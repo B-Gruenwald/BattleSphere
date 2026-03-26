@@ -242,12 +242,3 @@ export default function Home() {
     </>
   )
 }
-```
-
----
-
-**To deploy:** Once you've pasted all three files, save them, then in your terminal run:
-```
-git add .
-git commit -m "feat: landing page and visual identity"
-git push
