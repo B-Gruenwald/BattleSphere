@@ -143,3 +143,6 @@ button {
   background: var(--gold-dim);
   border-radius: 3px;
 }
+nav a:hover {
+  color: var(--text-primary) !important;
+}

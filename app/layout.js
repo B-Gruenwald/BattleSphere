@@ -36,51 +36,23 @@ function NavBar() {
       </Link>
 
       <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-        <Link href="/campaigns" style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: '0.65rem',
-          fontWeight: '600',
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: 'var(--text-secondary)',
-          textDecoration: 'none',
-          transition: 'color 0.2s ease',
-        }}
-        onMouseEnter={e => e.target.style.color = 'var(--text-primary)'}
-        onMouseLeave={e => e.target.style.color = 'var(--text-secondary)'}
-        >
-          Campaigns
-        </Link>
-        <Link href="/map" style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: '0.65rem',
-          fontWeight: '600',
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: 'var(--text-secondary)',
-          textDecoration: 'none',
-          transition: 'color 0.2s ease',
-        }}
-        onMouseEnter={e => e.target.style.color = 'var(--text-primary)'}
-        onMouseLeave={e => e.target.style.color = 'var(--text-secondary)'}
-        >
-          Map
-        </Link>
-        <Link href="/dashboard" style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: '0.65rem',
-          fontWeight: '600',
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: 'var(--text-secondary)',
-          textDecoration: 'none',
-          transition: 'color 0.2s ease',
-        }}
-        onMouseEnter={e => e.target.style.color = 'var(--text-primary)'}
-        onMouseLeave={e => e.target.style.color = 'var(--text-secondary)'}
-        >
-          Dashboard
-        </Link>
+        {['Campaigns', 'Map', 'Dashboard'].map((label) => (
+          <Link
+            key={label}
+            href={`/${label.toLowerCase()}`}
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '0.65rem',
+              fontWeight: '600',
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--text-secondary)',
+              textDecoration: 'none',
+            }}
+          >
+            {label}
+          </Link>
+        ))}
         <Link href="/login">
           <button className="btn-secondary" style={{ padding: '0.5rem 1.25rem' }}>
             Log In
