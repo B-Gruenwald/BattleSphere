@@ -1,12 +1,27 @@
 import './globals.css';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase/server';
+import LogoutButton from './components/LogoutButton';
 
 export const metadata = {
   title: 'Warzones',
   description: 'Organise and track narrative wargaming campaigns',
 };
 
-function NavBar() {
+const navLinkStyle = {
+  fontFamily: 'var(--font-display)',
+  fontSize: '0.65rem',
+  fontWeight: '600',
+  letterSpacing: '0.14em',
+  textTransform: 'uppercase',
+  color: 'var(--text-secondary)',
+  textDecoration: 'none',
+};
+
+async function NavBar() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <nav style={{
       position: 'fixed',
@@ -40,35 +55,31 @@ function NavBar() {
           <Link
             key={label}
             href={`/${label.toLowerCase()}`}
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '0.65rem',
-              fontWeight: '600',
-              letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-              color: 'var(--text-secondary)',
-              textDecoration: 'none',
-            }}
+            style={navLinkStyle}
           >
             {label}
           </Link>
         ))}
-        <Link href="/register" style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: '0.65rem',
-          fontWeight: '600',
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: 'var(--text-secondary)',
-          textDecoration: 'none',
-        }}>
-          Register
-        </Link>
-        <Link href="/login">
-          <button className="btn-secondary" style={{ padding: '0.5rem 1.25rem' }}>
-            Log In
-          </button>
-        </Link>
+
+        {user ? (
+          <>
+            <span style={{ ...navLinkStyle, opacity: 0.5 }}>
+              {user.user_metadata?.username || user.email}
+            </span>
+            <LogoutButton />
+          </>
+        ) : (
+          <>
+            <Link href="/register" style={navLinkStyle}>
+              Register
+            </Link>
+            <Link href="/login">
+              <button className="btn-secondary" style={{ padding: '0.5rem 1.25rem' }}>
+                Log In
+              </button>
+            </Link>
+          </>
+        )}
       </div>
     </nav>
   );
