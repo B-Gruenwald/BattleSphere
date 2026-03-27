@@ -375,10 +375,10 @@ export default function CreateCampaignPage() {
           </div>
         </div>
 
-        {step === 1 && <Step1 />}
-        {step === 2 && <Step2 />}
-        {step === 3 && <Step3 />}
-        {step === 4 && <Step4 />}
+        {step === 1 && Step1()}
+        {step === 2 && Step2()}
+        {step === 3 && Step3()}
+        {step === 4 && Step4()}
 
         {/* Navigation */}
         <div style={{ display: 'flex', gap: '1rem', marginTop: '2.5rem', justifyContent: 'space-between' }}>
