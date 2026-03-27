@@ -53,6 +53,17 @@ function NavBar() {
             {label}
           </Link>
         ))}
+        <Link href="/register" style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: '0.65rem',
+          fontWeight: '600',
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: 'var(--text-secondary)',
+          textDecoration: 'none',
+        }}>
+          Register
+        </Link>
         <Link href="/login">
           <button className="btn-secondary" style={{ padding: '0.5rem 1.25rem' }}>
             Log In
