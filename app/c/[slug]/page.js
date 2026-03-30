@@ -50,6 +50,12 @@ export default async function CampaignDashboard({ params }) {
     .select('*', { count: 'exact', head: true })
     .eq('campaign_id', campaign.id);
 
+  // Fetch all battles for faction win counts
+  const { data: allBattles } = await supabase
+    .from('battles')
+    .select('attacker_faction_id, defender_faction_id, winner_faction_id')
+    .eq('campaign_id', campaign.id);
+
   const isOrganiser = campaign.organiser_id === user.id;
 
   const SETTING_LABELS = {
@@ -112,12 +118,22 @@ export default async function CampaignDashboard({ params }) {
             <Link href={`/c/${slug}/factions`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>View all →</Link>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {factions && factions.length > 0 ? factions.map(f => (
-              <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ width: '10px', height: '10px', background: f.colour, flexShrink: 0 }} />
-                <span style={{ color: 'var(--text-primary)', fontSize: '0.95rem', flex: 1 }}>{f.name}</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>0 wins</span>
-              </div>
+            {factions && factions.length > 0 ? [...factions]
+              .map(f => ({
+                ...f,
+                wins: (allBattles || []).filter(b => b.winner_faction_id === f.id).length,
+              }))
+              .sort((a, b) => b.wins - a.wins)
+              .map(f => (
+              <Link key={f.id} href={`/c/${slug}/faction/${f.id}`} style={{ textDecoration: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.25rem 0' }}>
+                  <div style={{ width: '10px', height: '10px', background: f.colour, flexShrink: 0 }} />
+                  <span style={{ color: 'var(--text-primary)', fontSize: '0.95rem', flex: 1 }}>{f.name}</span>
+                  <span style={{ color: f.wins > 0 ? f.colour : 'var(--text-muted)', fontSize: '0.8rem', fontWeight: f.wins > 0 ? '700' : '400' }}>
+                    {f.wins} {f.wins === 1 ? 'win' : 'wins'}
+                  </span>
+                </div>
+              </Link>
             )) : (
               <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No factions yet.</p>
             )}
