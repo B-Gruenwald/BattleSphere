@@ -36,6 +36,20 @@ export default async function CampaignDashboard({ params }) {
     .select('*', { count: 'exact', head: true })
     .eq('campaign_id', campaign.id);
 
+  // Fetch recent battles (last 5)
+  const { data: recentBattles } = await supabase
+    .from('battles')
+    .select('id, attacker_faction_id, defender_faction_id, winner_faction_id, attacker_score, defender_score, territory_id, created_at')
+    .eq('campaign_id', campaign.id)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  // Fetch battle count for stats strip
+  const { count: battleCount } = await supabase
+    .from('battles')
+    .select('*', { count: 'exact', head: true })
+    .eq('campaign_id', campaign.id);
+
   const isOrganiser = campaign.organiser_id === user.id;
 
   const SETTING_LABELS = {
@@ -77,7 +91,7 @@ export default async function CampaignDashboard({ params }) {
           { label: 'Factions', value: factions?.length ?? 0 },
           { label: 'Players', value: memberCount ?? 0 },
           { label: 'Territories', value: territoryCount ?? 0 },
-          { label: 'Battles', value: 0 },
+          { label: 'Battles', value: battleCount ?? 0 },
         ].map((stat, i, arr) => (
           <div key={stat.label} style={{ padding: '1.5rem 1rem', textAlign: 'center', borderRight: i < arr.length - 1 ? '1px solid var(--border-dim)' : 'none' }}>
             <div style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{stat.value}</div>
@@ -116,13 +130,42 @@ export default async function CampaignDashboard({ params }) {
             <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
               Recent Battles
             </h2>
+            <Link href={`/c/${slug}/battle/new`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>Log battle →</Link>
           </div>
-          <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-            <div style={{ width: '6px', height: '6px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1rem', opacity: 0.4 }} />
-            <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
-              No battles recorded yet.
-            </p>
-          </div>
+          {recentBattles && recentBattles.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              {recentBattles.map(battle => {
+                const attacker = factions?.find(f => f.id === battle.attacker_faction_id);
+                const defender = factions?.find(f => f.id === battle.defender_faction_id);
+                const winner   = factions?.find(f => f.id === battle.winner_faction_id);
+                const resultLabel = !battle.winner_faction_id ? 'Draw'
+                  : battle.winner_faction_id === battle.attacker_faction_id ? `${attacker?.name ?? '?'} Victory`
+                  : `${defender?.name ?? '?'} Victory`;
+                const resultColour = !battle.winner_faction_id ? 'var(--text-muted)'
+                  : winner?.colour ?? 'var(--text-gold)';
+                const date = new Date(battle.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                return (
+                  <div key={battle.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingBottom: '0.85rem', borderBottom: '1px solid var(--border-dim)' }}>
+                    <div style={{ width: '6px', height: '6px', background: resultColour, transform: 'rotate(45deg)', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {attacker?.name ?? '?'} <span style={{ color: 'var(--text-muted)' }}>vs</span> {defender?.name ?? '?'}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: resultColour, fontFamily: 'var(--font-display)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: '0.15rem' }}>
+                        {resultLabel}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0 }}>{date}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+              <div style={{ width: '6px', height: '6px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1rem', opacity: 0.4 }} />
+              <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No battles recorded yet.</p>
+            </div>
+          )}
         </div>
 
         {/* Active events */}

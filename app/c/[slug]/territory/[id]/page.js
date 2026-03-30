@@ -53,6 +53,14 @@ export default async function TerritoryPage({ params }) {
     .eq('parent_id', territory.id)
     .order('created_at');
 
+  // Fetch battles fought at this territory (last 8)
+  const { data: battles } = await supabase
+    .from('battles')
+    .select('id, attacker_faction_id, defender_faction_id, winner_faction_id, attacker_score, defender_score, narrative, created_at')
+    .eq('territory_id', territory.id)
+    .order('created_at', { ascending: false })
+    .limit(8);
+
   const factionMap = Object.fromEntries((factions || []).map(f => [f.id, f]));
   const controllingFaction = territory.controlling_faction_id
     ? factionMap[territory.controlling_faction_id]
@@ -176,13 +184,55 @@ export default async function TerritoryPage({ params }) {
             }}>
               Battles Fought Here
             </h2>
+            <Link href={`/c/${slug}/battle/new?territory=${territory.id}`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
+              Log battle →
+            </Link>
           </div>
-          <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-            <div style={{ width: '6px', height: '6px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1rem', opacity: 0.4 }} />
-            <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
-              No battles recorded here yet.
-            </p>
-          </div>
+          {battles && battles.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {battles.map(battle => {
+                const attacker = factionMap[battle.attacker_faction_id];
+                const defender = factionMap[battle.defender_faction_id];
+                const winner   = factionMap[battle.winner_faction_id];
+                const isDraw   = !battle.winner_faction_id;
+                const resultLabel = isDraw ? 'Draw'
+                  : battle.winner_faction_id === battle.attacker_faction_id
+                    ? `${attacker?.name ?? '?'} Victory`
+                    : `${defender?.name ?? '?'} Victory`;
+                const resultColour = isDraw ? 'var(--text-muted)' : (winner?.colour ?? 'var(--text-gold)');
+                const date = new Date(battle.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                const hasScores = battle.attacker_score > 0 || battle.defender_score > 0;
+                return (
+                  <div key={battle.id} style={{ paddingBottom: '1rem', borderBottom: '1px solid var(--border-dim)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.25rem' }}>
+                      <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                        {attacker?.name ?? '?'} <span style={{ color: 'var(--text-muted)' }}>vs</span> {defender?.name ?? '?'}
+                        {hasScores && (
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginLeft: '0.5rem' }}>
+                            ({battle.attacker_score}–{battle.defender_score})
+                          </span>
+                        )}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{date}</span>
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.58rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: resultColour, marginBottom: battle.narrative ? '0.5rem' : 0 }}>
+                      {resultLabel}
+                    </div>
+                    {battle.narrative && (
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', fontStyle: 'italic', lineHeight: 1.5, marginTop: '0.4rem' }}>
+                        {battle.narrative}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+              <div style={{ width: '6px', height: '6px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1rem', opacity: 0.4 }} />
+              <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No battles recorded here yet.</p>
+            </div>
+          )}
         </div>
 
         {/* Factions in campaign panel */}
