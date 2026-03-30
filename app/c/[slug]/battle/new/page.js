@@ -18,9 +18,10 @@ export default async function NewBattlePage({ params, searchParams }) {
 
   if (!campaign) notFound();
 
+  // Use select('*') — specific column selection fails if schema has missing columns
   const { data: territories } = await supabase
     .from('territories')
-    .select('id, name, depth, controlling_faction_id')
+    .select('*')
     .eq('campaign_id', campaign.id)
     .order('depth')
     .order('name');
@@ -30,6 +31,25 @@ export default async function NewBattlePage({ params, searchParams }) {
     .select('*')
     .eq('campaign_id', campaign.id)
     .order('created_at');
+
+  // Fetch campaign members
+  const { data: campaignMembers } = await supabase
+    .from('campaign_members')
+    .select('user_id, faction_id')
+    .eq('campaign_id', campaign.id);
+
+  // Fetch profiles for those members
+  const memberIds = (campaignMembers || []).map(m => m.user_id);
+  const { data: profiles } = memberIds.length > 0
+    ? await supabase.from('profiles').select('id, username').in('id', memberIds)
+    : { data: [] };
+
+  // Merge members with their usernames and faction assignments
+  const members = (campaignMembers || []).map(m => ({
+    user_id:    m.user_id,
+    faction_id: m.faction_id || null,
+    username:   profiles?.find(p => p.id === m.user_id)?.username ?? 'Unknown',
+  }));
 
   return (
     <div style={{ padding: '3rem 2rem', maxWidth: '780px', margin: '0 auto' }}>
@@ -56,7 +76,7 @@ export default async function NewBattlePage({ params, searchParams }) {
           Log a Battle
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-          Record the outcome of a battle. Optionally transfer territory control if a territory changed hands.
+          Record the outcome. Attacker player is required — defender is optional for solo raids.
         </p>
       </div>
 
@@ -66,6 +86,7 @@ export default async function NewBattlePage({ params, searchParams }) {
         campaign={campaign}
         territories={territories || []}
         factions={factions || []}
+        members={members}
         userId={user.id}
         preselectedTerritoryId={preselectedTerritoryId || ''}
       />

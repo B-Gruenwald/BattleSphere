@@ -1,37 +1,58 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
-export default function BattleLogForm({ campaign, territories, factions, userId, preselectedTerritoryId }) {
+export default function BattleLogForm({ campaign, territories, factions, members, userId, preselectedTerritoryId }) {
   const router = useRouter();
   const supabase = createClient();
 
-  const [territoryId, setTerritoryId]       = useState(preselectedTerritoryId || '');
-  const [attackerFactionId, setAttacker]     = useState('');
-  const [defenderFactionId, setDefender]     = useState('');
-  const [result, setResult]                  = useState(''); // 'attacker' | 'defender' | 'draw'
-  const [attackerScore, setAttackerScore]    = useState('');
-  const [defenderScore, setDefenderScore]    = useState('');
-  const [narrative, setNarrative]            = useState('');
-  const [transferControl, setTransferControl] = useState(false);
-  const [submitting, setSubmitting]          = useState(false);
-  const [error, setError]                    = useState('');
+  const [territoryId, setTerritoryId]         = useState(preselectedTerritoryId || '');
+  const [attackerPlayerId, setAttackerPlayer]  = useState('');
+  const [defenderPlayerId, setDefenderPlayer]  = useState('');
+  const [attackerFactionId, setAttacker]       = useState('');
+  const [defenderFactionId, setDefender]       = useState('');
+  const [result, setResult]                    = useState('');
+  const [attackerScore, setAttackerScore]      = useState('');
+  const [defenderScore, setDefenderScore]      = useState('');
+  const [narrative, setNarrative]              = useState('');
+  const [transferControl, setTransferControl]  = useState(false);
+  const [submitting, setSubmitting]            = useState(false);
+  const [error, setError]                      = useState('');
+
+  // Auto-populate attacker faction from player's default faction
+  useEffect(() => {
+    if (attackerPlayerId) {
+      const member = members.find(m => m.user_id === attackerPlayerId);
+      if (member?.faction_id) setAttacker(member.faction_id);
+    }
+  }, [attackerPlayerId]);
+
+  // Auto-populate defender faction from player's default faction
+  useEffect(() => {
+    if (defenderPlayerId) {
+      const member = members.find(m => m.user_id === defenderPlayerId);
+      if (member?.faction_id) setDefender(member.faction_id);
+    }
+  }, [defenderPlayerId]);
 
   const winnerFactionId =
     result === 'attacker' ? attackerFactionId :
     result === 'defender' ? defenderFactionId :
     null;
 
-  const selectedTerritory = territories.find(t => t.id === territoryId);
-  const currentController = selectedTerritory?.controlling_faction_id;
+  const selectedTerritory  = territories.find(t => t.id === territoryId);
+  const currentController  = selectedTerritory?.controlling_faction_id;
   const winnerIsDifferent  = winnerFactionId && winnerFactionId !== currentController;
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
 
+    if (!attackerPlayerId) {
+      setError('Please select the attacker player.'); return;
+    }
     if (!attackerFactionId || !defenderFactionId) {
       setError('Please select both factions.'); return;
     }
@@ -44,17 +65,23 @@ export default function BattleLogForm({ campaign, territories, factions, userId,
 
     setSubmitting(true);
 
-    const { error: insertError } = await supabase.from('battles').insert({
-      campaign_id:         campaign.id,
-      territory_id:        territoryId || null,
-      attacker_faction_id: attackerFactionId,
-      defender_faction_id: defenderFactionId,
-      winner_faction_id:   winnerFactionId,
-      attacker_score:      attackerScore ? parseInt(attackerScore) : 0,
-      defender_score:      defenderScore ? parseInt(defenderScore) : 0,
-      narrative:           narrative.trim() || null,
-      logged_by:           userId,
-    });
+    const { data: battle, error: insertError } = await supabase
+      .from('battles')
+      .insert({
+        campaign_id:          campaign.id,
+        territory_id:         territoryId || null,
+        attacker_faction_id:  attackerFactionId,
+        defender_faction_id:  defenderFactionId,
+        winner_faction_id:    winnerFactionId,
+        attacker_player_id:   attackerPlayerId || null,
+        defender_player_id:   defenderPlayerId || null,
+        attacker_score:       attackerScore ? parseInt(attackerScore) : 0,
+        defender_score:       defenderScore ? parseInt(defenderScore) : 0,
+        narrative:            narrative.trim() || null,
+        logged_by:            userId,
+      })
+      .select()
+      .single();
 
     if (insertError) {
       setError(insertError.message);
@@ -70,12 +97,8 @@ export default function BattleLogForm({ campaign, territories, factions, userId,
         .eq('id', territoryId);
     }
 
-    // Navigate back — to territory if one was selected, otherwise campaign dashboard
-    if (territoryId) {
-      router.push(`/c/${campaign.slug}/territory/${territoryId}`);
-    } else {
-      router.push(`/c/${campaign.slug}`);
-    }
+    // Navigate to the new battle detail page
+    router.push(`/c/${campaign.slug}/battle/${battle.id}`);
   }
 
   const inputStyle = {
@@ -87,6 +110,7 @@ export default function BattleLogForm({ campaign, territories, factions, userId,
     fontSize: '0.95rem',
     outline: 'none',
     appearance: 'none',
+    boxSizing: 'border-box',
   };
 
   const labelStyle = {
@@ -97,6 +121,14 @@ export default function BattleLogForm({ campaign, territories, factions, userId,
     textTransform: 'uppercase',
     color: 'var(--text-gold)',
     marginBottom: '0.5rem',
+  };
+
+  const sublabelStyle = {
+    display: 'block',
+    fontSize: '0.75rem',
+    color: 'var(--text-muted)',
+    marginBottom: '0.4rem',
+    fontStyle: 'italic',
   };
 
   const resultBtnStyle = (active) => ({
@@ -113,44 +145,111 @@ export default function BattleLogForm({ campaign, territories, factions, userId,
     transition: 'all 0.15s',
   });
 
+  const sectionStyle = {
+    marginBottom: '2rem',
+    paddingBottom: '2rem',
+    borderBottom: '1px solid var(--border-dim)',
+  };
+
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: '640px' }}>
 
-      {/* Territory */}
-      <div style={{ marginBottom: '1.75rem' }}>
+      {/* ── Theatre of Battle ── */}
+      <div style={sectionStyle}>
         <label style={labelStyle}>Theatre of Battle</label>
         <select value={territoryId} onChange={e => setTerritoryId(e.target.value)} style={inputStyle}>
           <option value="">— None / Unknown —</option>
           {territories.map(t => (
-            <option key={t.id} value={t.id}>{t.name}{t.depth > 1 ? ' (sub-territory)' : ''}</option>
+            <option key={t.id} value={t.id}>
+              {'  '.repeat(t.depth - 1)}{t.name}{t.depth > 1 ? ` (${t.type || 'sub-territory'})` : ''}
+            </option>
           ))}
         </select>
       </div>
 
-      {/* Factions row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.75rem' }}>
-        <div>
-          <label style={labelStyle}>Attacker</label>
-          <select value={attackerFactionId} onChange={e => setAttacker(e.target.value)} style={inputStyle} required>
-            <option value="">— Select faction —</option>
-            {factions.map(f => (
-              <option key={f.id} value={f.id}>{f.name}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label style={labelStyle}>Defender</label>
-          <select value={defenderFactionId} onChange={e => setDefender(e.target.value)} style={inputStyle} required>
-            <option value="">— Select faction —</option>
-            {factions.filter(f => f.id !== attackerFactionId).map(f => (
-              <option key={f.id} value={f.id}>{f.name}</option>
-            ))}
-          </select>
+      {/* ── Players ── */}
+      <div style={sectionStyle}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+
+          {/* Attacker player */}
+          <div>
+            <label style={labelStyle}>
+              Attacker Player <span style={{ color: '#e05a5a', fontSize: '0.7rem' }}>*</span>
+            </label>
+            <select
+              value={attackerPlayerId}
+              onChange={e => setAttackerPlayer(e.target.value)}
+              style={inputStyle}
+              required
+            >
+              <option value="">— Select player —</option>
+              {members.map(m => (
+                <option key={m.user_id} value={m.user_id}>{m.username}</option>
+              ))}
+            </select>
+            {/* Faction for attacker */}
+            <div style={{ marginTop: '0.75rem' }}>
+              <span style={sublabelStyle}>
+                {attackerPlayerId && members.find(m => m.user_id === attackerPlayerId)?.faction_id
+                  ? 'Faction (auto-filled, overridable)'
+                  : 'Faction'}
+              </span>
+              <select
+                value={attackerFactionId}
+                onChange={e => setAttacker(e.target.value)}
+                style={inputStyle}
+                required
+              >
+                <option value="">— Select faction —</option>
+                {factions.map(f => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Defender player */}
+          <div>
+            <label style={labelStyle}>Defender Player <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
+            <select
+              value={defenderPlayerId}
+              onChange={e => setDefenderPlayer(e.target.value)}
+              style={inputStyle}
+            >
+              <option value="">— Select player —</option>
+              {members
+                .filter(m => m.user_id !== attackerPlayerId)
+                .map(m => (
+                  <option key={m.user_id} value={m.user_id}>{m.username}</option>
+                ))}
+            </select>
+            {/* Faction for defender */}
+            <div style={{ marginTop: '0.75rem' }}>
+              <span style={sublabelStyle}>
+                {defenderPlayerId && members.find(m => m.user_id === defenderPlayerId)?.faction_id
+                  ? 'Faction (auto-filled, overridable)'
+                  : 'Faction'}
+              </span>
+              <select
+                value={defenderFactionId}
+                onChange={e => setDefender(e.target.value)}
+                style={inputStyle}
+                required
+              >
+                <option value="">— Select faction —</option>
+                {factions
+                  .filter(f => f.id !== attackerFactionId)
+                  .map(f => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+              </select>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Result */}
-      <div style={{ marginBottom: '1.75rem' }}>
+      {/* ── Result ── */}
+      <div style={sectionStyle}>
         <label style={labelStyle}>Battle Result</label>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           <button type="button" style={resultBtnStyle(result === 'attacker')} onClick={() => setResult('attacker')}>
@@ -163,32 +262,36 @@ export default function BattleLogForm({ campaign, territories, factions, userId,
             Defender Wins
           </button>
         </div>
+
+        {/* Scores */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '1.25rem' }}>
+          <div>
+            <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>
+              Attacker Score <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span>
+            </label>
+            <input
+              type="number" min="0" value={attackerScore}
+              onChange={e => setAttackerScore(e.target.value)}
+              placeholder="e.g. 42" style={inputStyle}
+            />
+          </div>
+          <div>
+            <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>
+              Defender Score <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span>
+            </label>
+            <input
+              type="number" min="0" value={defenderScore}
+              onChange={e => setDefenderScore(e.target.value)}
+              placeholder="e.g. 18" style={inputStyle}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Scores row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.75rem' }}>
-        <div>
-          <label style={labelStyle}>Attacker Score <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
-          <input
-            type="number" min="0" value={attackerScore}
-            onChange={e => setAttackerScore(e.target.value)}
-            placeholder="e.g. 42" style={inputStyle}
-          />
-        </div>
-        <div>
-          <label style={labelStyle}>Defender Score <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
-          <input
-            type="number" min="0" value={defenderScore}
-            onChange={e => setDefenderScore(e.target.value)}
-            placeholder="e.g. 18" style={inputStyle}
-          />
-        </div>
-      </div>
-
-      {/* Transfer control checkbox — only if there's a winner and a territory */}
+      {/* Territory control transfer */}
       {territoryId && result && result !== 'draw' && winnerIsDifferent && (
         <div style={{
-          marginBottom: '1.75rem',
+          marginBottom: '2rem',
           padding: '1rem 1.25rem',
           border: '1px solid rgba(183,140,64,0.3)',
           background: 'rgba(183,140,64,0.05)',
@@ -212,9 +315,11 @@ export default function BattleLogForm({ campaign, territories, factions, userId,
         </div>
       )}
 
-      {/* Narrative */}
+      {/* ── Chronicle ── */}
       <div style={{ marginBottom: '2rem' }}>
-        <label style={labelStyle}>Battle Chronicle <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
+        <label style={labelStyle}>
+          Battle Chronicle <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span>
+        </label>
         <textarea
           value={narrative}
           onChange={e => setNarrative(e.target.value)}

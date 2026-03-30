@@ -203,7 +203,8 @@ export default async function TerritoryPage({ params }) {
                 const date = new Date(battle.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
                 const hasScores = battle.attacker_score > 0 || battle.defender_score > 0;
                 return (
-                  <div key={battle.id} style={{ paddingBottom: '1rem', borderBottom: '1px solid var(--border-dim)' }}>
+                  <Link key={battle.id} href={`/c/${slug}/battle/${battle.id}`} style={{ textDecoration: 'none' }}>
+                  <div style={{ paddingBottom: '1rem', borderBottom: '1px solid var(--border-dim)', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.25rem' }}>
                       <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
                         {attacker?.name ?? '?'} <span style={{ color: 'var(--text-muted)' }}>vs</span> {defender?.name ?? '?'}
@@ -213,7 +214,7 @@ export default async function TerritoryPage({ params }) {
                           </span>
                         )}
                       </span>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{date}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{date} →</span>
                     </div>
                     <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.58rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: resultColour, marginBottom: battle.narrative ? '0.5rem' : 0 }}>
                       {resultLabel}
@@ -224,6 +225,7 @@ export default async function TerritoryPage({ params }) {
                       </p>
                     )}
                   </div>
+                  </Link>
                 );
               })}
             </div>
