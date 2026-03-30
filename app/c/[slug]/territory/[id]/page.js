@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import TerritoryChildList from '@/app/components/TerritoryChildList';
 
 export default async function TerritoryPage({ params }) {
   const { slug, id } = await params;
@@ -155,46 +156,11 @@ export default async function TerritoryPage({ params }) {
             }}>
               Sub-Territories
             </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {children.map(child => {
-                const childFaction = child.controlling_faction_id ? factionMap[child.controlling_faction_id] : null;
-                return (
-                  <Link
-                    key={child.id}
-                    href={`/c/${slug}/territory/${child.id}`}
-                    style={{ textDecoration: 'none' }}
-                  >
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      padding: '0.6rem 0.75rem',
-                      border: '1px solid transparent',
-                      transition: 'border-color 0.15s, background 0.15s',
-                    }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.borderColor = 'var(--border-subtle)';
-                        e.currentTarget.style.background = 'var(--surface-2)';
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.borderColor = 'transparent';
-                        e.currentTarget.style.background = 'transparent';
-                      }}
-                    >
-                      <div style={{
-                        width: '8px',
-                        height: '8px',
-                        background: childFaction?.colour || 'var(--border-dim)',
-                        transform: 'rotate(45deg)',
-                        flexShrink: 0,
-                      }} />
-                      <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem', flex: 1 }}>{child.name}</span>
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>›</span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+            <TerritoryChildList
+              children={children}
+              slug={slug}
+              factionMap={factionMap}
+            />
           </div>
         )}
 
