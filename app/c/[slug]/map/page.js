@@ -37,7 +37,9 @@ export default async function MapPage({ params }) {
     .eq('campaign_id', campaign.id)
     .eq('user_id', user.id)
     .single();
-  const isAdmin = membership?.role === 'admin';
+  const isAdmin = membership?.role === 'admin'
+    || membership?.role === 'organiser'
+    || campaign.organiser_id === user.id;
 
   // Build territory hierarchy for sidebar: sort parents alphabetically, then children under their parent
   const roots = (territories || [])

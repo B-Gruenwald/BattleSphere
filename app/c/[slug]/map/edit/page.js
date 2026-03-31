@@ -26,7 +26,10 @@ export default async function EditMapPage({ params }) {
     .eq('user_id', user.id)
     .single();
 
-  if (!membership || membership.role !== 'admin') redirect(`/c/${slug}/map`);
+  const isAdmin = membership?.role === 'admin'
+    || membership?.role === 'organiser'
+    || campaign.organiser_id === user.id;
+  if (!isAdmin) redirect(`/c/${slug}/map`);
 
   const { data: territories } = await supabase
     .from('territories')
