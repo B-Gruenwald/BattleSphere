@@ -117,6 +117,14 @@ export default function MapEditForm({ territories: initial, factions, campaignId
 
   async function deleteTerritory(id) {
     setDeleting(prev => ({ ...prev, [id]: true }));
+
+    // Detach any battles referencing this territory before deleting,
+    // so battle records are preserved (shown as "Territory unknown").
+    await supabase
+      .from('battles')
+      .update({ territory_id: null })
+      .eq('territory_id', id);
+
     const { error } = await supabase.from('territories').delete().eq('id', id);
     setDeleting(prev => ({ ...prev, [id]: false }));
     if (error) {
