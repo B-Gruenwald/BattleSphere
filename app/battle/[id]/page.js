@@ -76,6 +76,15 @@ export default async function StandaloneBattleDetailPage({ params }) {
               {battle.battle_type}
             </span>
           )}
+          {battle.scenario && (
+            <span style={{
+              fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.14em',
+              textTransform: 'uppercase', color: 'var(--text-muted)',
+              border: '1px solid var(--border-dim)', padding: '0.2rem 0.6rem',
+            }}>
+              {battle.scenario}
+            </span>
+          )}
         </div>
         <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: '900', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '1rem' }}>
           {battle.attacker_faction || 'Attacker'}{' '}

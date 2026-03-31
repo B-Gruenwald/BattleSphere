@@ -19,6 +19,7 @@ export default function StandaloneBattleForm({ userId, battle }) {
   const isEdit   = !!battle;
 
   const [battleType,        setBattleType]        = useState(battle?.battle_type         || '');
+  const [scenario,          setScenario]          = useState(battle?.scenario            || '');
   const [attackerPlayer,    setAttackerPlayer]    = useState(battle?.attacker_player      || '');
   const [attackerFaction,   setAttackerFaction]   = useState(battle?.attacker_faction     || '');
   const [attackerArmyType,  setAttackerArmyType]  = useState(battle?.attacker_army_type   || '');
@@ -51,6 +52,7 @@ export default function StandaloneBattleForm({ userId, battle }) {
 
     const payload = {
       battle_type:          battleType           || null,
+      scenario:             scenario.trim()      || null,
       attacker_player:      attackerPlayer.trim()  || null,
       attacker_faction:     attackerFaction.trim()  || null,
       attacker_army_type:   attackerArmyType.trim() || null,
@@ -117,13 +119,24 @@ export default function StandaloneBattleForm({ userId, battle }) {
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: '700px' }}>
 
-      {/* ── Battle Type ── */}
+      {/* ── Battle Type + Scenario ── */}
       <div style={sectionStyle}>
-        <label style={labelStyle}>Battle Type</label>
-        <select value={battleType} onChange={e => setBattleType(e.target.value)} style={{ ...inputStyle, maxWidth: '320px' }}>
-          <option value="">— Select type —</option>
-          {BATTLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+          <div>
+            <label style={labelStyle}>Battle Type</label>
+            <select value={battleType} onChange={e => setBattleType(e.target.value)} style={inputStyle}>
+              <option value="">— Select type —</option>
+              {BATTLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={dimLabelStyle}>Scenario <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
+            <input
+              type="text" value={scenario} onChange={e => setScenario(e.target.value)}
+              placeholder="e.g. Vital Ground, Take &amp; Hold…" style={inputStyle}
+            />
+          </div>
+        </div>
       </div>
 
       {/* ── Players & Armies ── */}
