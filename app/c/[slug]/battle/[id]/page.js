@@ -208,6 +208,9 @@ export default async function BattleDetailPage({ params }) {
             <button className="btn-secondary">View Territory</button>
           </Link>
         )}
+        <Link href={`/c/${slug}/battle/${id}/edit`}>
+          <button className="btn-secondary">Edit Battle</button>
+        </Link>
       </div>
     </div>
   );

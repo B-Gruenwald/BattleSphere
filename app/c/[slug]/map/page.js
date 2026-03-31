@@ -30,6 +30,15 @@ export default async function MapPage({ params }) {
     .select('*')
     .eq('campaign_id', campaign.id);
 
+  // Check if current user is admin
+  const { data: membership } = await supabase
+    .from('campaign_members')
+    .select('role')
+    .eq('campaign_id', campaign.id)
+    .eq('user_id', user.id)
+    .single();
+  const isAdmin = membership?.role === 'admin';
+
   // Build territory hierarchy for sidebar: sort parents alphabetically, then children under their parent
   const roots = (territories || [])
     .filter(t => !t.parent_id)
@@ -66,6 +75,17 @@ export default async function MapPage({ params }) {
           <h1 style={{ fontSize: '1.1rem', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
             {campaign.name}
           </h1>
+        </div>
+
+        {/* Admin: Edit Map button */}
+        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+          {isAdmin && (
+            <Link href={`/c/${slug}/map/edit`}>
+              <button className="btn-secondary" style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}>
+                Edit Map
+              </button>
+            </Link>
+          )}
         </div>
 
         {/* Faction legend */}
