@@ -26,7 +26,7 @@ export default async function DashboardPage() {
         .select('id, campaign_id, attacker_faction_id, defender_faction_id, winner_faction_id, attacker_score, defender_score, created_at')
         .in('campaign_id', campaignIds)
         .order('created_at', { ascending: false })
-        .limit(8)
+        .limit(5)
     : { data: [] };
 
   // Fetch all factions for those campaigns
@@ -87,9 +87,11 @@ export default async function DashboardPage() {
         {/* Recent battles sidebar */}
         {campaigns.length > 0 && (
           <div style={{ border: '1px solid var(--border-dim)', padding: '1.75rem' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '1.25rem' }}>
-              Recent Battles
-            </h2>
+            <Link href="/battles" style={{ textDecoration: 'none' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '1.25rem' }}>
+                Recent Battles
+              </h2>
+            </Link>
             {recentBattles && recentBattles.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
                 {recentBattles.map(battle => {
