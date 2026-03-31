@@ -22,6 +22,7 @@ export default function BattleEditForm({ battle, campaign, territories, factions
     battle.winner_faction_id === battle.attacker_faction_id ? 'attacker' : 'defender';
 
   const [battleType,         setBattleType]        = useState(battle.battle_type          || '');
+  const [scenario,           setScenario]          = useState(battle.scenario             || '');
   const [territoryId,        setTerritoryId]        = useState(battle.territory_id         || '');
   const [attackerPlayerId,   setAttackerPlayer]     = useState(battle.attacker_player_id   || '');
   const [defenderPlayerId,   setDefenderPlayer]     = useState(battle.defender_player_id   || '');
@@ -75,6 +76,7 @@ export default function BattleEditForm({ battle, campaign, territories, factions
       .from('battles')
       .update({
         battle_type:           battleType          || null,
+        scenario:              scenario.trim()     || null,
         territory_id:          territoryId         || null,
         attacker_faction_id:   attackerFactionId,
         defender_faction_id:   defenderFactionId,
@@ -132,9 +134,9 @@ export default function BattleEditForm({ battle, campaign, territories, factions
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: '700px' }}>
 
-      {/* ── Battle Type + Theatre ── */}
+      {/* ── Battle Type + Scenario + Theatre ── */}
       <div style={sectionStyle}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
           <div>
             <label style={labelStyle}>Battle Type</label>
             <select value={battleType} onChange={e => setBattleType(e.target.value)} style={inputStyle}>
@@ -143,16 +145,25 @@ export default function BattleEditForm({ battle, campaign, territories, factions
             </select>
           </div>
           <div>
-            <label style={labelStyle}>Theatre of Battle</label>
-            <select value={territoryId} onChange={e => setTerritoryId(e.target.value)} style={inputStyle}>
-              <option value="">— None / Unknown —</option>
-              {territories.map(t => (
-                <option key={t.id} value={t.id}>
-                  {'  '.repeat(t.depth - 1)}{t.name}{t.depth > 1 ? ` (${t.type || 'sub-territory'})` : ''}
-                </option>
-              ))}
-            </select>
+            <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>
+              Scenario <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span>
+            </label>
+            <input
+              type="text" value={scenario} onChange={e => setScenario(e.target.value)}
+              placeholder="e.g. Vital Ground, Take &amp; Hold…" style={inputStyle}
+            />
           </div>
+        </div>
+        <div>
+          <label style={labelStyle}>Theatre of Battle</label>
+          <select value={territoryId} onChange={e => setTerritoryId(e.target.value)} style={inputStyle}>
+            <option value="">— None / Unknown —</option>
+            {territories.map(t => (
+              <option key={t.id} value={t.id}>
+                {'  '.repeat(t.depth - 1)}{t.name}{t.depth > 1 ? ` (${t.type || 'sub-territory'})` : ''}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
