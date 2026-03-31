@@ -1,17 +1,20 @@
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase/server';
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <div>
       {/* Hero */}
       <section style={{
-        minHeight: 'calc(100vh - 64px)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         textAlign: 'center',
-        padding: '4rem 2rem',
+        padding: '6rem 2rem 3rem',
         position: 'relative',
         overflow: 'hidden',
       }}>
@@ -27,34 +30,12 @@ export default function HomePage() {
           pointerEvents: 'none',
         }} />
 
-        {/* Decorative top rule */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1rem',
-          marginBottom: '3rem',
-          opacity: 0.5,
-        }}>
+        {/* Decorative rule */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem', opacity: 0.5 }}>
           <div style={{ width: '60px', height: '1px', background: 'var(--gold)' }} />
-          <div style={{
-            width: '6px', height: '6px',
-            background: 'var(--gold)',
-            transform: 'rotate(45deg)',
-          }} />
+          <div style={{ width: '6px', height: '6px', background: 'var(--gold)', transform: 'rotate(45deg)' }} />
           <div style={{ width: '60px', height: '1px', background: 'var(--gold)' }} />
         </div>
-
-        <p style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: '0.65rem',
-          letterSpacing: '0.28em',
-          textTransform: 'uppercase',
-          color: 'var(--text-gold)',
-          marginBottom: '1.5rem',
-          opacity: 0.8,
-        }}>
-          Narrative Campaign Platform
-        </p>
 
         <h1 style={{
           fontSize: 'clamp(3rem, 8vw, 6.5rem)',
@@ -72,41 +53,31 @@ export default function HomePage() {
         </h1>
 
         <p style={{
-          fontFamily: 'var(--font-body)',
           fontSize: 'clamp(1.1rem, 2.5vw, 1.35rem)',
           fontStyle: 'italic',
           color: 'var(--text-secondary)',
           maxWidth: '580px',
-          marginBottom: '3rem',
+          marginBottom: '2.5rem',
           lineHeight: 1.6,
         }}>
           Organise your narrative wargaming campaigns. Track territory, tell stories, build legend.
         </p>
 
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <Link href="/campaigns">
-            <button className="btn-primary">Begin Campaign</button>
-          </Link>
-          <Link href="/login">
-            <button className="btn-secondary">Sign In</button>
-          </Link>
-        </div>
-
-        {/* Decorative bottom rule */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1rem',
-          marginTop: '4rem',
-          opacity: 0.3,
-        }}>
-          <div style={{ width: '40px', height: '1px', background: 'var(--gold)' }} />
-          <div style={{
-            width: '4px', height: '4px',
-            background: 'var(--gold)',
-            transform: 'rotate(45deg)',
-          }} />
-          <div style={{ width: '40px', height: '1px', background: 'var(--gold)' }} />
+          {user ? (
+            <Link href="/dashboard">
+              <button className="btn-primary">Go to Dashboard</button>
+            </Link>
+          ) : (
+            <>
+              <Link href="/campaign/new">
+                <button className="btn-primary">Begin Campaign</button>
+              </Link>
+              <Link href="/login">
+                <button className="btn-secondary">Sign In</button>
+              </Link>
+            </>
+          )}
         </div>
       </section>
 
@@ -114,7 +85,7 @@ export default function HomePage() {
       <section style={{
         borderTop: '1px solid var(--border-dim)',
         borderBottom: '1px solid var(--border-dim)',
-        padding: '4rem 2rem',
+        padding: '3rem 2rem',
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
         gap: '0',
@@ -122,39 +93,17 @@ export default function HomePage() {
         margin: '0 auto',
       }}>
         {[
-          { title: 'Campaign Maps', body: 'Generate and customise interactive territory maps for any setting or scale.' },
-          { title: 'Battle Records', body: 'Log every engagement, track outcomes, and watch territorial influence shift.' },
+          { title: 'Campaign Maps',   body: 'Generate and customise interactive territory maps for any setting or scale.' },
+          { title: 'Battle Records',  body: 'Log every engagement, track outcomes, and watch territorial influence shift.' },
           { title: 'Living Narrative', body: 'Chronicle your campaign story as it unfolds — missions, events, legend.' },
-          { title: 'Faction Glory', body: 'Achievements, rankings, and legacy tracking across every campaign season.' },
+          { title: 'Faction Glory',   body: 'Achievements, rankings, and legacy tracking across every campaign season.' },
         ].map((f, i) => (
-          <div key={i} style={{
-            padding: '2.5rem 2rem',
-            borderRight: i < 3 ? '1px solid var(--border-dim)' : 'none',
-            textAlign: 'center',
-          }}>
-            <div style={{
-              width: '8px', height: '8px',
-              background: 'var(--gold)',
-              transform: 'rotate(45deg)',
-              margin: '0 auto 1.25rem',
-              opacity: 0.6,
-            }} />
-            <h3 style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '0.7rem',
-              letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-              color: 'var(--text-gold)',
-              marginBottom: '0.75rem',
-            }}>
+          <div key={i} style={{ padding: '2.5rem 2rem', borderRight: i < 3 ? '1px solid var(--border-dim)' : 'none', textAlign: 'center' }}>
+            <div style={{ width: '8px', height: '8px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1.25rem', opacity: 0.6 }} />
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.75rem' }}>
               {f.title}
             </h3>
-            <p style={{
-              fontSize: '0.95rem',
-              color: 'var(--text-secondary)',
-              lineHeight: 1.65,
-              fontStyle: 'italic',
-            }}>
+            <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', lineHeight: 1.65, fontStyle: 'italic' }}>
               {f.body}
             </p>
           </div>

@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import CampaignMap from '@/app/components/CampaignMap';
 
@@ -29,8 +30,26 @@ export default async function MapPage({ params }) {
     .select('*')
     .eq('campaign_id', campaign.id);
 
+  // Build territory hierarchy for sidebar: sort parents alphabetically, then children under their parent
+  const roots = (territories || [])
+    .filter(t => !t.parent_id)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const children = (territories || [])
+    .filter(t => t.parent_id)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const factionMap = Object.fromEntries((factions || []).map(f => [f.id, f]));
+
+  // Build ordered list: each root followed by its children
+  const orderedTerritories = roots.flatMap(root => [
+    { ...root, isChild: false },
+    ...children.filter(c => c.parent_id === root.id).map(c => ({ ...c, isChild: true })),
+  ]);
+  // Append any orphan children (parent not in roots)
+  const rootIds = new Set(roots.map(r => r.id));
+  children.filter(c => !rootIds.has(c.parent_id)).forEach(c => orderedTerritories.push({ ...c, isChild: true }));
+
   return (
-    <div style={{ height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: 'calc(100vh - 108px)', display: 'flex', flexDirection: 'column' }}>
       {/* Map header */}
       <div style={{
         padding: '1rem 2rem',
@@ -68,14 +87,75 @@ export default async function MapPage({ params }) {
         </div>
       </div>
 
-      {/* Map canvas */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        <CampaignMap
-          territories={territories || []}
-          factions={factions || []}
-          campaignSlug={slug}
-          setting={campaign.setting}
-        />
+      {/* Map canvas + sidebar */}
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+        {/* Map */}
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          <CampaignMap
+            territories={territories || []}
+            factions={factions || []}
+            campaignSlug={slug}
+            setting={campaign.setting}
+          />
+        </div>
+
+        {/* Territory sidebar */}
+        <div style={{
+          width: '220px',
+          borderLeft: '1px solid var(--border-dim)',
+          background: 'rgba(10,10,15,0.7)',
+          backdropFilter: 'blur(8px)',
+          overflowY: 'auto',
+          flexShrink: 0,
+          padding: '1rem 0',
+        }}>
+          <p style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '0.55rem',
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+            color: 'var(--text-gold)',
+            padding: '0 1rem 0.75rem',
+            borderBottom: '1px solid var(--border-dim)',
+            marginBottom: '0.5rem',
+          }}>
+            Territories
+          </p>
+          {orderedTerritories.length === 0 ? (
+            <p style={{ padding: '1rem', color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>No territories yet.</p>
+          ) : (
+            orderedTerritories.map(t => {
+              const controller = t.controlling_faction_id ? factionMap[t.controlling_faction_id] : null;
+              return (
+                <Link key={t.id} href={`/c/${slug}/territory/${t.id}`} style={{ textDecoration: 'none' }}>
+                  <div style={{
+                    padding: `0.45rem 1rem 0.45rem ${t.isChild ? '2rem' : '1rem'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    borderBottom: '1px solid rgba(255,255,255,0.03)',
+                  }}>
+                    {t.isChild && (
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem', flexShrink: 0, marginLeft: '-0.75rem' }}>↳</span>
+                    )}
+                    {controller && (
+                      <div style={{ width: '6px', height: '6px', background: controller.colour, flexShrink: 0, borderRadius: '1px' }} />
+                    )}
+                    <span style={{
+                      fontSize: t.isChild ? '0.78rem' : '0.85rem',
+                      color: t.isChild ? 'var(--text-secondary)' : 'var(--text-primary)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>
+                      {t.name}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );

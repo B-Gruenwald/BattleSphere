@@ -51,18 +51,9 @@ async function NavBar() {
       </Link>
 
       <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-        {['Campaigns', 'Map', 'Dashboard'].map((label) => (
-          <Link
-            key={label}
-            href={`/${label.toLowerCase()}`}
-            style={navLinkStyle}
-          >
-            {label}
-          </Link>
-        ))}
-
         {user ? (
           <>
+            <Link href="/dashboard" style={navLinkStyle}>Dashboard</Link>
             <span style={{ ...navLinkStyle, opacity: 0.5 }}>
               {user.user_metadata?.username || user.email}
             </span>
@@ -70,13 +61,9 @@ async function NavBar() {
           </>
         ) : (
           <>
-            <Link href="/register" style={navLinkStyle}>
-              Register
-            </Link>
+            <Link href="/register" style={navLinkStyle}>Register</Link>
             <Link href="/login">
-              <button className="btn-secondary" style={{ padding: '0.5rem 1.25rem' }}>
-                Log In
-              </button>
+              <button className="btn-secondary" style={{ padding: '0.5rem 1.25rem' }}>Log In</button>
             </Link>
           </>
         )}

@@ -94,15 +94,17 @@ export default async function CampaignDashboard({ params }) {
       {/* Stats strip */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', borderTop: '1px solid var(--border-dim)', borderBottom: '1px solid var(--border-dim)', marginBottom: '3rem' }}>
         {[
-          { label: 'Factions', value: factions?.length ?? 0 },
-          { label: 'Players', value: memberCount ?? 0 },
-          { label: 'Territories', value: territoryCount ?? 0 },
-          { label: 'Battles', value: battleCount ?? 0 },
+          { label: 'Factions',    value: factions?.length ?? 0,  href: `/c/${slug}/factions` },
+          { label: 'Players',     value: memberCount ?? 0,        href: `/c/${slug}/players` },
+          { label: 'Territories', value: territoryCount ?? 0,     href: `/c/${slug}/map` },
+          { label: 'Battles',     value: battleCount ?? 0,        href: `/c/${slug}/battles` },
         ].map((stat, i, arr) => (
-          <div key={stat.label} style={{ padding: '1.5rem 1rem', textAlign: 'center', borderRight: i < arr.length - 1 ? '1px solid var(--border-dim)' : 'none' }}>
-            <div style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{stat.value}</div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.58rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>{stat.label}</div>
-          </div>
+          <Link key={stat.label} href={stat.href} style={{ textDecoration: 'none' }}>
+            <div style={{ padding: '1.5rem 1rem', textAlign: 'center', borderRight: i < arr.length - 1 ? '1px solid var(--border-dim)' : 'none', cursor: 'pointer' }}>
+              <div style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{stat.value}</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.58rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>{stat.label}</div>
+            </div>
+          </Link>
         ))}
       </div>
 
@@ -143,9 +145,11 @@ export default async function CampaignDashboard({ params }) {
         {/* Recent battles */}
         <div style={{ border: '1px solid var(--border-dim)', padding: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
-              Recent Battles
-            </h2>
+            <Link href={`/c/${slug}/battles`} style={{ textDecoration: 'none' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+                Recent Battles
+              </h2>
+            </Link>
             <Link href={`/c/${slug}/battle/new`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>Log battle →</Link>
           </div>
           {recentBattles && recentBattles.length > 0 ? (
@@ -209,6 +213,9 @@ export default async function CampaignDashboard({ params }) {
         </Link>
         <Link href={`/c/${slug}/battle/new`}>
           <button className="btn-secondary">Log a Battle</button>
+        </Link>
+        <Link href={`/c/${slug}/battles`}>
+          <button className="btn-secondary">Battle History</button>
         </Link>
         <Link href={`/c/${slug}/factions`}>
           <button className="btn-secondary">Browse Factions</button>
