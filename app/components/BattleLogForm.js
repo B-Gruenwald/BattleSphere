@@ -59,6 +59,73 @@ export default function BattleLogForm({ campaign, territories, factions, members
   const currentController = selectedTerritory?.controlling_faction_id;
   const winnerIsDifferent = winnerFactionId && winnerFactionId !== currentController;
 
+  // ── Influence update helper ──────────────────────────────────────────────────
+  async function updateInfluence() {
+    if (!territoryId || !attackerFactionId || !defenderFactionId || !result) return;
+
+    // Fetch current influence for both factions in this territory
+    const { data: current } = await supabase
+      .from('territory_influence')
+      .select('*')
+      .eq('territory_id', territoryId)
+      .in('faction_id', [attackerFactionId, defenderFactionId]);
+
+    const getPoints = (factionId) =>
+      current?.find(i => i.faction_id === factionId)?.influence_points ?? 0;
+
+    const updates = [];
+
+    if (result === 'attacker') {
+      // Attacker wins: +3 for winner, -2 (min 0) for loser
+      updates.push({
+        campaign_id:      campaign.id,
+        territory_id:     territoryId,
+        faction_id:       attackerFactionId,
+        influence_points: getPoints(attackerFactionId) + 3,
+      });
+      updates.push({
+        campaign_id:      campaign.id,
+        territory_id:     territoryId,
+        faction_id:       defenderFactionId,
+        influence_points: Math.max(0, getPoints(defenderFactionId) - 2),
+      });
+    } else if (result === 'defender') {
+      // Defender wins: +3 for winner, -2 (min 0) for loser
+      updates.push({
+        campaign_id:      campaign.id,
+        territory_id:     territoryId,
+        faction_id:       defenderFactionId,
+        influence_points: getPoints(defenderFactionId) + 3,
+      });
+      updates.push({
+        campaign_id:      campaign.id,
+        territory_id:     territoryId,
+        faction_id:       attackerFactionId,
+        influence_points: Math.max(0, getPoints(attackerFactionId) - 2),
+      });
+    } else if (result === 'draw') {
+      // Draw: both factions gain +1
+      updates.push({
+        campaign_id:      campaign.id,
+        territory_id:     territoryId,
+        faction_id:       attackerFactionId,
+        influence_points: getPoints(attackerFactionId) + 1,
+      });
+      updates.push({
+        campaign_id:      campaign.id,
+        territory_id:     territoryId,
+        faction_id:       defenderFactionId,
+        influence_points: getPoints(defenderFactionId) + 1,
+      });
+    }
+
+    if (updates.length > 0) {
+      await supabase
+        .from('territory_influence')
+        .upsert(updates, { onConflict: 'territory_id,faction_id' });
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
@@ -96,12 +163,16 @@ export default function BattleLogForm({ campaign, territories, factions, members
 
     if (insertError) { setError(insertError.message); setSubmitting(false); return; }
 
+    // Transfer territory control if checked
     if (transferControl && territoryId && winnerFactionId) {
       await supabase
         .from('territories')
         .update({ controlling_faction_id: winnerFactionId })
         .eq('id', territoryId);
     }
+
+    // Auto-update influence points for this territory
+    await updateInfluence();
 
     router.push(`/c/${campaign.slug}/battle/${battle.id}`);
   }
@@ -163,6 +234,14 @@ export default function BattleLogForm({ campaign, territories, factions, members
               </option>
             ))}
           </select>
+          {territoryId && result && (
+            <p style={hintStyle}>
+              {result === 'draw'
+                ? '⬡ Both factions will gain +1 influence here.'
+                : `⬡ ${result === 'attacker' ? factions.find(f => f.id === attackerFactionId)?.name || 'Winner' : factions.find(f => f.id === defenderFactionId)?.name || 'Winner'} will gain +3 influence · loser loses 2.`
+              }
+            </p>
+          )}
         </div>
       </div>
 

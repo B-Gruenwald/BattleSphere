@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import TerritoryChildList from '@/app/components/TerritoryChildList';
+import InfluenceOverrideForm from '@/app/components/InfluenceOverrideForm';
 
 export default async function TerritoryPage({ params }) {
   const { slug, id } = await params;
@@ -61,6 +62,12 @@ export default async function TerritoryPage({ params }) {
     .order('created_at', { ascending: false })
     .limit(8);
 
+  // Fetch influence data for this territory
+  const { data: influence } = await supabase
+    .from('territory_influence')
+    .select('*')
+    .eq('territory_id', territory.id);
+
   const factionMap = Object.fromEntries((factions || []).map(f => [f.id, f]));
   const controllingFaction = territory.controlling_faction_id
     ? factionMap[territory.controlling_faction_id]
@@ -74,6 +81,12 @@ export default async function TerritoryPage({ params }) {
   // Status colour for controlling faction
   const statusColour = controllingFaction?.colour || 'var(--border-dim)';
   const statusLabel = controllingFaction?.name || 'Contested';
+
+  // Influence helpers
+  const getInfluence = (factionId) =>
+    (influence || []).find(i => i.faction_id === factionId)?.influence_points ?? 0;
+  const totalInfluence = (factions || []).reduce((sum, f) => sum + getInfluence(f.id), 0);
+  const factionsWithInfluence = (factions || []).filter(f => getInfluence(f.id) > 0);
 
   return (
     <div style={{ padding: '3rem 2rem', maxWidth: '900px', margin: '0 auto' }}>
@@ -147,6 +160,88 @@ export default async function TerritoryPage({ params }) {
 
       {/* Divider line */}
       <div style={{ borderTop: '1px solid var(--border-dim)', marginBottom: '2.5rem' }} />
+
+      {/* ── Influence panel ── */}
+      <div style={{ border: '1px solid var(--border-dim)', padding: '1.75rem', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.5rem' }}>
+          <div>
+            <h2 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '0.65rem',
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--text-gold)',
+              marginBottom: '0.3rem',
+            }}>
+              Territorial Influence
+            </h2>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+              Earned through battles fought here. Win: +3 · Draw: +1 · Loss: −2
+            </p>
+          </div>
+          {totalInfluence > 0 && (
+            <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              {totalInfluence} total
+            </span>
+          )}
+        </div>
+
+        {/* Stacked influence bar (read-only visual for all users) */}
+        {totalInfluence > 0 && (
+          <div style={{ height: '8px', display: 'flex', borderRadius: '2px', overflow: 'hidden', marginBottom: '1.5rem', gap: '1px' }}>
+            {(factions || []).filter(f => getInfluence(f.id) > 0).map(f => (
+              <div
+                key={f.id}
+                title={`${f.name}: ${getInfluence(f.id)}`}
+                style={{
+                  height: '100%',
+                  width: `${(getInfluence(f.id) / totalInfluence) * 100}%`,
+                  background: f.colour,
+                  transition: 'width 0.4s ease',
+                }}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Per-faction breakdown */}
+        {isOrganiser ? (
+          // Organiser: editable form
+          <InfluenceOverrideForm
+            campaignId={campaign.id}
+            territoryId={territory.id}
+            factions={factions || []}
+            influence={influence || []}
+          />
+        ) : (
+          // Players: read-only view
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+            {(factions || []).map(f => {
+              const pts = getInfluence(f.id);
+              const pct = totalInfluence > 0 ? (pts / totalInfluence) * 100 : 0;
+              return (
+                <div key={f.id}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.3rem' }}>
+                    <div style={{ width: '8px', height: '8px', background: f.colour, transform: 'rotate(45deg)', flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontSize: '0.88rem', color: 'var(--text-primary)' }}>{f.name}</span>
+                    <span style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '0.85rem', color: pts > 0 ? 'var(--text-gold)' : 'var(--text-muted)' }}>
+                      {pts}
+                    </span>
+                  </div>
+                  <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: f.colour, transition: 'width 0.4s ease' }} />
+                  </div>
+                </div>
+              );
+            })}
+            {totalInfluence === 0 && (
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                No battles have been fought here yet — influence will appear once the first battle is recorded.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Main content grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>

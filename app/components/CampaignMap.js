@@ -55,6 +55,11 @@ const SETTING_BG = {
   'Custom':        { bg: '#060608', grid: 'rgba(183,140,64,0.04)' },
 };
 
+// Default gold colour for uncontrolled/unknown territories
+const GOLD = 'rgba(183,140,64,1)';
+const GOLD_DIM = 'rgba(183,140,64,0.35)';
+const GOLD_MID = 'rgba(183,140,64,0.5)';
+
 export default function CampaignMap({ territories, factions, campaignSlug, setting }) {
   const router = useRouter();
   const [hoveredId, setHoveredId] = useState(null);
@@ -66,6 +71,9 @@ export default function CampaignMap({ territories, factions, campaignSlug, setti
 
   const theme = SETTING_BG[setting] || SETTING_BG['Custom'];
   const isScifi = setting === 'Gothic Sci-Fi' || setting === 'Space Opera';
+
+  // Build a quick lookup: faction id → faction colour
+  const factionColour = Object.fromEntries((factions || []).map(f => [f.id, f.colour]));
 
   function handleNodeClick(t) {
     router.push(`/c/${campaignSlug}/territory/${t.id}`);
@@ -143,14 +151,19 @@ export default function CampaignMap({ territories, factions, campaignSlug, setti
       })}
 
       {/* Sub-territory nodes (smaller, dimmer) */}
-      {subLevel.map(sub => (
-        <g key={sub.id}>
-          <circle
-            cx={`${sub.x_pos}%`} cy={`${sub.y_pos}%`} r="1.2%"
-            fill="rgba(183,140,64,0.12)" stroke="rgba(183,140,64,0.25)" strokeWidth="0.25"
-          />
-        </g>
-      ))}
+      {subLevel.map(sub => {
+        const subColour = sub.controlling_faction_id
+          ? factionColour[sub.controlling_faction_id] || GOLD_DIM
+          : 'rgba(183,140,64,0.25)';
+        return (
+          <g key={sub.id} style={{ cursor: 'pointer' }} onClick={() => handleNodeClick(sub)}>
+            <circle
+              cx={`${sub.x_pos}%`} cy={`${sub.y_pos}%`} r="1.2%"
+              fill={`${subColour}20`} stroke={subColour} strokeWidth="0.25"
+            />
+          </g>
+        );
+      })}
 
       {/* Top-level territory nodes */}
       {topLevel.map(t => {
@@ -159,6 +172,20 @@ export default function CampaignMap({ territories, factions, campaignSlug, setti
         const cy = `${t.y_pos}%`;
         const cxN = t.x_pos;
         const cyN = t.y_pos;
+
+        // Use the controlling faction's colour, or default gold for uncontrolled
+        const baseColour = t.controlling_faction_id
+          ? factionColour[t.controlling_faction_id] || GOLD
+          : GOLD;
+        const dimColour  = t.controlling_faction_id
+          ? `${factionColour[t.controlling_faction_id] || GOLD}88`
+          : GOLD_DIM;
+        const ringColour = isHov
+          ? baseColour
+          : t.controlling_faction_id
+            ? `${baseColour}88`
+            : GOLD_DIM;
+        const glowColour = `${baseColour}15`;
 
         return (
           <g
@@ -171,24 +198,43 @@ export default function CampaignMap({ territories, factions, campaignSlug, setti
           >
             {/* Glow ring when hovered */}
             {isHov && (
-              <circle cx={cx} cy={cy} r="4.5%" fill="rgba(183,140,64,0.08)" stroke="rgba(183,140,64,0.3)" strokeWidth="0.3" />
+              <circle cx={cx} cy={cy} r="4.5%"
+                fill={glowColour}
+                stroke={`${baseColour}40`}
+                strokeWidth="0.3"
+              />
             )}
+
+            {/* Controlled territory: coloured outer ring */}
+            {t.controlling_faction_id && !isHov && (
+              <circle cx={cx} cy={cy} r="3.6%"
+                fill="none"
+                stroke={`${baseColour}50`}
+                strokeWidth="0.5"
+              />
+            )}
+
             {/* Outer ring */}
             <circle cx={cx} cy={cy} r="3.2%"
               fill="rgba(10,10,15,0.9)"
-              stroke={isHov ? 'rgba(183,140,64,0.9)' : 'rgba(183,140,64,0.35)'}
+              stroke={ringColour}
               strokeWidth={isHov ? '0.5' : '0.35'}
               style={{ transition: 'stroke 0.15s, stroke-width 0.15s' }}
             />
-            {/* Inner fill */}
+            {/* Inner fill — tinted by faction colour when controlled */}
             <circle cx={cx} cy={cy} r="2.2%"
-              fill={isHov ? 'rgba(183,140,64,0.2)' : 'rgba(183,140,64,0.07)'}
+              fill={isHov
+                ? `${baseColour}25`
+                : t.controlling_faction_id
+                  ? `${baseColour}12`
+                  : 'rgba(183,140,64,0.07)'
+              }
               style={{ transition: 'fill 0.15s' }}
             />
-            {/* Diamond icon */}
+            {/* Diamond icon — uses faction colour when controlled */}
             <DiamondIcon
               cx={cxN} cy={cyN} size={1.4}
-              fill={isHov ? 'rgba(183,140,64,0.9)' : 'rgba(183,140,64,0.5)'}
+              fill={isHov ? baseColour : t.controlling_faction_id ? dimColour : GOLD_MID}
               stroke="none"
             />
             {/* Territory name */}
@@ -241,7 +287,10 @@ export default function CampaignMap({ territories, factions, campaignSlug, setti
             fontStyle="italic"
             style={{ userSelect: 'none' }}
           >
-            {tooltip.territory.type || 'Click to view'}
+            {tooltip.territory.controlling_faction_id
+              ? factions?.find(f => f.id === tooltip.territory.controlling_faction_id)?.name || 'Controlled'
+              : tooltip.territory.type || 'Click to view'
+            }
           </text>
         </g>
       )}
