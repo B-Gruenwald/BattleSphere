@@ -77,7 +77,7 @@ export default async function EditMapPage({ params }) {
         </div>
 
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-          {territoryCount} {territoryCount === 1 ? 'territory' : 'territories'} · Edit name, type, and description for each. Each row saves independently.
+          {territoryCount} {territoryCount === 1 ? 'territory' : 'territories'} · Add, edit, or delete territories and sub-territories. Each row saves independently.
         </p>
       </div>
 
@@ -86,6 +86,7 @@ export default async function EditMapPage({ params }) {
       <MapEditForm
         territories={territories || []}
         factions={factions || []}
+        campaignId={campaign.id}
         campaignSlug={slug}
       />
     </div>
