@@ -60,69 +60,69 @@ export default function BattleLogForm({ campaign, territories, factions, members
   const winnerIsDifferent = winnerFactionId && winnerFactionId !== currentController;
 
   // ── Influence update helper ──────────────────────────────────────────────────
+  // Win: winner +3, loser unchanged. Draw: both +1. Loss: no effect.
   async function updateInfluence() {
     if (!territoryId || !attackerFactionId || !defenderFactionId || !result) return;
 
-    // Fetch current influence for both factions in this territory
-    const { data: current } = await supabase
+    // Determine who (if anyone) gains influence
+    let gainerId = null;
+    let gainAmount = 0;
+    let secondGainerId = null;
+
+    if (result === 'attacker') {
+      gainerId   = attackerFactionId;
+      gainAmount = 3;
+    } else if (result === 'defender') {
+      gainerId   = defenderFactionId;
+      gainAmount = 3;
+    } else if (result === 'draw') {
+      gainerId       = attackerFactionId;
+      secondGainerId = defenderFactionId;
+      gainAmount     = 1;
+    }
+
+    if (!gainerId) return;
+
+    // Fetch current influence for the gaining faction(s)
+    const factionIds = [gainerId, secondGainerId].filter(Boolean);
+    const { data: current, error: fetchError } = await supabase
       .from('territory_influence')
       .select('*')
       .eq('territory_id', territoryId)
-      .in('faction_id', [attackerFactionId, defenderFactionId]);
+      .in('faction_id', factionIds);
+
+    if (fetchError) {
+      console.error('Influence fetch error:', fetchError);
+      return;
+    }
 
     const getPoints = (factionId) =>
       current?.find(i => i.faction_id === factionId)?.influence_points ?? 0;
 
-    const updates = [];
+    const updates = [
+      {
+        campaign_id:      campaign.id,
+        territory_id:     territoryId,
+        faction_id:       gainerId,
+        influence_points: getPoints(gainerId) + gainAmount,
+      },
+    ];
 
-    if (result === 'attacker') {
-      // Attacker wins: +3 for winner, -2 (min 0) for loser
+    if (secondGainerId) {
       updates.push({
         campaign_id:      campaign.id,
         territory_id:     territoryId,
-        faction_id:       attackerFactionId,
-        influence_points: getPoints(attackerFactionId) + 3,
-      });
-      updates.push({
-        campaign_id:      campaign.id,
-        territory_id:     territoryId,
-        faction_id:       defenderFactionId,
-        influence_points: Math.max(0, getPoints(defenderFactionId) - 2),
-      });
-    } else if (result === 'defender') {
-      // Defender wins: +3 for winner, -2 (min 0) for loser
-      updates.push({
-        campaign_id:      campaign.id,
-        territory_id:     territoryId,
-        faction_id:       defenderFactionId,
-        influence_points: getPoints(defenderFactionId) + 3,
-      });
-      updates.push({
-        campaign_id:      campaign.id,
-        territory_id:     territoryId,
-        faction_id:       attackerFactionId,
-        influence_points: Math.max(0, getPoints(attackerFactionId) - 2),
-      });
-    } else if (result === 'draw') {
-      // Draw: both factions gain +1
-      updates.push({
-        campaign_id:      campaign.id,
-        territory_id:     territoryId,
-        faction_id:       attackerFactionId,
-        influence_points: getPoints(attackerFactionId) + 1,
-      });
-      updates.push({
-        campaign_id:      campaign.id,
-        territory_id:     territoryId,
-        faction_id:       defenderFactionId,
-        influence_points: getPoints(defenderFactionId) + 1,
+        faction_id:       secondGainerId,
+        influence_points: getPoints(secondGainerId) + gainAmount,
       });
     }
 
-    if (updates.length > 0) {
-      await supabase
-        .from('territory_influence')
-        .upsert(updates, { onConflict: 'territory_id,faction_id' });
+    const { error: upsertError } = await supabase
+      .from('territory_influence')
+      .upsert(updates, { onConflict: 'territory_id,faction_id' });
+
+    if (upsertError) {
+      console.error('Influence upsert error:', upsertError);
     }
   }
 
@@ -238,7 +238,7 @@ export default function BattleLogForm({ campaign, territories, factions, members
             <p style={hintStyle}>
               {result === 'draw'
                 ? '⬡ Both factions will gain +1 influence here.'
-                : `⬡ ${result === 'attacker' ? factions.find(f => f.id === attackerFactionId)?.name || 'Winner' : factions.find(f => f.id === defenderFactionId)?.name || 'Winner'} will gain +3 influence · loser loses 2.`
+                : `⬡ ${result === 'attacker' ? factions.find(f => f.id === attackerFactionId)?.name || 'Winner' : factions.find(f => f.id === defenderFactionId)?.name || 'Winner'} will gain +3 influence here.`
               }
             </p>
           )}

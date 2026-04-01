@@ -176,7 +176,7 @@ export default async function TerritoryPage({ params }) {
               Territorial Influence
             </h2>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-              Earned through battles fought here. Win: +3 · Draw: +1 · Loss: −2
+              Earned through battles fought here. Win: +3 · Draw: +1 · Loss: no change
             </p>
           </div>
           {totalInfluence > 0 && (
