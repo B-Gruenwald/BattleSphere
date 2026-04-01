@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import LogoutButton from './components/LogoutButton';
 
 export const metadata = {
-  title: 'Warzones',
+  title: 'BattleSphere',
   description: 'Organise and track narrative wargaming campaigns',
 };
 
@@ -47,7 +47,7 @@ async function NavBar() {
         textTransform: 'uppercase',
         textDecoration: 'none',
       }}>
-        Warzones
+        BattleSphere
       </Link>
 
       <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
@@ -90,7 +90,7 @@ export default function RootLayout({ children }) {
           letterSpacing: '0.16em',
           textTransform: 'uppercase',
         }}>
-          Warzones · Narrative Campaign Platform · Early Access
+          BattleSphere · Narrative Campaign Platform · Early Access
         </footer>
       </body>
     </html>

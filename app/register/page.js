@@ -70,7 +70,7 @@ export default function RegisterPage() {
             color: 'var(--text-gold)',
             marginBottom: '0.75rem',
           }}>
-            Join Warzones
+            Join BattleSphere
           </p>
           <h1 style={{ fontSize: '2rem', fontWeight: '700', letterSpacing: '0.06em' }}>
             Create Account

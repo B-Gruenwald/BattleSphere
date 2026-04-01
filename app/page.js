@@ -49,7 +49,7 @@ export default async function HomePage() {
           backgroundClip: 'text',
           lineHeight: 1.05,
         }}>
-          Warzones
+          BattleSphere
         </h1>
 
         <p style={{
