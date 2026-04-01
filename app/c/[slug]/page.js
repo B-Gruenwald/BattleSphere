@@ -284,6 +284,9 @@ export default async function CampaignDashboard({ params }) {
         <Link href={`/c/${slug}/events`}>
           <button className="btn-secondary">Campaign Events</button>
         </Link>
+        <Link href={`/c/${slug}/chronicle`}>
+          <button className="btn-secondary">Chronicle</button>
+        </Link>
       </div>
     </div>
   );
