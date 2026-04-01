@@ -2,6 +2,12 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 
+const STATUS_COLOURS = {
+  upcoming: '#6a8fc7',
+  active:   '#b78c40',
+  resolved: '#5a5445',
+};
+
 export default async function CampaignDashboard({ params }) {
   const { slug } = await params;
   const supabase = await createClient();
@@ -55,6 +61,15 @@ export default async function CampaignDashboard({ params }) {
     .from('battles')
     .select('attacker_faction_id, defender_faction_id, winner_faction_id')
     .eq('campaign_id', campaign.id);
+
+  // Fetch active + upcoming events (max 5 shown on dashboard)
+  const { data: activeEvents } = await supabase
+    .from('campaign_events')
+    .select('*')
+    .eq('campaign_id', campaign.id)
+    .in('status', ['active', 'upcoming'])
+    .order('created_at', { ascending: false })
+    .limit(5);
 
   const isOrganiser = campaign.organiser_id === user.id;
 
@@ -190,19 +205,62 @@ export default async function CampaignDashboard({ params }) {
           )}
         </div>
 
-        {/* Active events */}
+        {/* Active Events */}
         <div style={{ border: '1px solid var(--border-dim)', padding: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
-              Active Events
-            </h2>
+            <Link href={`/c/${slug}/events`} style={{ textDecoration: 'none' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+                Active Events
+              </h2>
+            </Link>
+            {isOrganiser && (
+              <Link href={`/c/${slug}/events/new`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
+                Post event →
+              </Link>
+            )}
+            {!isOrganiser && (activeEvents?.length ?? 0) > 0 && (
+              <Link href={`/c/${slug}/events`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
+                View all →
+              </Link>
+            )}
           </div>
-          <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-            <div style={{ width: '6px', height: '6px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1rem', opacity: 0.4 }} />
-            <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
-              No active events.
-            </p>
-          </div>
+
+          {activeEvents && activeEvents.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              {activeEvents.map(ev => {
+                const statusColour = STATUS_COLOURS[ev.status] ?? 'var(--text-muted)';
+                const date = new Date(ev.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                return (
+                  <Link key={ev.id} href={`/c/${slug}/events/${ev.id}`} style={{ textDecoration: 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', paddingBottom: '0.85rem', borderBottom: '1px solid var(--border-dim)', cursor: 'pointer' }}>
+                      <div style={{ width: '6px', height: '6px', background: statusColour, transform: 'rotate(45deg)', flexShrink: 0, marginTop: '0.45rem' }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {ev.title}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: statusColour, fontFamily: 'var(--font-display)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: '0.15rem' }}>
+                          {ev.status}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0 }}>{date} →</span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+              <div style={{ width: '6px', height: '6px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1rem', opacity: 0.4 }} />
+              <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
+                No active events.
+              </p>
+              {isOrganiser && (
+                <Link href={`/c/${slug}/events/new`}>
+                  <button className="btn-secondary" style={{ marginTop: '1rem', fontSize: '0.58rem' }}>Post an Event</button>
+                </Link>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -222,6 +280,9 @@ export default async function CampaignDashboard({ params }) {
         </Link>
         <Link href={`/c/${slug}/players`}>
           <button className="btn-secondary">View Players</button>
+        </Link>
+        <Link href={`/c/${slug}/events`}>
+          <button className="btn-secondary">Campaign Events</button>
         </Link>
       </div>
     </div>

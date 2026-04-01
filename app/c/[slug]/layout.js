@@ -17,6 +17,7 @@ async function CampaignNav({ slug }) {
     { label: 'Factions', href: `/c/${slug}/factions` },
     { label: 'Players',  href: `/c/${slug}/players` },
     { label: 'Battles',  href: `/c/${slug}/battles` },
+    { label: 'Events',   href: `/c/${slug}/events` },
   ];
 
   return (
