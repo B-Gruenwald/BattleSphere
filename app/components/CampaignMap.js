@@ -60,7 +60,7 @@ const GOLD = 'rgba(183,140,64,1)';
 const GOLD_DIM = 'rgba(183,140,64,0.35)';
 const GOLD_MID = 'rgba(183,140,64,0.5)';
 
-export default function CampaignMap({ territories, factions, campaignSlug, setting }) {
+export default function CampaignMap({ territories, factions, influenceData = [], campaignSlug, setting }) {
   const router = useRouter();
   const [hoveredId, setHoveredId] = useState(null);
   const [tooltip, setTooltip]     = useState(null); // { x, y, territory }
@@ -74,6 +74,17 @@ export default function CampaignMap({ territories, factions, campaignSlug, setti
 
   // Build a quick lookup: faction id → faction colour
   const factionColour = Object.fromEntries((factions || []).map(f => [f.id, f.colour]));
+
+  // For a given territory, return the faction id with the highest influence (if any > 0),
+  // falling back to controlling_faction_id, then null.
+  function dominantFactionId(territory) {
+    const rows = influenceData.filter(i => i.territory_id === territory.id && i.influence_points > 0);
+    if (rows.length > 0) {
+      rows.sort((a, b) => b.influence_points - a.influence_points);
+      return rows[0].faction_id;
+    }
+    return territory.controlling_faction_id || null;
+  }
 
   function handleNodeClick(t) {
     router.push(`/c/${campaignSlug}/territory/${t.id}`);
@@ -173,18 +184,11 @@ export default function CampaignMap({ territories, factions, campaignSlug, setti
         const cxN = t.x_pos;
         const cyN = t.y_pos;
 
-        // Use the controlling faction's colour, or default gold for uncontrolled
-        const baseColour = t.controlling_faction_id
-          ? factionColour[t.controlling_faction_id] || GOLD
-          : GOLD;
-        const dimColour  = t.controlling_faction_id
-          ? `${factionColour[t.controlling_faction_id] || GOLD}88`
-          : GOLD_DIM;
-        const ringColour = isHov
-          ? baseColour
-          : t.controlling_faction_id
-            ? `${baseColour}88`
-            : GOLD_DIM;
+        // Colour by dominant influence faction, then controlling faction, then neutral gold
+        const domId = dominantFactionId(t);
+        const baseColour = domId ? factionColour[domId] || GOLD : GOLD;
+        const dimColour  = domId ? `${baseColour}88` : GOLD_DIM;
+        const ringColour = isHov ? baseColour : domId ? `${baseColour}88` : GOLD_DIM;
         const glowColour = `${baseColour}15`;
 
         return (
@@ -205,8 +209,8 @@ export default function CampaignMap({ territories, factions, campaignSlug, setti
               />
             )}
 
-            {/* Controlled territory: coloured outer ring */}
-            {t.controlling_faction_id && !isHov && (
+            {/* Outer accent ring when a faction is dominant */}
+            {domId && !isHov && (
               <circle cx={cx} cy={cy} r="3.6%"
                 fill="none"
                 stroke={`${baseColour}50`}
@@ -221,20 +225,15 @@ export default function CampaignMap({ territories, factions, campaignSlug, setti
               strokeWidth={isHov ? '0.5' : '0.35'}
               style={{ transition: 'stroke 0.15s, stroke-width 0.15s' }}
             />
-            {/* Inner fill — tinted by faction colour when controlled */}
+            {/* Inner fill — tinted by dominant faction colour */}
             <circle cx={cx} cy={cy} r="2.2%"
-              fill={isHov
-                ? `${baseColour}25`
-                : t.controlling_faction_id
-                  ? `${baseColour}12`
-                  : 'rgba(183,140,64,0.07)'
-              }
+              fill={isHov ? `${baseColour}25` : domId ? `${baseColour}12` : 'rgba(183,140,64,0.07)'}
               style={{ transition: 'fill 0.15s' }}
             />
-            {/* Diamond icon — uses faction colour when controlled */}
+            {/* Diamond icon — uses dominant faction colour */}
             <DiamondIcon
               cx={cxN} cy={cyN} size={1.4}
-              fill={isHov ? baseColour : t.controlling_faction_id ? dimColour : GOLD_MID}
+              fill={isHov ? baseColour : domId ? dimColour : GOLD_MID}
               stroke="none"
             />
             {/* Territory name */}
@@ -287,8 +286,8 @@ export default function CampaignMap({ territories, factions, campaignSlug, setti
             fontStyle="italic"
             style={{ userSelect: 'none' }}
           >
-            {tooltip.territory.controlling_faction_id
-              ? factions?.find(f => f.id === tooltip.territory.controlling_faction_id)?.name || 'Controlled'
+            {dominantFactionId(tooltip.territory)
+              ? factions?.find(f => f.id === dominantFactionId(tooltip.territory))?.name || 'Controlled'
               : tooltip.territory.type || 'Click to view'
             }
           </text>

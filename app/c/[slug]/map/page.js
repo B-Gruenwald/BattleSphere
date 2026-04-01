@@ -30,6 +30,12 @@ export default async function MapPage({ params }) {
     .select('*')
     .eq('campaign_id', campaign.id);
 
+  // Fetch influence data so the map can colour nodes by dominant faction
+  const { data: influenceData } = await supabase
+    .from('territory_influence')
+    .select('*')
+    .eq('campaign_id', campaign.id);
+
   // Check if current user is admin
   const { data: membership } = await supabase
     .from('campaign_members')
@@ -116,6 +122,7 @@ export default async function MapPage({ params }) {
           <CampaignMap
             territories={territories || []}
             factions={factions || []}
+            influenceData={influenceData || []}
             campaignSlug={slug}
             setting={campaign.setting}
           />
