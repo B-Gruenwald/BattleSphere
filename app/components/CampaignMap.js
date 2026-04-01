@@ -3,9 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-// Build adjacency connections for top-level territories arranged in a circle.
-// Each node connects to its immediate neighbours, plus cross-connections for
-// larger maps to make the network feel alive.
 function buildConnections(nodes) {
   const n = nodes.length;
   if (n < 2) return [];
@@ -14,15 +11,12 @@ function buildConnections(nodes) {
     const key = [Math.min(a, b), Math.max(a, b)].join('-');
     edges.add(key);
   };
-  // Ring connections
   for (let i = 0; i < n; i++) add(i, (i + 1) % n);
-  // Cross-connections for larger maps
   if (n >= 6)  for (let i = 0; i < n; i += 3) add(i, (i + Math.floor(n / 2)) % n);
   if (n >= 10) for (let i = 1; i < n; i += 4) add(i, (i + Math.floor(n / 3)) % n);
   return [...edges].map(k => k.split('-').map(Number));
 }
 
-// Subtle star-field background for Gothic Sci-Fi / Space Opera
 function StarField({ count = 80 }) {
   const stars = Array.from({ length: count }, (_, i) => ({
     cx: ((i * 137.5) % 100),
@@ -39,12 +33,11 @@ function StarField({ count = 80 }) {
   );
 }
 
-// Diamond icon for territory nodes
-function DiamondIcon({ cx, cy, size, fill, stroke, opacity = 1 }) {
+function DiamondIcon({ cx, cy, size, fill }) {
   const h = size * 0.6;
   const w = size * 0.45;
   const points = `${cx},${cy - h} ${cx + w},${cy} ${cx},${cy + h} ${cx - w},${cy}`;
-  return <polygon points={points} fill={fill} stroke={stroke} strokeWidth="0.4" opacity={opacity} />;
+  return <polygon points={points} fill={fill} strokeWidth="0" />;
 }
 
 const SETTING_BG = {
@@ -55,8 +48,7 @@ const SETTING_BG = {
   'Custom':        { bg: '#060608', grid: 'rgba(183,140,64,0.04)' },
 };
 
-// Default gold colour for uncontrolled/unknown territories
-const GOLD = 'rgba(183,140,64,1)';
+const GOLD     = 'rgba(183,140,64,1)';
 const GOLD_DIM = 'rgba(183,140,64,0.35)';
 const GOLD_MID = 'rgba(183,140,64,0.5)';
 
@@ -65,17 +57,16 @@ export default function CampaignMap({ territories, factions, influenceData = [],
   const [hoveredId, setHoveredId] = useState(null);
   const [tooltip, setTooltip]     = useState(null); // { x, y, territory }
 
-  const topLevel = territories.filter(t => t.depth === 1);
-  const subLevel  = territories.filter(t => t.depth === 2);
+  const topLevel   = territories.filter(t => t.depth === 1);
+  const subLevel   = territories.filter(t => t.depth === 2);
   const connections = buildConnections(topLevel);
 
-  const theme = SETTING_BG[setting] || SETTING_BG['Custom'];
+  const theme   = SETTING_BG[setting] || SETTING_BG['Custom'];
   const isScifi = setting === 'Gothic Sci-Fi' || setting === 'Space Opera';
 
-  // Build a quick lookup: faction id → faction colour
   const factionColour = Object.fromEntries((factions || []).map(f => [f.id, f.colour]));
 
-  // For a given territory, return the faction id with the highest influence (if any > 0),
+  // Return the faction id with the highest influence for a territory,
   // falling back to controlling_faction_id, then null.
   function dominantFactionId(territory) {
     const rows = influenceData.filter(i => i.territory_id === territory.id && i.influence_points > 0);
@@ -84,6 +75,13 @@ export default function CampaignMap({ territories, factions, influenceData = [],
       return rows[0].faction_id;
     }
     return territory.controlling_faction_id || null;
+  }
+
+  // Sorted influence rows for a territory (factions with > 0 points only)
+  function influenceRows(territory) {
+    return influenceData
+      .filter(i => i.territory_id === territory.id && i.influence_points > 0)
+      .sort((a, b) => b.influence_points - a.influence_points);
   }
 
   function handleNodeClick(t) {
@@ -99,6 +97,123 @@ export default function CampaignMap({ territories, factions, influenceData = [],
     });
   }
 
+  // ── Tooltip renderer ─────────────────────────────────────────────────────────
+  function renderTooltip() {
+    if (!tooltip) return null;
+    const t        = tooltip.territory;
+    const domId    = dominantFactionId(t);
+    const domName  = domId ? factions?.find(f => f.id === domId)?.name : null;
+    const rows     = influenceRows(t);
+
+    // Tooltip dimensions (SVG viewBox units, not px)
+    const TW      = 36;                           // tooltip width
+    const ROW_H   = 2.5;                          // height per influence row
+    const TH      = 8.5 + Math.max(1, rows.length) * ROW_H; // dynamic height
+
+    // Position: prefer right of cursor, clamp to viewport; appear above cursor
+    const TX = Math.min(tooltip.x + 2, 100 - TW - 1);
+    const TY = Math.max(1, tooltip.y - TH - 2);
+
+    // Y positions for each text element inside the box
+    const nameY   = TY + 3.0;
+    const typeY   = TY + 5.0;
+    const divY    = TY + 6.2;
+    const firstRowY = TY + 8.0;
+
+    return (
+      <g style={{ pointerEvents: 'none' }}>
+        {/* Background box */}
+        <rect
+          x={`${TX}%`} y={`${TY}%`}
+          width={`${TW}%`} height={`${TH}%`}
+          fill="rgba(8,8,12,0.97)"
+          stroke="rgba(183,140,64,0.35)"
+          strokeWidth="0.25"
+          rx="0.4"
+        />
+
+        {/* Territory name */}
+        <text
+          x={`${TX + 2}%`} y={`${nameY}%`}
+          fill="rgba(183,140,64,0.95)"
+          fontSize="1.9"
+          fontFamily="var(--font-display, sans-serif)"
+          letterSpacing="0.1em"
+          style={{ userSelect: 'none', textTransform: 'uppercase' }}
+        >
+          {t.name.length > 22 ? t.name.slice(0, 20) + '…' : t.name}
+        </text>
+
+        {/* Type + dominant faction */}
+        <text
+          x={`${TX + 2}%`} y={`${typeY}%`}
+          fill="rgba(200,180,140,0.45)"
+          fontSize="1.5"
+          fontFamily="serif"
+          fontStyle="italic"
+          style={{ userSelect: 'none' }}
+        >
+          {[t.type, domName].filter(Boolean).join(' · ') || 'No control'}
+        </text>
+
+        {/* Divider */}
+        <line
+          x1={`${TX + 1.5}%`} y1={`${divY}%`}
+          x2={`${TX + TW - 1.5}%`} y2={`${divY}%`}
+          stroke="rgba(183,140,64,0.12)" strokeWidth="0.2"
+        />
+
+        {/* Influence rows */}
+        {rows.length > 0 ? rows.map((row, i) => {
+          const faction = factions?.find(f => f.id === row.faction_id);
+          if (!faction) return null;
+          const ry = firstRowY + i * ROW_H;
+          return (
+            <g key={row.faction_id}>
+              {/* Faction colour dot */}
+              <DiamondIcon
+                cx={TX + 3.2} cy={ry - 0.5} size={0.9}
+                fill={faction.colour}
+              />
+              {/* Faction name */}
+              <text
+                x={`${TX + 5}%`} y={`${ry}%`}
+                fill="rgba(220,200,160,0.8)"
+                fontSize="1.55"
+                fontFamily="var(--font-display, sans-serif)"
+                style={{ userSelect: 'none' }}
+              >
+                {faction.name.length > 14 ? faction.name.slice(0, 12) + '…' : faction.name}
+              </text>
+              {/* Influence points — right-aligned */}
+              <text
+                x={`${TX + TW - 2.5}%`} y={`${ry}%`}
+                textAnchor="end"
+                fill={faction.colour}
+                fontSize="1.6"
+                fontFamily="monospace"
+                style={{ userSelect: 'none' }}
+              >
+                {row.influence_points}
+              </text>
+            </g>
+          );
+        }) : (
+          <text
+            x={`${TX + 2}%`} y={`${firstRowY}%`}
+            fill="rgba(200,180,140,0.3)"
+            fontSize="1.45"
+            fontFamily="serif"
+            fontStyle="italic"
+            style={{ userSelect: 'none' }}
+          >
+            No battles fought here yet
+          </text>
+        )}
+      </g>
+    );
+  }
+
   return (
     <svg
       width="100%"
@@ -108,11 +223,10 @@ export default function CampaignMap({ territories, factions, influenceData = [],
       style={{ background: theme.bg, display: 'block', cursor: 'default' }}
       onMouseLeave={() => { setHoveredId(null); setTooltip(null); }}
     >
-      {/* Background: star field or grid */}
+      {/* Background */}
       {isScifi ? (
         <StarField count={120} />
       ) : (
-        // Subtle grid lines for fantasy/historical
         <>
           {Array.from({ length: 10 }, (_, i) => (
             <line key={`h${i}`} x1="0" y1={`${i * 10}%`} x2="100%" y2={`${i * 10}%`} stroke={theme.grid} strokeWidth="0.3" />
@@ -123,7 +237,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
         </>
       )}
 
-      {/* Outer decorative ring */}
+      {/* Outer decorative rings */}
       <circle cx="50%" cy="50%" r="44%" fill="none" stroke="rgba(183,140,64,0.06)" strokeWidth="0.4" />
       <circle cx="50%" cy="50%" r="42%" fill="none" stroke="rgba(183,140,64,0.04)" strokeWidth="0.2" />
 
@@ -146,7 +260,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
         );
       })}
 
-      {/* Sub-territory connectors (thin lines from parent to child) */}
+      {/* Sub-territory connectors */}
       {subLevel.map(sub => {
         const parent = topLevel.find(t => t.id === sub.parent_id);
         if (!parent) return null;
@@ -161,31 +275,66 @@ export default function CampaignMap({ territories, factions, influenceData = [],
         );
       })}
 
-      {/* Sub-territory nodes (smaller, dimmer) */}
+      {/* ── Sub-territory nodes ── */}
       {subLevel.map(sub => {
-        const subColour = sub.controlling_faction_id
-          ? factionColour[sub.controlling_faction_id] || GOLD_DIM
-          : 'rgba(183,140,64,0.25)';
+        const isHov    = hoveredId === sub.id;
+        const domId    = dominantFactionId(sub);
+        const subColour = domId
+          ? factionColour[domId] || GOLD_DIM
+          : 'rgba(183,140,64,0.3)';
+
         return (
-          <g key={sub.id} style={{ cursor: 'pointer' }} onClick={() => handleNodeClick(sub)}>
+          <g
+            key={sub.id}
+            style={{ cursor: 'pointer' }}
+            onClick={() => handleNodeClick(sub)}
+            onMouseEnter={() => setHoveredId(sub.id)}
+            onMouseLeave={() => { setHoveredId(null); setTooltip(null); }}
+            onMouseMove={e => handleMouseMove(e, sub)}
+          >
+            {/* Hover glow */}
+            {isHov && (
+              <circle
+                cx={`${sub.x_pos}%`} cy={`${sub.y_pos}%`} r="2.2%"
+                fill={`${subColour}18`} stroke={`${subColour}50`} strokeWidth="0.25"
+              />
+            )}
+            {/* Node circle */}
             <circle
               cx={`${sub.x_pos}%`} cy={`${sub.y_pos}%`} r="1.2%"
-              fill={`${subColour}20`} stroke={subColour} strokeWidth="0.25"
+              fill={isHov ? `${subColour}35` : `${subColour}20`}
+              stroke={isHov ? subColour : `${subColour}90`}
+              strokeWidth={isHov ? '0.4' : '0.25'}
+              style={{ transition: 'stroke 0.15s' }}
             />
+            {/* Name label — only visible on hover */}
+            {isHov && (
+              <text
+                x={`${sub.x_pos}%`}
+                y={`${sub.y_pos + 2.2}%`}
+                textAnchor="middle"
+                fill="rgba(220,200,160,0.75)"
+                fontSize="1.6"
+                fontFamily="var(--font-display, sans-serif)"
+                letterSpacing="0.06em"
+                style={{ userSelect: 'none', textTransform: 'uppercase' }}
+              >
+                {sub.name.length > 14 ? sub.name.slice(0, 12) + '…' : sub.name}
+              </text>
+            )}
           </g>
         );
       })}
 
-      {/* Top-level territory nodes */}
+      {/* ── Top-level territory nodes ── */}
       {topLevel.map(t => {
         const isHov = hoveredId === t.id;
-        const cx = `${t.x_pos}%`;
-        const cy = `${t.y_pos}%`;
-        const cxN = t.x_pos;
-        const cyN = t.y_pos;
+        const cx    = `${t.x_pos}%`;
+        const cy    = `${t.y_pos}%`;
+        const cxN   = t.x_pos;
+        const cyN   = t.y_pos;
 
-        // Colour by dominant influence faction, then controlling faction, then neutral gold
-        const domId = dominantFactionId(t);
+        const domId      = dominantFactionId(t);
         const baseColour = domId ? factionColour[domId] || GOLD : GOLD;
         const dimColour  = domId ? `${baseColour}88` : GOLD_DIM;
         const ringColour = isHov ? baseColour : domId ? `${baseColour}88` : GOLD_DIM;
@@ -200,43 +349,30 @@ export default function CampaignMap({ territories, factions, influenceData = [],
             onMouseLeave={() => { setHoveredId(null); setTooltip(null); }}
             onMouseMove={e => handleMouseMove(e, t)}
           >
-            {/* Glow ring when hovered */}
             {isHov && (
               <circle cx={cx} cy={cy} r="4.5%"
-                fill={glowColour}
-                stroke={`${baseColour}40`}
-                strokeWidth="0.3"
+                fill={glowColour} stroke={`${baseColour}40`} strokeWidth="0.3"
               />
             )}
-
-            {/* Outer accent ring when a faction is dominant */}
             {domId && !isHov && (
               <circle cx={cx} cy={cy} r="3.6%"
-                fill="none"
-                stroke={`${baseColour}50`}
-                strokeWidth="0.5"
+                fill="none" stroke={`${baseColour}50`} strokeWidth="0.5"
               />
             )}
-
-            {/* Outer ring */}
             <circle cx={cx} cy={cy} r="3.2%"
               fill="rgba(10,10,15,0.9)"
               stroke={ringColour}
               strokeWidth={isHov ? '0.5' : '0.35'}
               style={{ transition: 'stroke 0.15s, stroke-width 0.15s' }}
             />
-            {/* Inner fill — tinted by dominant faction colour */}
             <circle cx={cx} cy={cy} r="2.2%"
               fill={isHov ? `${baseColour}25` : domId ? `${baseColour}12` : 'rgba(183,140,64,0.07)'}
               style={{ transition: 'fill 0.15s' }}
             />
-            {/* Diamond icon — uses dominant faction colour */}
             <DiamondIcon
               cx={cxN} cy={cyN} size={1.4}
               fill={isHov ? baseColour : domId ? dimColour : GOLD_MID}
-              stroke="none"
             />
-            {/* Territory name */}
             <text
               x={cx} y={`${cyN + 5}%`}
               textAnchor="middle"
@@ -252,47 +388,8 @@ export default function CampaignMap({ territories, factions, influenceData = [],
         );
       })}
 
-      {/* Tooltip */}
-      {tooltip && (
-        <g>
-          <rect
-            x={`${Math.min(tooltip.x + 2, 62)}%`}
-            y={`${Math.min(tooltip.y - 10, 80)}%`}
-            width="36%" height="8%"
-            fill="rgba(10,10,15,0.95)"
-            stroke="rgba(183,140,64,0.4)"
-            strokeWidth="0.3"
-            rx="0.5"
-          />
-          <text
-            x={`${Math.min(tooltip.x + 20, 80)}%`}
-            y={`${Math.min(tooltip.y - 5.5, 85)}%`}
-            textAnchor="middle"
-            fill="rgba(183,140,64,0.9)"
-            fontSize="1.8"
-            fontFamily="var(--font-display, sans-serif)"
-            letterSpacing="0.1em"
-            style={{ userSelect: 'none', textTransform: 'uppercase' }}
-          >
-            {tooltip.territory.name}
-          </text>
-          <text
-            x={`${Math.min(tooltip.x + 20, 80)}%`}
-            y={`${Math.min(tooltip.y - 3, 87)}%`}
-            textAnchor="middle"
-            fill="rgba(200,180,140,0.5)"
-            fontSize="1.5"
-            fontFamily="serif"
-            fontStyle="italic"
-            style={{ userSelect: 'none' }}
-          >
-            {dominantFactionId(tooltip.territory)
-              ? factions?.find(f => f.id === dominantFactionId(tooltip.territory))?.name || 'Controlled'
-              : tooltip.territory.type || 'Click to view'
-            }
-          </text>
-        </g>
-      )}
+      {/* ── Tooltip (rendered last so it sits on top) ── */}
+      {renderTooltip()}
 
       {/* Centre compass rose */}
       <g opacity="0.12">
