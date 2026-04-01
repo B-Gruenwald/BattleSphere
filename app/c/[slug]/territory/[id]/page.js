@@ -68,6 +68,12 @@ export default async function TerritoryPage({ params }) {
     .select('*')
     .eq('territory_id', territory.id);
 
+  // Fetch influence for child territories (used for 0.5× aggregation on top-level pages)
+  const childIds = (children || []).map(c => c.id);
+  const { data: childInfluence } = childIds.length > 0
+    ? await supabase.from('territory_influence').select('*').in('territory_id', childIds)
+    : { data: [] };
+
   const factionMap = Object.fromEntries((factions || []).map(f => [f.id, f]));
   const controllingFaction = territory.controlling_faction_id
     ? factionMap[territory.controlling_faction_id]
@@ -82,11 +88,19 @@ export default async function TerritoryPage({ params }) {
   const statusColour = controllingFaction?.colour || 'var(--border-dim)';
   const statusLabel = controllingFaction?.name || 'Contested';
 
-  // Influence helpers
-  const getInfluence = (factionId) =>
-    (influence || []).find(i => i.faction_id === factionId)?.influence_points ?? 0;
+  // Influence helpers — for top-level territories, add child contributions at 0.5×
+  const isTopLevel = territory.depth === 1;
+  const hasChildInfluence = isTopLevel && (childInfluence || []).some(i => i.influence_points > 0);
+
+  const getInfluence = (factionId) => {
+    const direct = (influence || []).find(i => i.faction_id === factionId)?.influence_points ?? 0;
+    if (!isTopLevel) return direct;
+    const fromChildren = (childInfluence || [])
+      .filter(i => i.faction_id === factionId)
+      .reduce((sum, i) => sum + i.influence_points * 0.5, 0);
+    return direct + fromChildren;
+  };
   const totalInfluence = (factions || []).reduce((sum, f) => sum + getInfluence(f.id), 0);
-  const factionsWithInfluence = (factions || []).filter(f => getInfluence(f.id) > 0);
 
   return (
     <div style={{ padding: '3rem 2rem', maxWidth: '900px', margin: '0 auto' }}>
@@ -177,6 +191,9 @@ export default async function TerritoryPage({ params }) {
             </h2>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
               Earned through battles fought here. Win: +3 · Draw: +1 · Loss: no change
+              {hasChildInfluence && (
+                <span> · Sub-territory influence counts at ×0.5</span>
+              )}
             </p>
           </div>
           {totalInfluence > 0 && (

@@ -66,22 +66,52 @@ export default function CampaignMap({ territories, factions, influenceData = [],
 
   const factionColour = Object.fromEntries((factions || []).map(f => [f.id, f.colour]));
 
-  // Return the faction id with the highest influence for a territory,
+  // Build a map of { faction_id → aggregated influence } for a territory.
+  // For top-level territories (depth 1), sub-territory influence counts at 0.5x.
+  function aggregatedInfluenceMap(territory) {
+    const result = {};
+
+    // Direct influence on this territory
+    influenceData
+      .filter(i => i.territory_id === territory.id)
+      .forEach(i => {
+        result[i.faction_id] = (result[i.faction_id] || 0) + i.influence_points;
+      });
+
+    // Sub-territory contributions at 0.5× (top-level only)
+    if (territory.depth === 1) {
+      const subs = territories.filter(t => t.parent_id === territory.id);
+      subs.forEach(sub => {
+        influenceData
+          .filter(i => i.territory_id === sub.id)
+          .forEach(i => {
+            result[i.faction_id] = (result[i.faction_id] || 0) + i.influence_points * 0.5;
+          });
+      });
+    }
+
+    return result;
+  }
+
+  // Return the faction id with the highest aggregated influence,
   // falling back to controlling_faction_id, then null.
   function dominantFactionId(territory) {
-    const rows = influenceData.filter(i => i.territory_id === territory.id && i.influence_points > 0);
-    if (rows.length > 0) {
-      rows.sort((a, b) => b.influence_points - a.influence_points);
-      return rows[0].faction_id;
+    const aggMap  = aggregatedInfluenceMap(territory);
+    const entries = Object.entries(aggMap).filter(([, pts]) => pts > 0);
+    if (entries.length > 0) {
+      entries.sort((a, b) => b[1] - a[1]);
+      return entries[0][0];
     }
     return territory.controlling_faction_id || null;
   }
 
-  // Sorted influence rows for a territory (factions with > 0 points only)
+  // Sorted influence rows for tooltip display (aggregated, factions with > 0 only)
   function influenceRows(territory) {
-    return influenceData
-      .filter(i => i.territory_id === territory.id && i.influence_points > 0)
-      .sort((a, b) => b.influence_points - a.influence_points);
+    const aggMap = aggregatedInfluenceMap(territory);
+    return Object.entries(aggMap)
+      .filter(([, pts]) => pts > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([faction_id, influence_points]) => ({ faction_id, influence_points }));
   }
 
   function handleNodeClick(t) {
@@ -105,10 +135,17 @@ export default function CampaignMap({ territories, factions, influenceData = [],
     const domName  = domId ? factions?.find(f => f.id === domId)?.name : null;
     const rows     = influenceRows(t);
 
+    // Does this territory have sub-territory contributions?
+    const hasSubs  = t.depth === 1 && territories.some(s => s.parent_id === t.id);
+    const hasSubInfluence = hasSubs && influenceData.some(i =>
+      territories.filter(s => s.parent_id === t.id).map(s => s.id).includes(i.territory_id) && i.influence_points > 0
+    );
+
     // Tooltip dimensions (SVG viewBox units, not px)
-    const TW      = 36;                           // tooltip width
-    const ROW_H   = 2.5;                          // height per influence row
-    const TH      = 8.5 + Math.max(1, rows.length) * ROW_H; // dynamic height
+    const TW      = 36;
+    const ROW_H   = 2.5;
+    const FOOT_H  = hasSubInfluence ? 2.2 : 0;   // footnote line if sub-contributions present
+    const TH      = 8.5 + Math.max(1, rows.length) * ROW_H + FOOT_H;
 
     // Position: prefer right of cursor, clamp to viewport; appear above cursor
     const TX = Math.min(tooltip.x + 2, 100 - TW - 1);
@@ -208,6 +245,20 @@ export default function CampaignMap({ territories, factions, influenceData = [],
             style={{ userSelect: 'none' }}
           >
             No battles fought here yet
+          </text>
+        )}
+        {/* Sub-territory footnote */}
+        {hasSubInfluence && (
+          <text
+            x={`${TX + TW / 2}%`} y={`${TY + TH - 1.2}%`}
+            textAnchor="middle"
+            fill="rgba(183,140,64,0.25)"
+            fontSize="1.3"
+            fontFamily="serif"
+            fontStyle="italic"
+            style={{ userSelect: 'none' }}
+          >
+            incl. sub-territories ×0.5
           </text>
         )}
       </g>
