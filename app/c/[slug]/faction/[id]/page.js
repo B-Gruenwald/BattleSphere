@@ -49,7 +49,7 @@ export default async function FactionDetailPage({ params }) {
     .order('depth')
     .order('name');
 
-  // Players who fight for this faction (campaign_members with faction_id = this faction)
+  // Players who fight for this faction
   const { data: assignedMembers } = await supabase
     .from('campaign_members')
     .select('user_id')
@@ -61,12 +61,23 @@ export default async function FactionDetailPage({ params }) {
     ? await supabase.from('profiles').select('id, username').in('id', memberIds)
     : { data: [] };
 
+  // Achievements for this faction
+  const { data: achievements } = await supabase
+    .from('achievements')
+    .select('*')
+    .eq('campaign_id', campaign.id)
+    .eq('awarded_to_type', 'faction')
+    .eq('awarded_to_faction_id', id)
+    .order('created_at', { ascending: false });
+
   const factionMap = Object.fromEntries((allFactions || []).map(f => [f.id, f]));
 
   // Compute record
   const wins   = (battles || []).filter(b => b.winner_faction_id === id).length;
   const draws  = (battles || []).filter(b => b.winner_faction_id === null).length;
   const losses = (battles || []).length - wins - draws;
+
+  const isOrganiser = campaign.organiser_id === user.id;
 
   // Fetch player profiles for battle display
   const battlePlayerIds = [...new Set(
@@ -120,6 +131,48 @@ export default async function FactionDetailPage({ params }) {
         ))}
       </div>
 
+      {/* Achievements */}
+      {achievements && achievements.length > 0 && (
+        <div style={{ border: '1px solid rgba(183,140,64,0.25)', padding: '1.75rem', marginBottom: '1.5rem', background: 'rgba(183,140,64,0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.25rem' }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+              Achievements
+            </h2>
+            <Link href={`/c/${slug}/achievements`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
+              Hall of Honours →
+            </Link>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+            {achievements.map(a => (
+              <div
+                key={a.id}
+                title={a.description || a.title}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.4rem 0.8rem',
+                  background: 'var(--bg-raised)',
+                  border: '1px solid rgba(183,140,64,0.3)',
+                }}
+              >
+                <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>{a.icon}</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-primary)' }}>{a.title}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Award achievement shortcut for organiser */}
+      {isOrganiser && (
+        <div style={{ marginBottom: '1.5rem', textAlign: 'right' }}>
+          <Link href={`/c/${slug}/achievements/new`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
+            + Award achievement to {faction.name} →
+          </Link>
+        </div>
+      )}
+
       {/* Main grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
 
@@ -153,12 +206,14 @@ export default async function FactionDetailPage({ params }) {
           {playerProfiles && playerProfiles.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {playerProfiles.map(p => (
-                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <div style={{ width: '28px', height: '28px', background: 'var(--surface-2)', border: `1px solid ${faction.colour}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: faction.colour, fontWeight: '700', flexShrink: 0 }}>
-                    {p.username.slice(0, 2).toUpperCase()}
+                <Link key={p.id} href={`/c/${slug}/player/${p.id}`} style={{ textDecoration: 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{ width: '28px', height: '28px', background: 'var(--surface-2)', border: `1px solid ${faction.colour}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: faction.colour, fontWeight: '700', flexShrink: 0 }}>
+                      {p.username.slice(0, 2).toUpperCase()}
+                    </div>
+                    <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>{p.username}</span>
                   </div>
-                  <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>{p.username}</span>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (
@@ -195,10 +250,7 @@ export default async function FactionDetailPage({ params }) {
               return (
                 <Link key={battle.id} href={`/c/${slug}/battle/${battle.id}`} style={{ textDecoration: 'none' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.85rem 0', borderBottom: '1px solid var(--border-dim)', cursor: 'pointer' }}>
-                    {/* Result indicator */}
                     <div style={{ width: '6px', height: '6px', background: resultColour, transform: 'rotate(45deg)', flexShrink: 0 }} />
-
-                    {/* Main info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
                         vs <strong style={{ color: opponent?.colour || 'var(--text-primary)' }}>{opponent?.name ?? 'Unknown'}</strong>
@@ -216,7 +268,6 @@ export default async function FactionDetailPage({ params }) {
                         )}
                       </div>
                     </div>
-
                     <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', flexShrink: 0 }}>{date} →</span>
                   </div>
                 </Link>

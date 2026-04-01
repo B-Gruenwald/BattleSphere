@@ -50,9 +50,19 @@ export default async function PlayerProfilePage({ params }) {
     .or(`attacker_player_id.eq.${userId},defender_player_id.eq.${userId}`)
     .order('created_at', { ascending: false });
 
+  // Fetch achievements for this player
+  const { data: achievements } = await supabase
+    .from('achievements')
+    .select('*')
+    .eq('campaign_id', campaign.id)
+    .eq('awarded_to_type', 'player')
+    .eq('awarded_to_player_id', userId)
+    .order('created_at', { ascending: false });
+
   const factionMap = Object.fromEntries((factions || []).map(f => [f.id, f]));
   const assignedFaction = membership.faction_id ? factionMap[membership.faction_id] : null;
   const isOwnProfile = user.id === userId;
+  const isOrganiser  = campaign.organiser_id === user.id;
 
   // Compute record
   function calcResult(battle) {
@@ -134,6 +144,48 @@ export default async function PlayerProfilePage({ params }) {
           </div>
         ))}
       </div>
+
+      {/* Achievements */}
+      {(achievements && achievements.length > 0) && (
+        <div style={{ border: '1px solid rgba(183,140,64,0.25)', padding: '1.75rem', marginBottom: '1.5rem', background: 'rgba(183,140,64,0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.25rem' }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+              Achievements
+            </h2>
+            <Link href={`/c/${slug}/achievements`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
+              Hall of Honours →
+            </Link>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+            {achievements.map(a => (
+              <div
+                key={a.id}
+                title={a.description || a.title}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.4rem 0.8rem',
+                  background: 'var(--bg-raised)',
+                  border: '1px solid rgba(183,140,64,0.3)',
+                }}
+              >
+                <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>{a.icon}</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-primary)' }}>{a.title}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Award achievement shortcut (organiser only, not on own profile to keep it clean) */}
+      {isOrganiser && !isOwnProfile && (
+        <div style={{ marginBottom: '1.5rem', textAlign: 'right' }}>
+          <Link href={`/c/${slug}/achievements/new`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
+            + Award achievement to {username} →
+          </Link>
+        </div>
+      )}
 
       {/* Faction assignment */}
       <div style={{ border: '1px solid var(--border-dim)', padding: '1.75rem', marginBottom: '1.5rem' }}>

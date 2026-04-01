@@ -13,12 +13,13 @@ async function CampaignNav({ slug }) {
   if (!campaign) return null;
 
   const links = [
-    { label: 'Map',       href: `/c/${slug}/map` },
-    { label: 'Factions',  href: `/c/${slug}/factions` },
-    { label: 'Players',   href: `/c/${slug}/players` },
-    { label: 'Battles',   href: `/c/${slug}/battles` },
-    { label: 'Events',    href: `/c/${slug}/events` },
-    { label: 'Chronicle', href: `/c/${slug}/chronicle` },
+    { label: 'Map',          href: `/c/${slug}/map` },
+    { label: 'Factions',     href: `/c/${slug}/factions` },
+    { label: 'Players',      href: `/c/${slug}/players` },
+    { label: 'Battles',      href: `/c/${slug}/battles` },
+    { label: 'Events',       href: `/c/${slug}/events` },
+    { label: 'Chronicle',    href: `/c/${slug}/chronicle` },
+    { label: 'Achievements', href: `/c/${slug}/achievements` },
   ];
 
   return (
