@@ -36,21 +36,29 @@ const GOLD_HEX         = '#b78c40';
 const GOLD_NEUTRAL_HEX = '#d4a830';
 
 // ── Force-separation: push nodes apart until no two are closer than minDist ──
-// Nodes are clamped to [bx1,bx2] × [by1,by2] after each iteration.
-function separateNodes(nodes, minDist, iterations = 120, bx1 = 12, bx2 = 88, by1 = 12, by2 = 78) {
+// A tiny index-based pre-jitter breaks the case where nodes start at exactly the
+// same position (dir vector would be NaN/zero without it).
+// Nodes are clamped to [bx1,bx2] × [by1,by2] after every iteration.
+function separateNodes(nodes, minDist, iterations = 150, bx1 = 12, bx2 = 88, by1 = 12, by2 = 78) {
   if (nodes.length < 2) return nodes;
-  const pts = nodes.map(n => ({ ...n }));
+  // Clone with a tiny deterministic offset so coincident nodes are never exactly equal
+  const pts = nodes.map((n, i) => ({
+    ...n,
+    x_pos: n.x_pos + i * 0.05,
+    y_pos: n.y_pos + i * 0.03,
+  }));
   for (let iter = 0; iter < iterations; iter++) {
     let maxMove = 0;
     for (let i = 0; i < pts.length; i++) {
       for (let j = i + 1; j < pts.length; j++) {
-        const dx = pts[j].x_pos - pts[i].x_pos;
-        const dy = pts[j].y_pos - pts[i].y_pos;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 0.001;
+        const dx   = pts[j].x_pos - pts[i].x_pos;
+        const dy   = pts[j].y_pos - pts[i].y_pos;
+        const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < minDist) {
+          // Safe direction even when dist is very small
+          const nx   = dist > 0.0001 ? dx / dist : 1;
+          const ny   = dist > 0.0001 ? dy / dist : 0;
           const push = (minDist - dist) / 2;
-          const nx = dx / dist;
-          const ny = dy / dist;
           pts[i].x_pos -= nx * push;
           pts[i].y_pos -= ny * push;
           pts[j].x_pos += nx * push;
@@ -59,7 +67,6 @@ function separateNodes(nodes, minDist, iterations = 120, bx1 = 12, bx2 = 88, by1
         }
       }
     }
-    // Clamp to bounds
     for (const p of pts) {
       p.x_pos = Math.max(bx1, Math.min(bx2, p.x_pos));
       p.y_pos = Math.max(by1, Math.min(by2, p.y_pos));
@@ -69,74 +76,87 @@ function separateNodes(nodes, minDist, iterations = 120, bx1 = 12, bx2 = 88, by1
   return pts;
 }
 
-// ── Auto-fit: scale & centre all territory positions into the visible safe zone ──
+// ── Auto-fit + collision avoidance ────────────────────────────────────────────
 //
-// The SVG viewBox is 0 0 100 100. The "safe zone" keeps nodes and labels away
-// from the edges:
-//   X: 8 – 92  (node rings are ~3.2 units wide on each side)
-//   Y: 8 – 83  (labels sit 5 units from the node centre in any direction)
+// SVG viewBox 0 0 100 100. Safe zone: X 8–92, Y 8–83.
 //
-// Rules:
-//  • Scale DOWN only when needed (territories outside the safe zone)
-//  • Never scale UP — compact layouts stay compact
-//  • After scaling, apply force-separation so top-level nodes don't overlap
-//  • Sub-territories move with their parent when parents are separated
-//  • Null-position territories get parked at the safe-zone centre
+// Pass 1 – scale/centre positioned territories (scale-down only).
+// Pass 2 – null top-level territories get near-centre positions with a tiny
+//           index-based offset so the separator can push them apart.
+// Pass 3 – null sub-territories are placed in an orbit around their parent
+//           (using their parent's Pass-1/2 position).
+// Pass 4 – force-separate top-level nodes (minDist 12).
+// Pass 5 – co-move sub-territories by exactly the delta their parent moved.
+// Pass 6 – force-separate sibling sub-territories (minDist 5).
 function normalizePositions(territories) {
   const positioned = territories.filter(t => t.x_pos != null && t.y_pos != null);
 
-  // Safe zone boundaries
-  const X1 = 8, X2 = 92;
-  const Y1 = 8, Y2 = 83;
+  const X1 = 8,  X2 = 92;
+  const Y1 = 8,  Y2 = 83;
   const safeCx = (X1 + X2) / 2; // 50
   const safeCy = (Y1 + Y2) / 2; // 45.5
 
+  // All null — spread in a circle and return early
   if (positioned.length === 0) {
-    // No coordinates at all — evenly distribute in a circle
     const n = territories.length || 1;
     return territories.map((t, i) => {
       const angle = (i / n) * 2 * Math.PI - Math.PI / 2;
-      return { ...t, x_pos: Math.round((safeCx + 28 * Math.cos(angle)) * 10) / 10,
-                     y_pos: Math.round((safeCy + 22 * Math.sin(angle)) * 10) / 10 };
+      return { ...t,
+        x_pos: Math.round((safeCx + 28 * Math.cos(angle)) * 10) / 10,
+        y_pos: Math.round((safeCy + 22 * Math.sin(angle)) * 10) / 10,
+      };
     });
   }
 
-  const xs = positioned.map(t => t.x_pos);
-  const ys = positioned.map(t => t.y_pos);
-  const rawMinX = Math.min(...xs);
-  const rawMaxX = Math.max(...xs);
-  const rawMinY = Math.min(...ys);
-  const rawMaxY = Math.max(...ys);
+  // Scale parameters
+  const xs     = positioned.map(t => t.x_pos);
+  const ys     = positioned.map(t => t.y_pos);
+  const rawMinX = Math.min(...xs), rawMaxX = Math.max(...xs);
+  const rawMinY = Math.min(...ys), rawMaxY = Math.max(...ys);
+  const dataW  = rawMaxX - rawMinX || 1;
+  const dataH  = rawMaxY - rawMinY || 1;
+  const scale  = Math.min(1, (X2 - X1) / dataW, (Y2 - Y1) / dataH);
+  const rawCx  = (rawMinX + rawMaxX) / 2;
+  const rawCy  = (rawMinY + rawMaxY) / 2;
 
-  const safeW = X2 - X1; // 84
-  const safeH = Y2 - Y1; // 75
-  const dataW = rawMaxX - rawMinX || 1;
-  const dataH = rawMaxY - rawMinY || 1;
+  const tx = x => Math.round((safeCx + (x - rawCx) * scale) * 10) / 10;
+  const ty = y => Math.round((safeCy + (y - rawCy) * scale) * 10) / 10;
 
-  // Scale down only — never inflate a compact layout
-  const scale = Math.min(1, safeW / dataW, safeH / dataH);
-
-  const rawCx = (rawMinX + rawMaxX) / 2;
-  const rawCy = (rawMinY + rawMaxY) / 2;
-
-  // Step 1 — apply scale + centre transform
+  // Pass 1+2: place all territories; flag null sub-territories for Pass 3
+  let nullTopIdx = 0;
   let result = territories.map(t => {
-    if (t.x_pos == null || t.y_pos == null) {
-      return { ...t, x_pos: safeCx, y_pos: safeCy };
+    if (t.x_pos != null && t.y_pos != null) {
+      return { ...t, x_pos: tx(t.x_pos), y_pos: ty(t.y_pos) };
     }
-    return {
-      ...t,
-      x_pos: Math.round((safeCx + (t.x_pos - rawCx) * scale) * 10) / 10,
-      y_pos: Math.round((safeCy + (t.y_pos - rawCy) * scale) * 10) / 10,
+    if (!t.parent_id) {
+      // Null top-level: near centre, tiny offset per index so separator can act
+      const off = (nullTopIdx++) * 0.15;
+      return { ...t, x_pos: safeCx + off, y_pos: safeCy + off };
+    }
+    // Null sub-level: will be resolved in Pass 3
+    return { ...t, x_pos: null, y_pos: null, _place: true };
+  });
+
+  // Pass 3: place null sub-territories in orbit around their (now-positioned) parent
+  result = result.map(t => {
+    if (!t._place) return t;
+    const parent   = result.find(p => p.id === t.parent_id);
+    const px       = parent?.x_pos ?? safeCx;
+    const py       = parent?.y_pos ?? safeCy;
+    // Count already-placed siblings to pick a free angle slot
+    const nPlaced  = result.filter(s => s.parent_id === t.parent_id && !s._place && s.id !== t.id).length;
+    const angle    = (nPlaced / Math.max(nPlaced + 1, 1)) * 2 * Math.PI - Math.PI / 2;
+    const { _place, ...rest } = t;
+    return { ...rest,
+      x_pos: Math.round((px + 9 * Math.cos(angle)) * 10) / 10,
+      y_pos: Math.round((py + 7 * Math.sin(angle)) * 10) / 10,
     };
   });
 
-  // Step 2 — separate top-level nodes so they don't visually overlap
-  // minDist 12: outer ring r=3.2 × 2 + ~5.6 clearance buffer
-  const topBefore = result.filter(t => t.depth === 1);
+  // Pass 4: force-separate top-level nodes
+  const topBefore = result.filter(t => !t.parent_id);
   const topAfter  = separateNodes(topBefore, 12);
 
-  // Build delta map: how far did each top-level node move?
   const deltaById = {};
   topBefore.forEach((t, i) => {
     deltaById[t.id] = {
@@ -145,51 +165,52 @@ function normalizePositions(territories) {
     };
   });
 
-  // Step 3 — apply top-level deltas to their sub-territories (keep them co-moving)
+  // Pass 5: co-move sub-territories by the same delta as their parent
   result = result.map(t => {
-    if (t.depth === 1) {
+    if (!t.parent_id) {
       const d = deltaById[t.id];
       return { ...t, x_pos: t.x_pos + d.dx, y_pos: t.y_pos + d.dy };
     }
-    if (t.depth === 2 && t.parent_id && deltaById[t.parent_id]) {
-      const d = deltaById[t.parent_id];
-      return { ...t, x_pos: t.x_pos + d.dx, y_pos: t.y_pos + d.dy };
-    }
+    const d = deltaById[t.parent_id];
+    if (d) return { ...t, x_pos: t.x_pos + d.dx, y_pos: t.y_pos + d.dy };
     return t;
   });
 
-  // Step 4 — separate sub-territories within each parent group
-  const parentIds = [...new Set(result.filter(t => t.depth === 2).map(t => t.parent_id))];
+  // Pass 6: separate sibling sub-territories within each parent group
+  const parentIds = [...new Set(result.filter(t => t.parent_id).map(t => t.parent_id))];
   parentIds.forEach(pid => {
     const idxs = result.reduce((acc, t, i) => { if (t.parent_id === pid) acc.push(i); return acc; }, []);
     if (idxs.length < 2) return;
-    const subs     = idxs.map(i => result[i]);
-    const separated = separateNodes(subs, 5, 80);
+    const separated = separateNodes(idxs.map(i => result[i]), 5, 80);
     idxs.forEach((idx, i) => { result[idx] = { ...result[idx], x_pos: separated[i].x_pos, y_pos: separated[i].y_pos }; });
   });
 
   return result;
 }
 
-// ── Label offset: place a top-level territory's label away from its sub-territories ──
-// Returns { dx, dy } to add to the node centre to reach the label anchor point.
-// Default (no subs) is directly below the node.
+// ── Label offset: place a top-level node's label away from its sub-territories ──
+// Returns { dx, dy } to add to the node centre for the label anchor.
+// Falls back to directly-below (0, +5) when there are no subs or direction is ambiguous.
 function getLabelOffset(t, allTerritories) {
-  const subs = allTerritories.filter(s => s.parent_id === t.id && s.x_pos != null && s.y_pos != null);
+  const subs = allTerritories.filter(
+    s => s.parent_id === t.id && s.x_pos != null && s.y_pos != null
+  );
   if (subs.length === 0) return { dx: 0, dy: 5 };
 
-  // Compute unit-vector centroid pointing from parent toward its sub-territories
+  // Sum unit vectors from parent toward each sub that is not coincident with it
   let sx = 0, sy = 0;
   subs.forEach(s => {
-    const dx = s.x_pos - t.x_pos;
-    const dy = s.y_pos - t.y_pos;
-    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    const dx  = s.x_pos - t.x_pos;
+    const dy  = s.y_pos - t.y_pos;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 0.5) return; // sub essentially at same position — ignore
     sx += dx / len;
     sy += dy / len;
   });
-  const len = Math.sqrt(sx * sx + sy * sy) || 1;
+  const len = Math.sqrt(sx * sx + sy * sy);
+  if (len < 0.01) return { dx: 0, dy: 5 }; // no clear direction — use default
 
-  // Place label in the OPPOSITE direction at distance 5 from node centre
+  // Place label in the OPPOSITE direction at distance 5
   return { dx: -(sx / len) * 5, dy: -(sy / len) * 5 };
 }
 
