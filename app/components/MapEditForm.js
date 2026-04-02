@@ -103,9 +103,33 @@ export default function MapEditForm({ territories: initial, factions, campaignId
   async function addTerritory({ name, type, description }, parentId = null) {
     const parentItem = parentId ? items.find(t => t.id === parentId) : null;
     const depth = parentItem ? (parentItem.depth || 1) + 1 : 1;
+
+    // ── Compute a sensible default position ──────────────────────────────────
+    // Without x_pos/y_pos the node renders at (0,0) and disappears off-screen.
+    // For root territories: place in a circle with existing roots (radius 28).
+    // For sub-territories: orbit 9 units from the parent at the next open angle.
+    let x_pos = 50;
+    let y_pos = 46;
+
+    if (!parentId) {
+      // Root territory — place around the safe-zone centre in a circle
+      const existingRoots = items.filter(t => !t.parent_id);
+      const count  = existingRoots.length;
+      const angle  = (count / Math.max(count + 1, 1)) * 2 * Math.PI - Math.PI / 2;
+      x_pos = Math.round((50 + 28 * Math.cos(angle)) * 10) / 10;
+      y_pos = Math.round((46 + 22 * Math.sin(angle)) * 10) / 10;
+    } else if (parentItem && parentItem.x_pos != null && parentItem.y_pos != null) {
+      // Sub-territory — orbit around the parent at the next open angle
+      const siblings = items.filter(t => t.parent_id === parentId);
+      const count    = siblings.length;
+      const angle    = (count / Math.max(count + 1, 1)) * 2 * Math.PI - Math.PI / 2;
+      x_pos = Math.round((parentItem.x_pos + 9 * Math.cos(angle)) * 10) / 10;
+      y_pos = Math.round((parentItem.y_pos + 7 * Math.sin(angle)) * 10) / 10;
+    }
+
     const { data, error } = await supabase
       .from('territories')
-      .insert({ campaign_id: campaignId, name, type, description, parent_id: parentId || null, depth })
+      .insert({ campaign_id: campaignId, name, type, description, parent_id: parentId || null, depth, x_pos, y_pos })
       .select()
       .single();
     if (error) return error.message;
