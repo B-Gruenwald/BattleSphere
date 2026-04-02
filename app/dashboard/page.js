@@ -19,7 +19,7 @@ export default async function DashboardPage() {
   const campaigns   = memberships?.map(m => ({ ...m.campaigns, role: m.role })) ?? [];
   const campaignIds = campaigns.map(c => c.id).filter(Boolean);
 
-  // Recent campaign battles
+  // Recent battles across all campaigns (for sidebar)
   const { data: recentBattles } = campaignIds.length > 0
     ? await supabase
         .from('battles')
@@ -33,13 +33,15 @@ export default async function DashboardPage() {
     ? await supabase.from('factions').select('id, name, colour, campaign_id').in('campaign_id', campaignIds)
     : { data: [] };
 
-  // Recent standalone battles
-  const { data: recentStandalone } = await supabase
-    .from('standalone_battles')
-    .select('id, attacker_faction, defender_faction, result, attacker_score, defender_score, battle_type, created_at')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(5);
+  // Personal Battle Log — all campaign battles where this user was attacker or defender
+  const { data: personalBattles } = campaignIds.length > 0
+    ? await supabase
+        .from('battles')
+        .select('*')
+        .or(`attacker_player_id.eq.${user.id},defender_player_id.eq.${user.id}`)
+        .order('created_at', { ascending: false })
+        .limit(20)
+    : { data: [] };
 
   const factionMap  = Object.fromEntries((allFactions || []).map(f => [f.id, f]));
   const campaignMap = Object.fromEntries(campaigns.map(c => [c.id, c]));
@@ -56,9 +58,6 @@ export default async function DashboardPage() {
           <h1 style={{ fontSize: '2.5rem', fontWeight: '700' }}>Welcome, {username}</h1>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <Link href="/battle/new">
-            <button className="btn-secondary">+ Log Battle</button>
-          </Link>
           <Link href="/campaign/new">
             <button className="btn-primary">+ New Campaign</button>
           </Link>
@@ -97,11 +96,9 @@ export default async function DashboardPage() {
         {/* Recent campaign battles sidebar */}
         {campaigns.length > 0 && (
           <div style={{ border: '1px solid var(--border-dim)', padding: '1.75rem' }}>
-            <Link href="/battles" style={{ textDecoration: 'none' }}>
-              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '1.25rem' }}>
-                Recent Battles
-              </h2>
-            </Link>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '1.25rem' }}>
+              Recent Battles
+            </h2>
             {recentBattles && recentBattles.length > 0 ? (
               <div>
                 {recentBattles.map(battle => {
@@ -150,38 +147,55 @@ export default async function DashboardPage() {
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
             Personal Battle Log
           </h2>
-          <Link href="/battle/new" style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
-            Log battle →
-          </Link>
         </div>
 
-        {recentStandalone && recentStandalone.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-            {recentStandalone.map(b => {
-              const isDraw      = b.result === 'draw';
-              const attackerWon = b.result === 'attacker';
-              const resultColour = 'var(--text-gold)';
-              const date = new Date(b.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        {personalBattles && personalBattles.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {personalBattles.map(b => {
+              const campaign    = campaignMap[b.campaign_id];
+              const isAttacker  = b.attacker_player_id === user.id;
+              const myFactionId = isAttacker ? b.attacker_faction_id : b.defender_faction_id;
+              const oppFactionId = isAttacker ? b.defender_faction_id : b.attacker_faction_id;
+              const myFaction   = factionMap[myFactionId];
+              const oppFaction  = factionMap[oppFactionId];
+
+              const isDraw = !b.winner_faction_id;
+              const iWon   = b.winner_faction_id === myFactionId;
+              const resultLabel  = isDraw ? 'Draw' : iWon ? 'Victory' : 'Defeat';
+              const resultColour = isDraw
+                ? 'var(--text-muted)'
+                : iWon
+                  ? (myFaction?.colour || 'var(--text-gold)')
+                  : '#e05a5a';
+
+              const myScore   = isAttacker ? b.attacker_score : b.defender_score;
+              const oppScore  = isAttacker ? b.defender_score : b.attacker_score;
               const hasScores = b.attacker_score > 0 || b.defender_score > 0;
+              const date      = new Date(b.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
               return (
-                <Link key={b.id} href={`/battle/${b.id}`} style={{ textDecoration: 'none' }}>
-                  <div style={{ padding: '0.9rem 0', borderBottom: '1px solid var(--border-dim)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <div style={{ width: '5px', height: '5px', background: isDraw ? 'var(--text-muted)' : resultColour, transform: 'rotate(45deg)', flexShrink: 0 }} />
+                <Link key={b.id} href={`/c/${campaign?.slug}/battle/${b.id}`} style={{ textDecoration: 'none' }}>
+                  <div style={{ padding: '0.9rem 0', borderBottom: '1px solid var(--border-dim)', display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}>
+                    <div style={{ width: '6px', height: '6px', background: resultColour, transform: 'rotate(45deg)', flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        <span style={{ fontWeight: '600' }}>{b.attacker_faction || '?'}</span>
+                      <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span style={{ color: myFaction?.colour || 'var(--text-secondary)' }}>{myFaction?.name ?? '?'}</span>
                         <span style={{ color: 'var(--text-muted)', margin: '0 0.4rem' }}>vs</span>
-                        <span style={{ fontWeight: '600' }}>{b.defender_faction || '?'}</span>
+                        <span style={{ color: oppFaction?.colour || 'var(--text-secondary)' }}>{oppFaction?.name ?? '?'}</span>
                       </div>
                       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: isDraw ? 'var(--text-muted)' : 'var(--text-gold)' }}>
-                          {isDraw ? 'Draw' : attackerWon ? `${b.attacker_faction || 'Attacker'} Victory` : `${b.defender_faction || 'Defender'} Victory`}
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: resultColour }}>
+                          {resultLabel}
                         </span>
-                        {hasScores && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{b.attacker_score} – {b.defender_score}</span>}
-                        {b.battle_type && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>{b.battle_type}</span>}
+                        {hasScores && (
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{myScore} – {oppScore}</span>
+                        )}
+                        {campaign && (
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>{campaign.name}</span>
+                        )}
                       </div>
                     </div>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', flexShrink: 0 }}>{date} →</span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', flexShrink: 0, whiteSpace: 'nowrap' }}>{date} →</span>
                   </div>
                 </Link>
               );
@@ -190,12 +204,9 @@ export default async function DashboardPage() {
         ) : (
           <div style={{ border: '1px solid var(--border-dim)', padding: '3rem 2rem', textAlign: 'center' }}>
             <div style={{ width: '6px', height: '6px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1rem', opacity: 0.4 }} />
-            <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.88rem', marginBottom: '1.5rem' }}>
-              No personal battles recorded yet.
+            <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.88rem' }}>
+              No battles recorded yet — join a campaign and log your first fight.
             </p>
-            <Link href="/battle/new">
-              <button className="btn-secondary">Log Your First Battle</button>
-            </Link>
           </div>
         )}
       </div>
