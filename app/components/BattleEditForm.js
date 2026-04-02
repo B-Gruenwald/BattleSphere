@@ -145,8 +145,8 @@ export default function BattleEditForm({ battle, campaign, territories, factions
 
     if (!saved || saved.length === 0) {
       setError(
-        'Changes could not be saved — you may not have permission to edit this battle. ' +
-        'Only the campaign organiser or the player who originally logged the battle can make changes.'
+        'Changes could not be saved — only the attacker, defender, the player who logged the battle, ' +
+        'or the campaign organiser can edit this record.'
       );
       setSubmitting(false);
       return;

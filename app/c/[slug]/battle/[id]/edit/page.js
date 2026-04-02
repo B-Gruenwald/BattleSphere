@@ -17,7 +17,7 @@ export default async function EditBattlePage({ params }) {
 
   if (!campaign) notFound();
 
-  // Only campaign members may edit battles
+  // Must be a campaign member to reach this page at all
   const { data: membership } = await supabase
     .from('campaign_members')
     .select('role')
@@ -35,6 +35,16 @@ export default async function EditBattlePage({ params }) {
     .single();
 
   if (!battle) notFound();
+
+  // Co-ownership check: only the logger, the attacker, the defender,
+  // or the campaign organiser may edit a battle record.
+  const isCoOwner =
+    user.id === battle.logged_by             ||
+    user.id === battle.attacker_player_id    ||
+    user.id === battle.defender_player_id    ||
+    user.id === campaign.organiser_id;
+
+  if (!isCoOwner) redirect(`/c/${slug}/battle/${id}`);
 
   const { data: territories } = await supabase
     .from('territories')
@@ -90,7 +100,7 @@ export default async function EditBattlePage({ params }) {
           Edit Battle
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-          Correct the record — any player may amend battle details.
+          Correct the record — both players and the organiser can amend battle details.
         </p>
       </div>
 

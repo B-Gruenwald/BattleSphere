@@ -65,6 +65,13 @@ export default async function BattleDetailPage({ params }) {
   const attackerPlayer   = profileMap[battle.attacker_player_id];
   const defenderPlayer   = profileMap[battle.defender_player_id];
 
+  // Co-ownership: logger, attacker, defender, or campaign organiser may edit
+  const canEdit =
+    user.id === battle.logged_by          ||
+    user.id === battle.attacker_player_id ||
+    user.id === battle.defender_player_id ||
+    user.id === campaign.organiser_id;
+
   const isDraw      = !battle.winner_faction_id;
   const attackerWon = battle.winner_faction_id === battle.attacker_faction_id;
   const resultLabel = isDraw ? 'Draw' : attackerWon
@@ -313,9 +320,11 @@ export default async function BattleDetailPage({ params }) {
             <button className="btn-secondary">View Territory</button>
           </Link>
         )}
-        <Link href={`/c/${slug}/battle/${id}/edit`}>
-          <button className="btn-secondary">Edit Battle</button>
-        </Link>
+        {canEdit && (
+          <Link href={`/c/${slug}/battle/${id}/edit`}>
+            <button className="btn-secondary">Edit Battle</button>
+          </Link>
+        )}
       </div>
     </div>
   );
