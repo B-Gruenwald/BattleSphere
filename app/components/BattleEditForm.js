@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
@@ -37,11 +37,18 @@ export default function BattleEditForm({ battle, campaign, territories, factions
   const [defenderScore,      setDefenderScore]      = useState(battle.defender_score       ?? '');
   const [attackerNarrative,  setAttackerNarrative]  = useState(battle.attacker_narrative   || '');
   const [defenderNarrative,  setDefenderNarrative]  = useState(battle.defender_narrative   || '');
-  const [transferControl,    setTransfer]           = useState(false);
   const [submitting,         setSubmitting]         = useState(false);
   const [error,              setError]              = useState('');
 
+  // These refs prevent the auto-fill useEffects from overwriting the saved
+  // faction IDs on initial mount. Without them, if a player's current
+  // faction differs from what was recorded in the battle, the form would
+  // silently overwrite the correct data before the user touches anything.
+  const attackerEffectRan = useRef(false);
+  const defenderEffectRan = useRef(false);
+
   useEffect(() => {
+    if (!attackerEffectRan.current) { attackerEffectRan.current = true; return; }
     if (attackerPlayerId) {
       const member = members.find(m => m.user_id === attackerPlayerId);
       if (member?.faction_id) setAttacker(member.faction_id);
@@ -49,6 +56,7 @@ export default function BattleEditForm({ battle, campaign, territories, factions
   }, [attackerPlayerId]);
 
   useEffect(() => {
+    if (!defenderEffectRan.current) { defenderEffectRan.current = true; return; }
     if (defenderPlayerId) {
       const member = members.find(m => m.user_id === defenderPlayerId);
       if (member?.faction_id) setDefender(member.faction_id);
@@ -59,20 +67,54 @@ export default function BattleEditForm({ battle, campaign, territories, factions
     result === 'attacker' ? attackerFactionId :
     result === 'defender' ? defenderFactionId : null;
 
-  const selectedTerritory = territories.find(t => t.id === territoryId);
-  const currentController = selectedTerritory?.controlling_faction_id;
-  const winnerIsDifferent = winnerFactionId && winnerFactionId !== currentController;
-
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    if (!attackerFactionId || !defenderFactionId) { setError('Please select both factions.'); return; }
-    if (attackerFactionId === defenderFactionId)  { setError('Attacker and defender must be different factions.'); return; }
-    if (!result) { setError('Please select a battle result.'); return; }
+
+    // ── Validation ─────────────────────────────────────────────────────────────
+    if (!attackerFactionId) {
+      if (attackerPlayerId) {
+        const attackerMember = members.find(m => m.user_id === attackerPlayerId);
+        if (attackerMember && !attackerMember.faction_id) {
+          setError('The attacker has no faction assigned. They can set one from their Player Profile, or select one manually in the Faction field above.');
+        } else {
+          setError('Please select a faction for the attacker.');
+        }
+      } else {
+        setError('Please select a faction for the attacker.');
+      }
+      return;
+    }
+
+    if (!defenderFactionId) {
+      if (defenderPlayerId) {
+        const defenderMember = members.find(m => m.user_id === defenderPlayerId);
+        if (defenderMember && !defenderMember.faction_id) {
+          setError('The defender has no faction assigned. They can set one from their Player Profile, or select one manually in the Faction field above.');
+        } else {
+          setError('Please select a faction for the defender.');
+        }
+      } else {
+        setError('Please select a faction for the defender.');
+      }
+      return;
+    }
+
+    if (attackerFactionId === defenderFactionId) {
+      setError('Attacker and defender must be different factions.');
+      return;
+    }
+
+    if (!result) {
+      setError('Please select a battle result.');
+      return;
+    }
 
     setSubmitting(true);
 
-    const { error: updateError } = await supabase
+    // Use .select() so we can detect when RLS silently blocks the update
+    // (Supabase returns 0 rows with no error when RLS prevents an update)
+    const { data: saved, error: updateError } = await supabase
       .from('battles')
       .update({
         battle_type:           battleType          || null,
@@ -92,19 +134,25 @@ export default function BattleEditForm({ battle, campaign, territories, factions
         attacker_narrative:    attackerNarrative.trim() || null,
         defender_narrative:    defenderNarrative.trim() || null,
       })
-      .eq('id', battle.id);
+      .eq('id', battle.id)
+      .select();
 
-    if (updateError) { setError(updateError.message); setSubmitting(false); return; }
+    if (updateError) {
+      setError(updateError.message);
+      setSubmitting(false);
+      return;
+    }
 
-    if (transferControl && territoryId && winnerFactionId) {
-      await supabase
-        .from('territories')
-        .update({ controlling_faction_id: winnerFactionId })
-        .eq('id', territoryId);
+    if (!saved || saved.length === 0) {
+      setError(
+        'Changes could not be saved — you may not have permission to edit this battle. ' +
+        'Only the campaign organiser or the player who originally logged the battle can make changes.'
+      );
+      setSubmitting(false);
+      return;
     }
 
     router.push(`/c/${campaign.slug}/battle/${battle.id}`);
-    router.refresh();
   }
 
   // ── Styles ──────────────────────────────────────────────────────────────────
@@ -164,6 +212,14 @@ export default function BattleEditForm({ battle, campaign, territories, factions
               </option>
             ))}
           </select>
+          {territoryId && result && (
+            <p style={hintStyle}>
+              {result === 'draw'
+                ? '⬡ Both factions will gain influence here when this battle was first logged.'
+                : `⬡ ${result === 'attacker' ? factions.find(f => f.id === attackerFactionId)?.name || 'Winner' : factions.find(f => f.id === defenderFactionId)?.name || 'Winner'} gained +3 influence here when this battle was first logged.`
+              }
+            </p>
+          )}
         </div>
       </div>
 
@@ -276,22 +332,6 @@ export default function BattleEditForm({ battle, campaign, territories, factions
           </div>
         </div>
       </div>
-
-      {/* ── Territory control transfer ── */}
-      {territoryId && result && result !== 'draw' && winnerIsDifferent && (
-        <div style={{
-          marginBottom: '2rem', padding: '1rem 1.25rem',
-          border: '1px solid rgba(183,140,64,0.3)', background: 'rgba(183,140,64,0.05)',
-          display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
-        }}>
-          <input id="transfer" type="checkbox" checked={transferControl} onChange={e => setTransfer(e.target.checked)}
-            style={{ marginTop: '2px', accentColor: 'var(--gold)', flexShrink: 0 }} />
-          <label htmlFor="transfer" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5, cursor: 'pointer' }}>
-            Transfer control of <strong style={{ color: 'var(--text-primary)' }}>{selectedTerritory?.name}</strong> to{' '}
-            <strong style={{ color: 'var(--text-gold)' }}>{factions.find(f => f.id === winnerFactionId)?.name}</strong>
-          </label>
-        </div>
-      )}
 
       {/* ── Battle Chronicles ── */}
       <div style={sectionStyle}>

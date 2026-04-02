@@ -33,7 +33,6 @@ export default function BattleLogForm({ campaign, territories, factions, members
   const [defenderScore,      setDefenderScore]      = useState('');
   const [attackerNarrative,  setAttackerNarrative]  = useState('');
   const [defenderNarrative,  setDefenderNarrative]  = useState('');
-  const [transferControl,    setTransferControl]    = useState(false);
   const [submitting,         setSubmitting]         = useState(false);
   const [error,              setError]              = useState('');
 
@@ -55,16 +54,11 @@ export default function BattleLogForm({ campaign, territories, factions, members
     result === 'attacker' ? attackerFactionId :
     result === 'defender' ? defenderFactionId : null;
 
-  const selectedTerritory = territories.find(t => t.id === territoryId);
-  const currentController = selectedTerritory?.controlling_faction_id;
-  const winnerIsDifferent = winnerFactionId && winnerFactionId !== currentController;
-
   // ── Influence update helper ──────────────────────────────────────────────────
-  // Win: winner +3, loser unchanged. Draw: both +1. Loss: no effect.
+  // Win: winner +3, loser unchanged. Draw: both +1.
   async function updateInfluence() {
     if (!territoryId || !attackerFactionId || !defenderFactionId || !result) return;
 
-    // Determine who (if anyone) gains influence
     let gainerId = null;
     let gainAmount = 0;
     let secondGainerId = null;
@@ -83,7 +77,6 @@ export default function BattleLogForm({ campaign, territories, factions, members
 
     if (!gainerId) return;
 
-    // Fetch current influence for the gaining faction(s)
     const factionIds = [gainerId, secondGainerId].filter(Boolean);
     const { data: current, error: fetchError } = await supabase
       .from('territory_influence')
@@ -129,10 +122,50 @@ export default function BattleLogForm({ campaign, territories, factions, members
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    if (!attackerPlayerId) { setError('Please select the attacker player.'); return; }
-    if (!attackerFactionId || !defenderFactionId) { setError('Please select both factions.'); return; }
-    if (attackerFactionId === defenderFactionId) { setError('Attacker and defender must be different factions.'); return; }
-    if (!result) { setError('Please select a battle result.'); return; }
+
+    // ── Validation with specific, actionable messages ──────────────────────────
+    if (!attackerPlayerId) {
+      setError('Please select the attacker player.');
+      return;
+    }
+
+    if (!attackerFactionId) {
+      const attackerMember = members.find(m => m.user_id === attackerPlayerId);
+      if (attackerMember && !attackerMember.faction_id) {
+        setError(
+          'The attacker has no faction assigned. They can set one from their Player Profile, or select one manually in the Faction field above.'
+        );
+      } else {
+        setError('Please select a faction for the attacker.');
+      }
+      return;
+    }
+
+    if (!defenderFactionId) {
+      if (defenderPlayerId) {
+        const defenderMember = members.find(m => m.user_id === defenderPlayerId);
+        if (defenderMember && !defenderMember.faction_id) {
+          setError(
+            'The defender has no faction assigned. They can set one from their Player Profile, or select one manually in the Faction field above.'
+          );
+        } else {
+          setError('Please select a faction for the defender.');
+        }
+      } else {
+        setError('Please select a faction for the defender.');
+      }
+      return;
+    }
+
+    if (attackerFactionId === defenderFactionId) {
+      setError('Attacker and defender must be different factions.');
+      return;
+    }
+
+    if (!result) {
+      setError('Please select a battle result.');
+      return;
+    }
 
     setSubmitting(true);
 
@@ -162,14 +195,6 @@ export default function BattleLogForm({ campaign, territories, factions, members
       .single();
 
     if (insertError) { setError(insertError.message); setSubmitting(false); return; }
-
-    // Transfer territory control if checked
-    if (transferControl && territoryId && winnerFactionId) {
-      await supabase
-        .from('territories')
-        .update({ controlling_faction_id: winnerFactionId })
-        .eq('id', territoryId);
-    }
 
     // Auto-update influence points for this territory
     await updateInfluence();
@@ -354,22 +379,6 @@ export default function BattleLogForm({ campaign, territories, factions, members
           </div>
         </div>
       </div>
-
-      {/* ── Territory control transfer ── */}
-      {territoryId && result && result !== 'draw' && winnerIsDifferent && (
-        <div style={{
-          marginBottom: '2rem', padding: '1rem 1.25rem',
-          border: '1px solid rgba(183,140,64,0.3)', background: 'rgba(183,140,64,0.05)',
-          display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
-        }}>
-          <input id="transfer" type="checkbox" checked={transferControl} onChange={e => setTransferControl(e.target.checked)}
-            style={{ marginTop: '2px', accentColor: 'var(--gold)', flexShrink: 0 }} />
-          <label htmlFor="transfer" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5, cursor: 'pointer' }}>
-            Transfer control of <strong style={{ color: 'var(--text-primary)' }}>{selectedTerritory?.name}</strong> to{' '}
-            <strong style={{ color: 'var(--text-gold)' }}>{factions.find(f => f.id === winnerFactionId)?.name}</strong>
-          </label>
-        </div>
-      )}
 
       {/* ── Battle Chronicles ── */}
       <div style={sectionStyle}>
