@@ -35,18 +35,53 @@ const SETTING_BG = {
 const GOLD_HEX         = '#b78c40';
 const GOLD_NEUTRAL_HEX = '#d4a830';
 
+// ── Force-separation: push nodes apart until no two are closer than minDist ──
+// Nodes are clamped to [bx1,bx2] × [by1,by2] after each iteration.
+function separateNodes(nodes, minDist, iterations = 120, bx1 = 12, bx2 = 88, by1 = 12, by2 = 78) {
+  if (nodes.length < 2) return nodes;
+  const pts = nodes.map(n => ({ ...n }));
+  for (let iter = 0; iter < iterations; iter++) {
+    let maxMove = 0;
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const dx = pts[j].x_pos - pts[i].x_pos;
+        const dy = pts[j].y_pos - pts[i].y_pos;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 0.001;
+        if (dist < minDist) {
+          const push = (minDist - dist) / 2;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          pts[i].x_pos -= nx * push;
+          pts[i].y_pos -= ny * push;
+          pts[j].x_pos += nx * push;
+          pts[j].y_pos += ny * push;
+          maxMove = Math.max(maxMove, push);
+        }
+      }
+    }
+    // Clamp to bounds
+    for (const p of pts) {
+      p.x_pos = Math.max(bx1, Math.min(bx2, p.x_pos));
+      p.y_pos = Math.max(by1, Math.min(by2, p.y_pos));
+    }
+    if (maxMove < 0.01) break;
+  }
+  return pts;
+}
+
 // ── Auto-fit: scale & centre all territory positions into the visible safe zone ──
 //
 // The SVG viewBox is 0 0 100 100. The "safe zone" keeps nodes and labels away
 // from the edges:
 //   X: 8 – 92  (node rings are ~3.2 units wide on each side)
-//   Y: 8 – 83  (labels sit 5 units below the node centre; leaving 12 at bottom)
+//   Y: 8 – 83  (labels sit 5 units from the node centre in any direction)
 //
 // Rules:
 //  • Scale DOWN only when needed (territories outside the safe zone)
 //  • Never scale UP — compact layouts stay compact
-//  • Null-position territories (added via Edit Map without coordinates)
-//    get parked at the safe-zone centre until the admin repositions them
+//  • After scaling, apply force-separation so top-level nodes don't overlap
+//  • Sub-territories move with their parent when parents are separated
+//  • Null-position territories get parked at the safe-zone centre
 function normalizePositions(territories) {
   const positioned = territories.filter(t => t.x_pos != null && t.y_pos != null);
 
@@ -84,9 +119,9 @@ function normalizePositions(territories) {
   const rawCx = (rawMinX + rawMaxX) / 2;
   const rawCy = (rawMinY + rawMaxY) / 2;
 
-  return territories.map(t => {
+  // Step 1 — apply scale + centre transform
+  let result = territories.map(t => {
     if (t.x_pos == null || t.y_pos == null) {
-      // No coordinates saved — park at safe-zone centre
       return { ...t, x_pos: safeCx, y_pos: safeCy };
     }
     return {
@@ -95,6 +130,67 @@ function normalizePositions(territories) {
       y_pos: Math.round((safeCy + (t.y_pos - rawCy) * scale) * 10) / 10,
     };
   });
+
+  // Step 2 — separate top-level nodes so they don't visually overlap
+  // minDist 12: outer ring r=3.2 × 2 + ~5.6 clearance buffer
+  const topBefore = result.filter(t => t.depth === 1);
+  const topAfter  = separateNodes(topBefore, 12);
+
+  // Build delta map: how far did each top-level node move?
+  const deltaById = {};
+  topBefore.forEach((t, i) => {
+    deltaById[t.id] = {
+      dx: topAfter[i].x_pos - t.x_pos,
+      dy: topAfter[i].y_pos - t.y_pos,
+    };
+  });
+
+  // Step 3 — apply top-level deltas to their sub-territories (keep them co-moving)
+  result = result.map(t => {
+    if (t.depth === 1) {
+      const d = deltaById[t.id];
+      return { ...t, x_pos: t.x_pos + d.dx, y_pos: t.y_pos + d.dy };
+    }
+    if (t.depth === 2 && t.parent_id && deltaById[t.parent_id]) {
+      const d = deltaById[t.parent_id];
+      return { ...t, x_pos: t.x_pos + d.dx, y_pos: t.y_pos + d.dy };
+    }
+    return t;
+  });
+
+  // Step 4 — separate sub-territories within each parent group
+  const parentIds = [...new Set(result.filter(t => t.depth === 2).map(t => t.parent_id))];
+  parentIds.forEach(pid => {
+    const idxs = result.reduce((acc, t, i) => { if (t.parent_id === pid) acc.push(i); return acc; }, []);
+    if (idxs.length < 2) return;
+    const subs     = idxs.map(i => result[i]);
+    const separated = separateNodes(subs, 5, 80);
+    idxs.forEach((idx, i) => { result[idx] = { ...result[idx], x_pos: separated[i].x_pos, y_pos: separated[i].y_pos }; });
+  });
+
+  return result;
+}
+
+// ── Label offset: place a top-level territory's label away from its sub-territories ──
+// Returns { dx, dy } to add to the node centre to reach the label anchor point.
+// Default (no subs) is directly below the node.
+function getLabelOffset(t, allTerritories) {
+  const subs = allTerritories.filter(s => s.parent_id === t.id && s.x_pos != null && s.y_pos != null);
+  if (subs.length === 0) return { dx: 0, dy: 5 };
+
+  // Compute unit-vector centroid pointing from parent toward its sub-territories
+  let sx = 0, sy = 0;
+  subs.forEach(s => {
+    const dx = s.x_pos - t.x_pos;
+    const dy = s.y_pos - t.y_pos;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    sx += dx / len;
+    sy += dy / len;
+  });
+  const len = Math.sqrt(sx * sx + sy * sy) || 1;
+
+  // Place label in the OPPOSITE direction at distance 5 from node centre
+  return { dx: -(sx / len) * 5, dy: -(sy / len) * 5 };
 }
 
 export default function CampaignMap({ territories, factions, influenceData = [], campaignSlug, setting }) {
@@ -404,6 +500,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
         const cy    = `${t.y_pos}%`;
         const cxN   = t.x_pos;
         const cyN   = t.y_pos;
+        const { dx: ldx, dy: ldy } = getLabelOffset(t, normalizedTerritories);
 
         const domId = dominantFactionId(t);
         const baseColour = domId
@@ -449,7 +546,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
               fill={isHov ? baseColour : domId ? dimColour : GOLD_NEUTRAL_HEX}
             />
             <text
-              x={cx} y={`${cyN + 5}%`}
+              x={`${cxN + ldx}%`} y={`${cyN + ldy}%`}
               textAnchor="middle"
               fill={isHov ? '#e8d5a0' : 'rgba(220,200,160,0.7)'}
               fontSize="2"
