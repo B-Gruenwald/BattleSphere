@@ -22,7 +22,7 @@ function StarField({ count = 80 }) {
     cx: ((i * 137.5) % 100),
     cy: ((i * 97.3) % 100),
     r: i % 7 === 0 ? 0.3 : 0.15,
-    opacity: 0.2 + (i % 5) * 0.07,
+    opacity: 0.12 + (i % 5) * 0.04,
   }));
   return (
     <>
@@ -48,17 +48,18 @@ const SETTING_BG = {
   'Custom':        { bg: '#060608', grid: 'rgba(183,140,64,0.04)' },
 };
 
-const GOLD     = 'rgba(183,140,64,1)';
-const GOLD_DIM = 'rgba(183,140,64,0.35)';
-const GOLD_MID = 'rgba(183,140,64,0.5)';
+// Gold for faction-controlled territories (hex for safe alpha interpolation)
+const GOLD_HEX         = '#b78c40';
+// Brighter, more vibrant gold for neutral / uncontrolled territories
+const GOLD_NEUTRAL_HEX = '#d4a830';
 
 export default function CampaignMap({ territories, factions, influenceData = [], campaignSlug, setting }) {
   const router = useRouter();
   const [hoveredId, setHoveredId] = useState(null);
   const [tooltip, setTooltip]     = useState(null); // { x, y, territory }
 
-  const topLevel   = territories.filter(t => t.depth === 1);
-  const subLevel   = territories.filter(t => t.depth === 2);
+  const topLevel    = territories.filter(t => t.depth === 1);
+  const subLevel    = territories.filter(t => t.depth === 2);
   const connections = buildConnections(topLevel);
 
   const theme   = SETTING_BG[setting] || SETTING_BG['Custom'];
@@ -144,7 +145,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
     // Tooltip dimensions (SVG viewBox units, not px)
     const TW      = 36;
     const ROW_H   = 2.5;
-    const FOOT_H  = hasSubInfluence ? 2.2 : 0;   // footnote line if sub-contributions present
+    const FOOT_H  = hasSubInfluence ? 2.2 : 0;
     const TH      = 8.5 + Math.max(1, rows.length) * ROW_H + FOOT_H;
 
     // Position: prefer right of cursor, clamp to viewport; appear above cursor
@@ -152,10 +153,10 @@ export default function CampaignMap({ territories, factions, influenceData = [],
     const TY = Math.max(1, tooltip.y - TH - 2);
 
     // Y positions for each text element inside the box
-    const nameY   = TY + 3.0;
-    const typeY   = TY + 5.0;
-    const divY    = TY + 6.2;
-    const firstRowY = TY + 8.0;
+    const nameY      = TY + 3.0;
+    const typeY      = TY + 5.0;
+    const divY       = TY + 6.2;
+    const firstRowY  = TY + 8.0;
 
     return (
       <g style={{ pointerEvents: 'none' }}>
@@ -207,12 +208,10 @@ export default function CampaignMap({ territories, factions, influenceData = [],
           const ry = firstRowY + i * ROW_H;
           return (
             <g key={row.faction_id}>
-              {/* Faction colour dot */}
               <DiamondIcon
                 cx={TX + 3.2} cy={ry - 0.5} size={0.9}
                 fill={faction.colour}
               />
-              {/* Faction name */}
               <text
                 x={`${TX + 5}%`} y={`${ry}%`}
                 fill="rgba(220,200,160,0.8)"
@@ -222,7 +221,6 @@ export default function CampaignMap({ territories, factions, influenceData = [],
               >
                 {faction.name.length > 14 ? faction.name.slice(0, 12) + '…' : faction.name}
               </text>
-              {/* Influence points — right-aligned */}
               <text
                 x={`${TX + TW - 2.5}%`} y={`${ry}%`}
                 textAnchor="end"
@@ -274,10 +272,22 @@ export default function CampaignMap({ territories, factions, influenceData = [],
       style={{ background: theme.bg, display: 'block', cursor: 'default' }}
       onMouseLeave={() => { setHoveredId(null); setTooltip(null); }}
     >
-      {/* Background */}
-      {isScifi ? (
-        <StarField count={120} />
-      ) : (
+      {/* ── Background image ─────────────────────────────────────────────────── */}
+      {/* Place map-background.jpg in your /public folder to activate this */}
+      <image
+        href="/map-background.jpg"
+        x="0" y="0"
+        width="100%" height="100%"
+        preserveAspectRatio="xMidYMid slice"
+      />
+      {/* Dark overlay — ensures territory nodes remain readable over the photo */}
+      <rect x="0" y="0" width="100%" height="100%" fill="rgba(5,5,10,0.58)" />
+
+      {/* Star field — layered on top of photo for added depth (reduced opacity) */}
+      {isScifi && <StarField count={120} />}
+
+      {/* Grid lines for non-sci-fi settings */}
+      {!isScifi && (
         <>
           {Array.from({ length: 10 }, (_, i) => (
             <line key={`h${i}`} x1="0" y1={`${i * 10}%`} x2="100%" y2={`${i * 10}%`} stroke={theme.grid} strokeWidth="0.3" />
@@ -292,7 +302,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
       <circle cx="50%" cy="50%" r="44%" fill="none" stroke="rgba(183,140,64,0.06)" strokeWidth="0.4" />
       <circle cx="50%" cy="50%" r="42%" fill="none" stroke="rgba(183,140,64,0.04)" strokeWidth="0.2" />
 
-      {/* Warp route connections */}
+      {/* ── Warp route connections (top-level ↔ top-level) ───────────────────── */}
       {connections.map(([a, b], i) => {
         const ta = topLevel[a];
         const tb = topLevel[b];
@@ -303,7 +313,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
             key={i}
             x1={`${ta.x_pos}%`} y1={`${ta.y_pos}%`}
             x2={`${tb.x_pos}%`} y2={`${tb.y_pos}%`}
-            stroke={isHovered ? 'rgba(183,140,64,0.5)' : 'rgba(183,140,64,0.15)'}
+            stroke={isHovered ? `${GOLD_HEX}80` : `${GOLD_HEX}28`}
             strokeWidth={isHovered ? '0.4' : '0.25'}
             strokeDasharray="1.2 0.8"
             style={{ transition: 'stroke 0.2s, stroke-width 0.2s' }}
@@ -311,28 +321,42 @@ export default function CampaignMap({ territories, factions, influenceData = [],
         );
       })}
 
-      {/* Sub-territory connectors */}
+      {/* ── Sub-territory connector lines ──────────────────────────────────────
+          Colour rule:
+            · Both parent and sub controlled by the same faction → faction colour
+            · Otherwise → neutral gold
+      ─────────────────────────────────────────────────────────────────────────── */}
       {subLevel.map(sub => {
         const parent = topLevel.find(t => t.id === sub.parent_id);
         if (!parent) return null;
+
+        const parentDomId = dominantFactionId(parent);
+        const subDomId    = dominantFactionId(sub);
+        const sameOwner   = parentDomId && subDomId && parentDomId === subDomId;
+        const lineColour  = sameOwner
+          ? (factionColour[parentDomId] || GOLD_NEUTRAL_HEX)
+          : GOLD_NEUTRAL_HEX;
+
         return (
           <line
             key={sub.id}
             x1={`${parent.x_pos}%`} y1={`${parent.y_pos}%`}
             x2={`${sub.x_pos}%`}   y2={`${sub.y_pos}%`}
-            stroke="rgba(255,255,255,0.06)"
-            strokeWidth="0.2"
+            stroke={lineColour}
+            strokeWidth={sameOwner ? '0.3' : '0.2'}
+            opacity={sameOwner ? 0.55 : 0.38}
           />
         );
       })}
 
-      {/* ── Sub-territory nodes ── */}
+      {/* ── Sub-territory nodes ──────────────────────────────────────────────── */}
       {subLevel.map(sub => {
         const isHov    = hoveredId === sub.id;
         const domId    = dominantFactionId(sub);
+        // Use faction colour if controlled, otherwise bright neutral gold
         const subColour = domId
-          ? factionColour[domId] || GOLD_DIM
-          : 'rgba(183,140,64,0.3)';
+          ? (factionColour[domId] || GOLD_HEX)
+          : GOLD_NEUTRAL_HEX;
 
         return (
           <g
@@ -353,9 +377,9 @@ export default function CampaignMap({ territories, factions, influenceData = [],
             {/* Node circle */}
             <circle
               cx={`${sub.x_pos}%`} cy={`${sub.y_pos}%`} r="1.2%"
-              fill={isHov ? `${subColour}35` : `${subColour}20`}
-              stroke={isHov ? subColour : `${subColour}90`}
-              strokeWidth={isHov ? '0.4' : '0.25'}
+              fill={isHov ? `${subColour}45` : `${subColour}28`}
+              stroke={isHov ? subColour : `${subColour}bb`}
+              strokeWidth={isHov ? '0.4' : '0.3'}
               style={{ transition: 'stroke 0.15s' }}
             />
             {/* Name label — only visible on hover */}
@@ -377,7 +401,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
         );
       })}
 
-      {/* ── Top-level territory nodes ── */}
+      {/* ── Top-level territory nodes ─────────────────────────────────────────── */}
       {topLevel.map(t => {
         const isHov = hoveredId === t.id;
         const cx    = `${t.x_pos}%`;
@@ -385,11 +409,14 @@ export default function CampaignMap({ territories, factions, influenceData = [],
         const cxN   = t.x_pos;
         const cyN   = t.y_pos;
 
-        const domId      = dominantFactionId(t);
-        const baseColour = domId ? factionColour[domId] || GOLD : GOLD;
-        const dimColour  = domId ? `${baseColour}88` : GOLD_DIM;
-        const ringColour = isHov ? baseColour : domId ? `${baseColour}88` : GOLD_DIM;
-        const glowColour = `${baseColour}15`;
+        const domId = dominantFactionId(t);
+        // Controlled → faction colour; Neutral → brighter gold
+        const baseColour = domId
+          ? (factionColour[domId] || GOLD_HEX)
+          : GOLD_NEUTRAL_HEX;
+
+        const dimColour  = domId ? `${baseColour}88` : `${GOLD_NEUTRAL_HEX}cc`;
+        const ringColour = isHov ? baseColour : domId ? `${baseColour}88` : `${GOLD_NEUTRAL_HEX}cc`;
 
         return (
           <g
@@ -400,30 +427,38 @@ export default function CampaignMap({ territories, factions, influenceData = [],
             onMouseLeave={() => { setHoveredId(null); setTooltip(null); }}
             onMouseMove={e => handleMouseMove(e, t)}
           >
+            {/* Hover glow */}
             {isHov && (
               <circle cx={cx} cy={cy} r="4.5%"
-                fill={glowColour} stroke={`${baseColour}40`} strokeWidth="0.3"
+                fill={`${baseColour}18`} stroke={`${baseColour}40`} strokeWidth="0.3"
               />
             )}
+            {/* Faction pulse ring — shown when controlled (not hovered) */}
             {domId && !isHov && (
               <circle cx={cx} cy={cy} r="3.6%"
                 fill="none" stroke={`${baseColour}50`} strokeWidth="0.5"
               />
             )}
+            {/* Main node ring */}
             <circle cx={cx} cy={cy} r="3.2%"
-              fill="rgba(10,10,15,0.9)"
+              fill="rgba(10,10,15,0.88)"
               stroke={ringColour}
-              strokeWidth={isHov ? '0.5' : '0.35'}
+              strokeWidth={isHov ? '0.5' : '0.38'}
               style={{ transition: 'stroke 0.15s, stroke-width 0.15s' }}
             />
+            {/* Inner fill */}
             <circle cx={cx} cy={cy} r="2.2%"
-              fill={isHov ? `${baseColour}25` : domId ? `${baseColour}12` : 'rgba(183,140,64,0.07)'}
+              fill={isHov
+                ? `${baseColour}30`
+                : domId ? `${baseColour}14` : `${GOLD_NEUTRAL_HEX}18`}
               style={{ transition: 'fill 0.15s' }}
             />
+            {/* Diamond icon */}
             <DiamondIcon
               cx={cxN} cy={cyN} size={1.4}
-              fill={isHov ? baseColour : domId ? dimColour : GOLD_MID}
+              fill={isHov ? baseColour : domId ? dimColour : GOLD_NEUTRAL_HEX}
             />
+            {/* Territory name */}
             <text
               x={cx} y={`${cyN + 5}%`}
               textAnchor="middle"
@@ -439,7 +474,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
         );
       })}
 
-      {/* ── Tooltip (rendered last so it sits on top) ── */}
+      {/* ── Tooltip (rendered last so it sits on top) ─────────────────────────── */}
       {renderTooltip()}
 
       {/* Centre compass rose */}
