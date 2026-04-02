@@ -1,16 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Support ?redirect=/join/abc123 so invite links work for unauthenticated users
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -24,7 +28,7 @@ export default function LoginPage() {
       setError('Invalid email or password. Please try again.');
       setLoading(false);
     } else {
-      router.push('/dashboard');
+      router.push(redirectTo);
       router.refresh();
     }
   }
@@ -88,6 +92,21 @@ export default function LoginPage() {
             Sign In
           </h1>
         </div>
+
+        {/* Invite banner — shown when arriving via an invite link */}
+        {redirectTo.startsWith('/join/') && (
+          <div style={{
+            border: '1px solid rgba(183,140,64,0.4)',
+            background: 'rgba(183,140,64,0.06)',
+            padding: '0.85rem 1rem',
+            marginBottom: '1.5rem',
+            textAlign: 'center',
+          }}>
+            <p style={{ color: 'var(--text-gold)', fontSize: '0.85rem', lineHeight: 1.5 }}>
+              You've been invited to join a campaign. Sign in to accept.
+            </p>
+          </div>
+        )}
 
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
@@ -155,7 +174,7 @@ export default function LoginPage() {
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
 
-          {/* Link to register */}
+          {/* Link to register — preserves redirect param for invite flow */}
           <p style={{
             textAlign: 'center',
             color: 'var(--text-muted)',
@@ -163,12 +182,24 @@ export default function LoginPage() {
             fontStyle: 'italic',
           }}>
             No account yet?{' '}
-            <Link href="/register" style={{ color: 'var(--text-gold)', textDecoration: 'none' }}>
+            <Link
+              href={redirectTo.startsWith('/join/') ? `/register?redirect=${encodeURIComponent(redirectTo)}` : '/register'}
+              style={{ color: 'var(--text-gold)', textDecoration: 'none' }}
+            >
               Create one
             </Link>
           </p>
         </form>
       </div>
     </div>
+  );
+}
+
+// Wrap in Suspense because useSearchParams() requires it in Next.js App Router
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
