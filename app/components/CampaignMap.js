@@ -17,21 +17,6 @@ function buildConnections(nodes) {
   return [...edges].map(k => k.split('-').map(Number));
 }
 
-function StarField({ count = 80 }) {
-  const stars = Array.from({ length: count }, (_, i) => ({
-    cx: ((i * 137.5) % 100),
-    cy: ((i * 97.3) % 100),
-    r: i % 7 === 0 ? 0.3 : 0.15,
-    opacity: 0.12 + (i % 5) * 0.04,
-  }));
-  return (
-    <>
-      {stars.map((s, i) => (
-        <circle key={i} cx={`${s.cx}%`} cy={`${s.cy}%`} r={s.r * 6} fill="white" opacity={s.opacity} />
-      ))}
-    </>
-  );
-}
 
 function DiamondIcon({ cx, cy, size, fill }) {
   const h = size * 0.6;
@@ -62,8 +47,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
   const subLevel    = territories.filter(t => t.depth === 2);
   const connections = buildConnections(topLevel);
 
-  const theme   = SETTING_BG[setting] || SETTING_BG['Custom'];
-  const isScifi = setting === 'Gothic Sci-Fi' || setting === 'Space Opera';
+  const theme = SETTING_BG[setting] || SETTING_BG['Custom'];
 
   const factionColour = Object.fromEntries((factions || []).map(f => [f.id, f.colour]));
 
@@ -283,24 +267,6 @@ export default function CampaignMap({ territories, factions, influenceData = [],
       {/* Dark overlay — ensures territory nodes remain readable over the photo */}
       <rect x="0" y="0" width="100%" height="100%" fill="rgba(5,5,10,0.58)" />
 
-      {/* Star field — layered on top of photo for added depth (reduced opacity) */}
-      {isScifi && <StarField count={120} />}
-
-      {/* Grid lines for non-sci-fi settings */}
-      {!isScifi && (
-        <>
-          {Array.from({ length: 10 }, (_, i) => (
-            <line key={`h${i}`} x1="0" y1={`${i * 10}%`} x2="100%" y2={`${i * 10}%`} stroke={theme.grid} strokeWidth="0.3" />
-          ))}
-          {Array.from({ length: 10 }, (_, i) => (
-            <line key={`v${i}`} x1={`${i * 10}%`} y1="0" x2={`${i * 10}%`} y2="100%" stroke={theme.grid} strokeWidth="0.3" />
-          ))}
-        </>
-      )}
-
-      {/* Outer decorative rings */}
-      <circle cx="50%" cy="50%" r="44%" fill="none" stroke="rgba(183,140,64,0.06)" strokeWidth="0.4" />
-      <circle cx="50%" cy="50%" r="42%" fill="none" stroke="rgba(183,140,64,0.04)" strokeWidth="0.2" />
 
       {/* ── Warp route connections (top-level ↔ top-level) ───────────────────── */}
       {connections.map(([a, b], i) => {
@@ -477,12 +443,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
       {/* ── Tooltip (rendered last so it sits on top) ─────────────────────────── */}
       {renderTooltip()}
 
-      {/* Centre compass rose */}
-      <g opacity="0.12">
-        <line x1="50%" y1="46%" x2="50%" y2="54%" stroke="#b78c40" strokeWidth="0.3" />
-        <line x1="46%" y1="50%" x2="54%" y2="50%" stroke="#b78c40" strokeWidth="0.3" />
-        <polygon points="50,46 50.6,47.2 49.4,47.2" fill="#b78c40" />
-      </g>
+
     </svg>
   );
 }
