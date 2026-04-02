@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { reverseInfluence } from '@/app/lib/influence';
 
 export default function AdminBattleManager({ battles, factions, slug }) {
   const router = useRouter();
@@ -18,6 +19,10 @@ export default function AdminBattleManager({ battles, factions, slug }) {
   async function handleDelete(battleId) {
     setDeletingId(battleId);
     setError('');
+
+    // Reverse influence before deleting the record
+    const battle = battles.find(b => b.id === battleId);
+    if (battle) await reverseInfluence(supabase, battle);
 
     const { error: deleteError } = await supabase
       .from('battles')

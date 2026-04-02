@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { reverseInfluence } from '@/app/lib/influence';
 
 const BATTLE_TYPES = [
   'Boarding Action',
@@ -160,6 +161,9 @@ export default function BattleEditForm({ battle, campaign, territories, factions
   async function handleDelete() {
     setDeleting(true);
     setError('');
+
+    // Reverse influence before deleting the record
+    await reverseInfluence(supabase, battle);
 
     const { error: deleteError } = await supabase
       .from('battles')
