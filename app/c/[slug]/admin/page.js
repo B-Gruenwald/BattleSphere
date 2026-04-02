@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import AdminCampaignSettings from '@/app/components/AdminCampaignSettings';
 import AdminPlayerSearch from '@/app/components/AdminPlayerSearch';
 import AdminFactionEditor from '@/app/components/AdminFactionEditor';
+import AdminBattleManager from '@/app/components/AdminBattleManager';
 
 export default async function AdminPage({ params }) {
   const { slug } = await params;
@@ -49,6 +50,13 @@ export default async function AdminPage({ params }) {
     .select('*')
     .eq('campaign_id', campaign.id)
     .order('created_at');
+
+  // Fetch battles (for battle management section)
+  const { data: battles } = await supabase
+    .from('battles')
+    .select('*')
+    .eq('campaign_id', campaign.id)
+    .order('created_at', { ascending: false });
 
   const sectionLabel = {
     fontFamily: 'var(--font-display)',
@@ -144,6 +152,21 @@ export default async function AdminPage({ params }) {
         <Link href={`/c/${slug}/map/edit`}>
           <button className="btn-primary">Edit Campaign Map →</button>
         </Link>
+      </div>
+
+      {/* ═══ SECTION 5: Battle Records ═══════════════════════════════════════ */}
+      <div style={{ marginBottom: '3.5rem' }}>
+        <div style={{ borderBottom: '1px solid var(--border-dim)', marginBottom: '2rem', paddingBottom: '0.75rem' }}>
+          <h2 style={sectionTitle}>Battle Records</h2>
+        </div>
+        <p style={sectionDesc}>
+          As organiser, you can delete any battle record in this campaign. This cannot be undone.
+        </p>
+        <AdminBattleManager
+          battles={battles || []}
+          factions={factions || []}
+          slug={slug}
+        />
       </div>
 
       {/* Back link */}

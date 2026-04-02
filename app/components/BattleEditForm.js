@@ -39,6 +39,8 @@ export default function BattleEditForm({ battle, campaign, territories, factions
   const [defenderNarrative,  setDefenderNarrative]  = useState(battle.defender_narrative   || '');
   const [submitting,         setSubmitting]         = useState(false);
   const [error,              setError]              = useState('');
+  const [confirmDelete,      setConfirmDelete]      = useState(false);
+  const [deleting,           setDeleting]           = useState(false);
 
   // These refs prevent the auto-fill useEffects from overwriting the saved
   // faction IDs on initial mount. Without them, if a player's current
@@ -155,6 +157,25 @@ export default function BattleEditForm({ battle, campaign, territories, factions
     router.push(`/c/${campaign.slug}/battle/${battle.id}`);
   }
 
+  async function handleDelete() {
+    setDeleting(true);
+    setError('');
+
+    const { error: deleteError } = await supabase
+      .from('battles')
+      .delete()
+      .eq('id', battle.id);
+
+    if (deleteError) {
+      setError('Could not delete battle: ' + deleteError.message);
+      setDeleting(false);
+      setConfirmDelete(false);
+      return;
+    }
+
+    router.push(`/c/${campaign.slug}/battles`);
+  }
+
   // ── Styles ──────────────────────────────────────────────────────────────────
   const inputStyle = {
     width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border-dim)',
@@ -178,6 +199,16 @@ export default function BattleEditForm({ battle, campaign, territories, factions
   });
   const sectionStyle = { marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid var(--border-dim)' };
   const hintStyle = { fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.4rem', fontStyle: 'italic' };
+  const dangerBtnStyle = {
+    padding: '0.65rem 1.25rem', background: 'transparent',
+    border: '1px solid #7a2020', color: '#e05a5a',
+    fontFamily: 'var(--font-display)', fontSize: '0.6rem', letterSpacing: '0.12em',
+    textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.15s',
+  };
+  const dangerBtnConfirmStyle = {
+    ...dangerBtnStyle,
+    background: 'rgba(224,90,90,0.12)', border: '1px solid #e05a5a',
+  };
 
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: '700px' }}>
@@ -360,11 +391,52 @@ export default function BattleEditForm({ battle, campaign, territories, factions
 
       {error && <p style={{ color: '#e05a5a', fontSize: '0.85rem', marginBottom: '1.25rem' }}>{error}</p>}
 
-      <div style={{ display: 'flex', gap: '1rem' }}>
+      {/* ── Save / Cancel ── */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '3rem' }}>
         <button type="submit" className="btn-primary" disabled={submitting} style={{ opacity: submitting ? 0.6 : 1 }}>
           {submitting ? 'Saving…' : 'Save Changes'}
         </button>
         <button type="button" className="btn-secondary" onClick={() => router.back()}>Cancel</button>
+      </div>
+
+      {/* ── Delete Battle ── */}
+      <div style={{ paddingTop: '2rem', borderTop: '1px solid var(--border-dim)' }}>
+        <p style={{
+          fontFamily: 'var(--font-display)', fontSize: '0.6rem', letterSpacing: '0.15em',
+          textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '1rem',
+        }}>
+          Danger Zone
+        </p>
+
+        {!confirmDelete ? (
+          <button type="button" style={dangerBtnStyle} onClick={() => setConfirmDelete(true)}>
+            Delete Battle Record
+          </button>
+        ) : (
+          <div style={{ border: '1px solid #7a2020', padding: '1.25rem', background: 'rgba(224,90,90,0.05)' }}>
+            <p style={{ color: '#e05a5a', fontSize: '0.9rem', marginBottom: '1rem' }}>
+              Are you sure? This battle record will be permanently deleted and cannot be recovered.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                type="button"
+                style={{ ...dangerBtnConfirmStyle, opacity: deleting ? 0.6 : 1 }}
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting…' : 'Yes, Delete Permanently'}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setConfirmDelete(false)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </form>
   );
