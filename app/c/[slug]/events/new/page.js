@@ -41,7 +41,7 @@ export default async function NewEventPage({ params }) {
         </p>
       </div>
 
-      <EventForm campaign={campaign} factions={factions ?? []} />
+      <EventForm campaign={campaign} factions={factions ?? []} userId={user.id} />
     </div>
   );
 }

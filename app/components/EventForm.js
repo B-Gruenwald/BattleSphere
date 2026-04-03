@@ -60,6 +60,7 @@ const fieldStyle = { marginBottom: '1.5rem' };
 export default function EventForm({
   campaign,
   factions,
+  userId,
   existingEvent = null,   // pass when editing
 }) {
   const router = useRouter();
@@ -103,6 +104,7 @@ export default function EventForm({
       affected_factions:  affectedFactions.length > 0 ? affectedFactions : null,
       starts_at:          startsAt || null,
       ends_at:            endsAt || null,
+      ...(!isEditing && { created_by: userId }),
     };
 
     let result;
