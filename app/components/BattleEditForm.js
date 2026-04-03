@@ -22,31 +22,30 @@ export default function BattleEditForm({ battle, campaign, territories, factions
     !battle.winner_faction_id ? 'draw' :
     battle.winner_faction_id === battle.attacker_faction_id ? 'attacker' : 'defender';
 
-  const [battleType,         setBattleType]        = useState(battle.battle_type          || '');
-  const [scenario,           setScenario]          = useState(battle.scenario             || '');
-  const [territoryId,        setTerritoryId]        = useState(battle.territory_id         || '');
-  const [attackerPlayerId,   setAttackerPlayer]     = useState(battle.attacker_player_id   || '');
-  const [defenderPlayerId,   setDefenderPlayer]     = useState(battle.defender_player_id   || '');
-  const [attackerFactionId,  setAttacker]           = useState(battle.attacker_faction_id  || '');
-  const [defenderFactionId,  setDefender]           = useState(battle.defender_faction_id  || '');
-  const [attackerArmyType,   setAttackerArmyType]   = useState(battle.attacker_army_type   || '');
-  const [defenderArmyType,   setDefenderArmyType]   = useState(battle.defender_army_type   || '');
-  const [attackerArmyList,   setAttackerArmyList]   = useState(battle.attacker_army_list   || '');
-  const [defenderArmyList,   setDefenderArmyList]   = useState(battle.defender_army_list   || '');
-  const [result,             setResult]             = useState(initialResult);
-  const [attackerScore,      setAttackerScore]      = useState(battle.attacker_score       ?? '');
-  const [defenderScore,      setDefenderScore]      = useState(battle.defender_score       ?? '');
-  const [attackerNarrative,  setAttackerNarrative]  = useState(battle.attacker_narrative   || '');
-  const [defenderNarrative,  setDefenderNarrative]  = useState(battle.defender_narrative   || '');
-  const [submitting,         setSubmitting]         = useState(false);
-  const [error,              setError]              = useState('');
-  const [confirmDelete,      setConfirmDelete]      = useState(false);
-  const [deleting,           setDeleting]           = useState(false);
+  const [headline,         setHeadline]          = useState(battle.headline            || '');
+  const [battleType,       setBattleType]         = useState(battle.battle_type         || '');
+  const [scenario,         setScenario]           = useState(battle.scenario            || '');
+  const [territoryId,      setTerritoryId]        = useState(battle.territory_id        || '');
+  const [attackerPlayerId, setAttackerPlayer]     = useState(battle.attacker_player_id  || '');
+  const [defenderPlayerId, setDefenderPlayer]     = useState(battle.defender_player_id  || '');
+  const [attackerFactionId,setAttacker]           = useState(battle.attacker_faction_id || '');
+  const [defenderFactionId,setDefender]           = useState(battle.defender_faction_id || '');
+  const [attackerArmyType, setAttackerArmyType]   = useState(battle.attacker_army_type  || '');
+  const [defenderArmyType, setDefenderArmyType]   = useState(battle.defender_army_type  || '');
+  const [attackerArmyList, setAttackerArmyList]   = useState(battle.attacker_army_list  || '');
+  const [defenderArmyList, setDefenderArmyList]   = useState(battle.defender_army_list  || '');
+  const [result,           setResult]             = useState(initialResult);
+  const [attackerScore,    setAttackerScore]      = useState(battle.attacker_score      ?? '');
+  const [defenderScore,    setDefenderScore]      = useState(battle.defender_score      ?? '');
+  const [attackerNarrative,setAttackerNarrative]  = useState(battle.attacker_narrative  || '');
+  const [defenderNarrative,setDefenderNarrative]  = useState(battle.defender_narrative  || '');
+  const [submitting,       setSubmitting]         = useState(false);
+  const [error,            setError]              = useState('');
+  const [confirmDelete,    setConfirmDelete]      = useState(false);
+  const [deleting,         setDeleting]           = useState(false);
 
   // These refs prevent the auto-fill useEffects from overwriting the saved
-  // faction IDs on initial mount. Without them, if a player's current
-  // faction differs from what was recorded in the battle, the form would
-  // silently overwrite the correct data before the user touches anything.
+  // faction IDs on initial mount.
   const attackerEffectRan = useRef(false);
   const defenderEffectRan = useRef(false);
 
@@ -74,17 +73,17 @@ export default function BattleEditForm({ battle, campaign, territories, factions
     e.preventDefault();
     setError('');
 
-    // ── Validation ─────────────────────────────────────────────────────────────
+    // ── Validation ──────────────────────────────────────────────────────────────
     if (!attackerFactionId) {
       if (attackerPlayerId) {
         const attackerMember = members.find(m => m.user_id === attackerPlayerId);
         if (attackerMember && !attackerMember.faction_id) {
-          setError('The attacker has no faction assigned. They can set one from their Player Profile, or select one manually in the Faction field above.');
+          setError('The Registering Player has no faction assigned. They can set one from their Player Profile, or select one manually in the Faction field above.');
         } else {
-          setError('Please select a faction for the attacker.');
+          setError('Please select a faction for the Registering Player.');
         }
       } else {
-        setError('Please select a faction for the attacker.');
+        setError('Please select a faction for the Registering Player.');
       }
       return;
     }
@@ -93,18 +92,18 @@ export default function BattleEditForm({ battle, campaign, territories, factions
       if (defenderPlayerId) {
         const defenderMember = members.find(m => m.user_id === defenderPlayerId);
         if (defenderMember && !defenderMember.faction_id) {
-          setError('The defender has no faction assigned. They can set one from their Player Profile, or select one manually in the Faction field above.');
+          setError('The Opponent has no faction assigned. They can set one from their Player Profile, or select one manually in the Faction field above.');
         } else {
-          setError('Please select a faction for the defender.');
+          setError('Please select a faction for the Opponent.');
         }
       } else {
-        setError('Please select a faction for the defender.');
+        setError('Please select a faction for the Opponent.');
       }
       return;
     }
 
     if (attackerFactionId === defenderFactionId) {
-      setError('Attacker and defender must be different factions.');
+      setError('Registering Player and Opponent must be different factions.');
       return;
     }
 
@@ -115,19 +114,18 @@ export default function BattleEditForm({ battle, campaign, territories, factions
 
     setSubmitting(true);
 
-    // Use .select() so we can detect when RLS silently blocks the update
-    // (Supabase returns 0 rows with no error when RLS prevents an update)
     const { data: saved, error: updateError } = await supabase
       .from('battles')
       .update({
-        battle_type:           battleType          || null,
-        scenario:              scenario.trim()     || null,
-        territory_id:          territoryId         || null,
+        headline:              headline.trim()          || null,
+        battle_type:           battleType               || null,
+        scenario:              scenario.trim()          || null,
+        territory_id:          territoryId              || null,
         attacker_faction_id:   attackerFactionId,
         defender_faction_id:   defenderFactionId,
         winner_faction_id:     winnerFactionId,
-        attacker_player_id:    attackerPlayerId    || null,
-        defender_player_id:    defenderPlayerId    || null,
+        attacker_player_id:    attackerPlayerId         || null,
+        defender_player_id:    defenderPlayerId         || null,
         attacker_army_type:    attackerArmyType.trim()  || null,
         defender_army_type:    defenderArmyType.trim()  || null,
         attacker_army_list:    attackerArmyList.trim()  || null,
@@ -148,7 +146,7 @@ export default function BattleEditForm({ battle, campaign, territories, factions
 
     if (!saved || saved.length === 0) {
       setError(
-        'Changes could not be saved — only the attacker, defender, the player who logged the battle, ' +
+        'Changes could not be saved — only the Registering Player, Opponent, the player who logged the battle, ' +
         'or the campaign organiser can edit this record.'
       );
       setSubmitting(false);
@@ -162,7 +160,6 @@ export default function BattleEditForm({ battle, campaign, territories, factions
     setDeleting(true);
     setError('');
 
-    // Reverse influence before deleting the record
     await reverseInfluence(supabase, battle);
 
     const { error: deleteError } = await supabase
@@ -217,6 +214,21 @@ export default function BattleEditForm({ battle, campaign, territories, factions
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: '700px' }}>
 
+      {/* ── Headline ── */}
+      <div style={sectionStyle}>
+        <label style={labelStyle}>
+          Battle Headline <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span>
+        </label>
+        <input
+          type="text"
+          value={headline}
+          onChange={e => setHeadline(e.target.value)}
+          placeholder="e.g. The Fall of Hive Secondus, Ambush at the Iron Gate…"
+          style={inputStyle}
+        />
+        <p style={hintStyle}>A short title for this battle — shown in battle lists and the chronicle.</p>
+      </div>
+
       {/* ── Battle Type + Scenario + Theatre ── */}
       <div style={sectionStyle}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
@@ -251,7 +263,7 @@ export default function BattleEditForm({ battle, campaign, territories, factions
             <p style={hintStyle}>
               {result === 'draw'
                 ? '⬡ Both factions will gain influence here when this battle was first logged.'
-                : `⬡ ${result === 'attacker' ? factions.find(f => f.id === attackerFactionId)?.name || 'Winner' : factions.find(f => f.id === defenderFactionId)?.name || 'Winner'} gained +3 influence here when this battle was first logged.`
+                : `⬡ ${result === 'attacker' ? factions.find(f => f.id === attackerFactionId)?.name || 'Registering Player' : factions.find(f => f.id === defenderFactionId)?.name || 'Opponent'} gained +3 influence here when this battle was first logged.`
               }
             </p>
           )}
@@ -262,10 +274,10 @@ export default function BattleEditForm({ battle, campaign, territories, factions
       <div style={sectionStyle}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
 
-          {/* Attacker column */}
+          {/* Registering Player column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
             <div>
-              <label style={labelStyle}>Attacker Player</label>
+              <label style={labelStyle}>Registering Player</label>
               <select value={attackerPlayerId} onChange={e => setAttackerPlayer(e.target.value)} style={inputStyle}>
                 <option value="">— Select player —</option>
                 {members.map(m => <option key={m.user_id} value={m.user_id}>{m.username}</option>)}
@@ -302,10 +314,10 @@ export default function BattleEditForm({ battle, campaign, territories, factions
             </div>
           </div>
 
-          {/* Defender column */}
+          {/* Opponent column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
             <div>
-              <label style={labelStyle}>Defender Player <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
+              <label style={labelStyle}>Opponent <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
               <select value={defenderPlayerId} onChange={e => setDefenderPlayer(e.target.value)} style={inputStyle}>
                 <option value="">— Select player —</option>
                 {members.filter(m => m.user_id !== attackerPlayerId).map(m => (
@@ -352,17 +364,17 @@ export default function BattleEditForm({ battle, campaign, territories, factions
       <div style={sectionStyle}>
         <label style={labelStyle}>Battle Result</label>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button type="button" style={resultBtnStyle(result === 'attacker')} onClick={() => setResult('attacker')}>Attacker Wins</button>
+          <button type="button" style={resultBtnStyle(result === 'attacker')} onClick={() => setResult('attacker')}>Registering Player Wins</button>
           <button type="button" style={resultBtnStyle(result === 'draw')}     onClick={() => setResult('draw')}>Draw</button>
-          <button type="button" style={resultBtnStyle(result === 'defender')} onClick={() => setResult('defender')}>Defender Wins</button>
+          <button type="button" style={resultBtnStyle(result === 'defender')} onClick={() => setResult('defender')}>Opponent Wins</button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '1.25rem' }}>
           <div>
-            <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Attacker Score <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
+            <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Registering Player Score <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
             <input type="number" min="0" value={attackerScore} onChange={e => setAttackerScore(e.target.value)} placeholder="e.g. 42" style={inputStyle} />
           </div>
           <div>
-            <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Defender Score <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
+            <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Opponent Score <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
             <input type="number" min="0" value={defenderScore} onChange={e => setDefenderScore(e.target.value)} placeholder="e.g. 18" style={inputStyle} />
           </div>
         </div>
@@ -373,19 +385,19 @@ export default function BattleEditForm({ battle, campaign, territories, factions
         <label style={labelStyle}>Battle Chronicles <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
           <div>
-            <span style={{ ...sublabelStyle, marginBottom: '0.5rem' }}>Attacker's Account</span>
+            <span style={{ ...sublabelStyle, marginBottom: '0.5rem' }}>Registering Player's Account</span>
             <textarea
               value={attackerNarrative} onChange={e => setAttackerNarrative(e.target.value)}
-              rows={5} placeholder="Describe the battle from the attacker's perspective…"
+              rows={5} placeholder="Describe the battle from your perspective…"
               style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
             />
             <p style={hintStyle}>**bold** &nbsp;·&nbsp; *italic*</p>
           </div>
           <div>
-            <span style={{ ...sublabelStyle, marginBottom: '0.5rem' }}>Defender's Account</span>
+            <span style={{ ...sublabelStyle, marginBottom: '0.5rem' }}>Opponent's Account</span>
             <textarea
               value={defenderNarrative} onChange={e => setDefenderNarrative(e.target.value)}
-              rows={5} placeholder="Describe the battle from the defender's perspective…"
+              rows={5} placeholder="Describe the battle from the opponent's perspective…"
               style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
             />
             <p style={hintStyle}>**bold** &nbsp;·&nbsp; *italic*</p>

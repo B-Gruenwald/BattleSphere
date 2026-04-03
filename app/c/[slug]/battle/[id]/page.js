@@ -129,9 +129,20 @@ export default async function BattleDetailPage({ params }) {
             </span>
           )}
         </div>
-        <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: '900', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '1rem' }}>
-          {attackerFaction?.name ?? '?'} <span style={{ color: 'var(--text-muted)', fontWeight: '400' }}>vs</span> {defenderFaction?.name ?? '?'}
-        </h1>
+        {battle.headline ? (
+          <>
+            <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: '900', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+              {battle.headline}
+            </h1>
+            <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              {attackerFaction?.name ?? '?'} <span style={{ color: 'var(--text-muted)' }}>vs</span> {defenderFaction?.name ?? '?'}
+            </p>
+          </>
+        ) : (
+          <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2.2rem)', fontWeight: '900', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '1rem' }}>
+            {attackerFaction?.name ?? '?'} <span style={{ color: 'var(--text-muted)', fontWeight: '400' }}>vs</span> {defenderFaction?.name ?? '?'}
+          </h1>
+        )}
 
         {/* Result badge */}
         <div style={{

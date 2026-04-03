@@ -17,24 +17,25 @@ export default function BattleLogForm({ campaign, territories, factions, members
   const router = useRouter();
   const supabase = createClient();
 
-  const [battleType,         setBattleType]        = useState('');
-  const [scenario,           setScenario]          = useState('');
-  const [territoryId,        setTerritoryId]        = useState(preselectedTerritoryId || '');
-  const [attackerPlayerId,   setAttackerPlayer]     = useState('');
-  const [defenderPlayerId,   setDefenderPlayer]     = useState('');
-  const [attackerFactionId,  setAttacker]           = useState('');
-  const [defenderFactionId,  setDefender]           = useState('');
-  const [attackerArmyType,   setAttackerArmyType]   = useState('');
-  const [defenderArmyType,   setDefenderArmyType]   = useState('');
-  const [attackerArmyList,   setAttackerArmyList]   = useState('');
-  const [defenderArmyList,   setDefenderArmyList]   = useState('');
-  const [result,             setResult]             = useState('');
-  const [attackerScore,      setAttackerScore]      = useState('');
-  const [defenderScore,      setDefenderScore]      = useState('');
-  const [attackerNarrative,  setAttackerNarrative]  = useState('');
-  const [defenderNarrative,  setDefenderNarrative]  = useState('');
-  const [submitting,         setSubmitting]         = useState(false);
-  const [error,              setError]              = useState('');
+  const [headline,         setHeadline]          = useState('');
+  const [battleType,       setBattleType]         = useState('');
+  const [scenario,         setScenario]           = useState('');
+  const [territoryId,      setTerritoryId]        = useState(preselectedTerritoryId || '');
+  const [attackerPlayerId, setAttackerPlayer]     = useState('');
+  const [defenderPlayerId, setDefenderPlayer]     = useState('');
+  const [attackerFactionId,setAttacker]           = useState('');
+  const [defenderFactionId,setDefender]           = useState('');
+  const [attackerArmyType, setAttackerArmyType]   = useState('');
+  const [defenderArmyType, setDefenderArmyType]   = useState('');
+  const [attackerArmyList, setAttackerArmyList]   = useState('');
+  const [defenderArmyList, setDefenderArmyList]   = useState('');
+  const [result,           setResult]             = useState('');
+  const [attackerScore,    setAttackerScore]      = useState('');
+  const [defenderScore,    setDefenderScore]      = useState('');
+  const [attackerNarrative,setAttackerNarrative]  = useState('');
+  const [defenderNarrative,setDefenderNarrative]  = useState('');
+  const [submitting,       setSubmitting]         = useState(false);
+  const [error,            setError]              = useState('');
 
   useEffect(() => {
     if (attackerPlayerId) {
@@ -84,22 +85,17 @@ export default function BattleLogForm({ campaign, territories, factions, members
       .eq('territory_id', territoryId)
       .in('faction_id', factionIds);
 
-    if (fetchError) {
-      console.error('Influence fetch error:', fetchError);
-      return;
-    }
+    if (fetchError) { console.error('Influence fetch error:', fetchError); return; }
 
     const getPoints = (factionId) =>
       current?.find(i => i.faction_id === factionId)?.influence_points ?? 0;
 
-    const updates = [
-      {
-        campaign_id:      campaign.id,
-        territory_id:     territoryId,
-        faction_id:       gainerId,
-        influence_points: getPoints(gainerId) + gainAmount,
-      },
-    ];
+    const updates = [{
+      campaign_id:      campaign.id,
+      territory_id:     territoryId,
+      faction_id:       gainerId,
+      influence_points: getPoints(gainerId) + gainAmount,
+    }];
 
     if (secondGainerId) {
       updates.push({
@@ -114,29 +110,25 @@ export default function BattleLogForm({ campaign, territories, factions, members
       .from('territory_influence')
       .upsert(updates, { onConflict: 'territory_id,faction_id' });
 
-    if (upsertError) {
-      console.error('Influence upsert error:', upsertError);
-    }
+    if (upsertError) { console.error('Influence upsert error:', upsertError); }
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
 
-    // ── Validation with specific, actionable messages ──────────────────────────
+    // ── Validation ──────────────────────────────────────────────────────────────
     if (!attackerPlayerId) {
-      setError('Please select the attacker player.');
+      setError('Please select the Registering Player.');
       return;
     }
 
     if (!attackerFactionId) {
       const attackerMember = members.find(m => m.user_id === attackerPlayerId);
       if (attackerMember && !attackerMember.faction_id) {
-        setError(
-          'The attacker has no faction assigned. They can set one from their Player Profile, or select one manually in the Faction field above.'
-        );
+        setError('The Registering Player has no faction assigned. They can set one from their Player Profile, or select one manually in the Faction field above.');
       } else {
-        setError('Please select a faction for the attacker.');
+        setError('Please select a faction for the Registering Player.');
       }
       return;
     }
@@ -145,20 +137,18 @@ export default function BattleLogForm({ campaign, territories, factions, members
       if (defenderPlayerId) {
         const defenderMember = members.find(m => m.user_id === defenderPlayerId);
         if (defenderMember && !defenderMember.faction_id) {
-          setError(
-            'The defender has no faction assigned. They can set one from their Player Profile, or select one manually in the Faction field above.'
-          );
+          setError('The Opponent has no faction assigned. They can set one from their Player Profile, or select one manually in the Faction field above.');
         } else {
-          setError('Please select a faction for the defender.');
+          setError('Please select a faction for the Opponent.');
         }
       } else {
-        setError('Please select a faction for the defender.');
+        setError('Please select a faction for the Opponent.');
       }
       return;
     }
 
     if (attackerFactionId === defenderFactionId) {
-      setError('Attacker and defender must be different factions.');
+      setError('Registering Player and Opponent must be different factions.');
       return;
     }
 
@@ -173,6 +163,7 @@ export default function BattleLogForm({ campaign, territories, factions, members
       .from('battles')
       .insert({
         campaign_id:           campaign.id,
+        headline:              headline.trim()     || null,
         battle_type:           battleType          || null,
         scenario:              scenario.trim()     || null,
         territory_id:          territoryId         || null,
@@ -196,7 +187,6 @@ export default function BattleLogForm({ campaign, territories, factions, members
 
     if (insertError) { setError(insertError.message); setSubmitting(false); return; }
 
-    // Auto-update influence points for this territory
     await updateInfluence();
 
     router.push(`/c/${campaign.slug}/battle/${battle.id}`);
@@ -229,7 +219,22 @@ export default function BattleLogForm({ campaign, territories, factions, members
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: '700px' }}>
 
-      {/* ── Battle Type + Theatre ── */}
+      {/* ── Headline ── */}
+      <div style={sectionStyle}>
+        <label style={labelStyle}>
+          Battle Headline <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span>
+        </label>
+        <input
+          type="text"
+          value={headline}
+          onChange={e => setHeadline(e.target.value)}
+          placeholder="e.g. The Fall of Hive Secondus, Ambush at the Iron Gate…"
+          style={inputStyle}
+        />
+        <p style={hintStyle}>A short title for this battle — shown in battle lists and the chronicle.</p>
+      </div>
+
+      {/* ── Battle Type + Scenario + Theatre ── */}
       <div style={sectionStyle}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
           <div>
@@ -263,7 +268,7 @@ export default function BattleLogForm({ campaign, territories, factions, members
             <p style={hintStyle}>
               {result === 'draw'
                 ? '⬡ Both factions will gain +1 influence here.'
-                : `⬡ ${result === 'attacker' ? factions.find(f => f.id === attackerFactionId)?.name || 'Winner' : factions.find(f => f.id === defenderFactionId)?.name || 'Winner'} will gain +3 influence here.`
+                : `⬡ ${result === 'attacker' ? factions.find(f => f.id === attackerFactionId)?.name || 'Registering Player' : factions.find(f => f.id === defenderFactionId)?.name || 'Opponent'} will gain +3 influence here.`
               }
             </p>
           )}
@@ -274,10 +279,10 @@ export default function BattleLogForm({ campaign, territories, factions, members
       <div style={sectionStyle}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
 
-          {/* Attacker column */}
+          {/* Registering Player column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
             <div>
-              <label style={labelStyle}>Attacker Player <span style={{ color: '#e05a5a' }}>*</span></label>
+              <label style={labelStyle}>Registering Player <span style={{ color: '#e05a5a' }}>*</span></label>
               <select value={attackerPlayerId} onChange={e => setAttackerPlayer(e.target.value)} style={inputStyle} required>
                 <option value="">— Select player —</option>
                 {members.map(m => <option key={m.user_id} value={m.user_id}>{m.username}</option>)}
@@ -314,10 +319,10 @@ export default function BattleLogForm({ campaign, territories, factions, members
             </div>
           </div>
 
-          {/* Defender column */}
+          {/* Opponent column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
             <div>
-              <label style={labelStyle}>Defender Player <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
+              <label style={labelStyle}>Opponent <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
               <select value={defenderPlayerId} onChange={e => setDefenderPlayer(e.target.value)} style={inputStyle}>
                 <option value="">— Select player —</option>
                 {members.filter(m => m.user_id !== attackerPlayerId).map(m => (
@@ -364,17 +369,17 @@ export default function BattleLogForm({ campaign, territories, factions, members
       <div style={sectionStyle}>
         <label style={labelStyle}>Battle Result</label>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button type="button" style={resultBtnStyle(result === 'attacker')} onClick={() => setResult('attacker')}>Attacker Wins</button>
+          <button type="button" style={resultBtnStyle(result === 'attacker')} onClick={() => setResult('attacker')}>Registering Player Wins</button>
           <button type="button" style={resultBtnStyle(result === 'draw')}     onClick={() => setResult('draw')}>Draw</button>
-          <button type="button" style={resultBtnStyle(result === 'defender')} onClick={() => setResult('defender')}>Defender Wins</button>
+          <button type="button" style={resultBtnStyle(result === 'defender')} onClick={() => setResult('defender')}>Opponent Wins</button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '1.25rem' }}>
           <div>
-            <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Attacker Score <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
+            <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Registering Player Score <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
             <input type="number" min="0" value={attackerScore} onChange={e => setAttackerScore(e.target.value)} placeholder="e.g. 42" style={inputStyle} />
           </div>
           <div>
-            <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Defender Score <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
+            <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Opponent Score <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
             <input type="number" min="0" value={defenderScore} onChange={e => setDefenderScore(e.target.value)} placeholder="e.g. 18" style={inputStyle} />
           </div>
         </div>
@@ -385,19 +390,19 @@ export default function BattleLogForm({ campaign, territories, factions, members
         <label style={labelStyle}>Battle Chronicles <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
           <div>
-            <span style={{ ...sublabelStyle, marginBottom: '0.5rem' }}>Attacker's Account</span>
+            <span style={{ ...sublabelStyle, marginBottom: '0.5rem' }}>Registering Player's Account</span>
             <textarea
               value={attackerNarrative} onChange={e => setAttackerNarrative(e.target.value)}
-              rows={5} placeholder="Describe the battle from the attacker's perspective…"
+              rows={5} placeholder="Describe the battle from your perspective…"
               style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
             />
             <p style={hintStyle}>**bold** &nbsp;·&nbsp; *italic*</p>
           </div>
           <div>
-            <span style={{ ...sublabelStyle, marginBottom: '0.5rem' }}>Defender's Account</span>
+            <span style={{ ...sublabelStyle, marginBottom: '0.5rem' }}>Opponent's Account</span>
             <textarea
               value={defenderNarrative} onChange={e => setDefenderNarrative(e.target.value)}
-              rows={5} placeholder="Describe the battle from the defender's perspective…"
+              rows={5} placeholder="Describe the battle from the opponent's perspective…"
               style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
             />
             <p style={hintStyle}>**bold** &nbsp;·&nbsp; *italic*</p>

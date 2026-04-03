@@ -93,10 +93,15 @@ export default async function BattleHistoryPage({ params }) {
 
                   {/* Match info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
-                      <span style={{ fontWeight: '600' }}>{attacker?.name ?? '?'}</span>
+                    {battle.headline && (
+                      <div style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.1rem' }}>
+                        {battle.headline}
+                      </div>
+                    )}
+                    <div style={{ fontSize: battle.headline ? '0.85rem' : '1rem', color: battle.headline ? 'var(--text-secondary)' : 'var(--text-primary)', marginBottom: '0.2rem' }}>
+                      <span style={{ fontWeight: battle.headline ? '400' : '600' }}>{attacker?.name ?? '?'}</span>
                       <span style={{ color: 'var(--text-muted)', margin: '0 0.5rem' }}>vs</span>
-                      <span style={{ fontWeight: '600' }}>{defender?.name ?? '?'}</span>
+                      <span style={{ fontWeight: battle.headline ? '400' : '600' }}>{defender?.name ?? '?'}</span>
                     </div>
                     <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                       <span style={{
