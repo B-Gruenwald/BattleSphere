@@ -93,6 +93,7 @@ export default async function PlayersPage({ params }) {
       <div style={{ borderTop: '1px solid var(--border-dim)', marginBottom: '2.5rem' }} />
 
       {/* Player cards */}
+      <div className="table-scroll-wrap">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
 
         {/* Table header */}
@@ -171,6 +172,7 @@ export default async function PlayersPage({ params }) {
             </Link>
           );
         })}
+      </div>
       </div>
 
       <div style={{ marginTop: '2.5rem' }}>

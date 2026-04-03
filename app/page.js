@@ -37,7 +37,7 @@ export default async function HomePage() {
           <div style={{ width: '60px', height: '1px', background: 'var(--gold)' }} />
         </div>
 
-        <h1 style={{
+        <h1 className="hero-title" style={{
           fontSize: 'clamp(3rem, 8vw, 6.5rem)',
           fontWeight: '900',
           letterSpacing: '0.12em',

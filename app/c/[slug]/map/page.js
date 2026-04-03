@@ -66,9 +66,9 @@ export default async function MapPage({ params }) {
   children.filter(c => !rootIds.has(c.parent_id)).forEach(c => orderedTerritories.push({ ...c, isChild: true }));
 
   return (
-    <div style={{ height: 'calc(100vh - 108px)', display: 'flex', flexDirection: 'column' }}>
+    <div className="map-page-root" style={{ height: 'calc(100vh - 108px)', display: 'flex', flexDirection: 'column' }}>
       {/* Map header */}
-      <div style={{
+      <div className="map-header" style={{
         padding: '1rem 2rem',
         borderBottom: '1px solid var(--border-dim)',
         display: 'flex',
@@ -97,7 +97,7 @@ export default async function MapPage({ params }) {
         </div>
 
         {/* Faction legend */}
-        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+        <div className="map-legend" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
           {factions?.map(f => (
             <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <div style={{ width: '10px', height: '10px', background: f.colour, borderRadius: '2px' }} />
@@ -116,9 +116,9 @@ export default async function MapPage({ params }) {
       </div>
 
       {/* Map canvas + sidebar */}
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+      <div className="map-content-area" style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
         {/* Map */}
-        <div style={{ flex: 1, overflow: 'hidden' }}>
+        <div className="map-canvas-wrap" style={{ flex: 1, overflow: 'hidden' }}>
           <CampaignMap
             territories={territories || []}
             factions={factions || []}
@@ -129,7 +129,7 @@ export default async function MapPage({ params }) {
         </div>
 
         {/* Territory sidebar */}
-        <div style={{
+        <div className="map-sidebar" style={{
           width: '220px',
           borderLeft: '1px solid var(--border-dim)',
           background: 'rgba(10,10,15,0.7)',

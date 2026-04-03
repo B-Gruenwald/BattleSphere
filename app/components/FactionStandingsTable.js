@@ -58,6 +58,7 @@ export default function FactionStandingsTable({ factions, slug }) {
   }
 
   return (
+    <div className="table-scroll-wrap">
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       {/* Table header */}
       <div style={{
@@ -84,6 +85,7 @@ export default function FactionStandingsTable({ factions, slug }) {
       {factions.map((faction, i) => (
         <FactionRow key={faction.id} faction={faction} index={i} slug={slug} />
       ))}
+    </div>
     </div>
   );
 }
