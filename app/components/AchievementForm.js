@@ -73,11 +73,15 @@ export default function AchievementForm({ campaign, factions, members, memberPro
     setSubmitting(true);
     setError('');
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setError('You must be logged in to award achievements.'); setSubmitting(false); return; }
+
     const payload = {
       campaign_id:           campaign.id,
       title:                 title.trim(),
       description:           description.trim() || null,
       icon:                  activeIcon,
+      awarded_by:            user.id,
       awarded_to_type:       recipientType,
       awarded_to_player_id:  recipientType === 'player'  ? playerId  : null,
       awarded_to_faction_id: recipientType === 'faction' ? factionId : null,
