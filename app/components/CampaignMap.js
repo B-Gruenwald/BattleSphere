@@ -36,12 +36,8 @@ const GOLD_HEX         = '#b78c40';
 const GOLD_NEUTRAL_HEX = '#d4a830';
 
 // ── Force-separation: push nodes apart until no two are closer than minDist ──
-// A tiny index-based pre-jitter breaks the case where nodes start at exactly the
-// same position (dir vector would be NaN/zero without it).
-// Nodes are clamped to [bx1,bx2] × [by1,by2] after every iteration.
 function separateNodes(nodes, minDist, iterations = 150, bx1 = 12, bx2 = 88, by1 = 12, by2 = 78) {
   if (nodes.length < 2) return nodes;
-  // Clone with a tiny deterministic offset so coincident nodes are never exactly equal
   const pts = nodes.map((n, i) => ({
     ...n,
     x_pos: n.x_pos + i * 0.05,
@@ -55,7 +51,6 @@ function separateNodes(nodes, minDist, iterations = 150, bx1 = 12, bx2 = 88, by1
         const dy   = pts[j].y_pos - pts[i].y_pos;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < minDist) {
-          // Safe direction even when dist is very small
           const nx   = dist > 0.0001 ? dx / dist : 1;
           const ny   = dist > 0.0001 ? dy / dist : 0;
           const push = (minDist - dist) / 2;
@@ -77,26 +72,14 @@ function separateNodes(nodes, minDist, iterations = 150, bx1 = 12, bx2 = 88, by1
 }
 
 // ── Auto-fit + collision avoidance ────────────────────────────────────────────
-//
-// SVG viewBox 0 0 100 100. Safe zone: X 8–92, Y 8–83.
-//
-// Pass 1 – scale/centre positioned territories (scale-down only).
-// Pass 2 – null top-level territories get near-centre positions with a tiny
-//           index-based offset so the separator can push them apart.
-// Pass 3 – null sub-territories are placed in an orbit around their parent
-//           (using their parent's Pass-1/2 position).
-// Pass 4 – force-separate top-level nodes (minDist 12).
-// Pass 5 – co-move sub-territories by exactly the delta their parent moved.
-// Pass 6 – force-separate sibling sub-territories (minDist 5).
 function normalizePositions(territories) {
   const positioned = territories.filter(t => t.x_pos != null && t.y_pos != null);
 
   const X1 = 8,  X2 = 92;
   const Y1 = 8,  Y2 = 83;
-  const safeCx = (X1 + X2) / 2; // 50
-  const safeCy = (Y1 + Y2) / 2; // 45.5
+  const safeCx = (X1 + X2) / 2;
+  const safeCy = (Y1 + Y2) / 2;
 
-  // All null — spread in a circle and return early
   if (positioned.length === 0) {
     const n = territories.length || 1;
     return territories.map((t, i) => {
@@ -108,7 +91,6 @@ function normalizePositions(territories) {
     });
   }
 
-  // Scale parameters
   const xs     = positioned.map(t => t.x_pos);
   const ys     = positioned.map(t => t.y_pos);
   const rawMinX = Math.min(...xs), rawMaxX = Math.max(...xs);
@@ -122,28 +104,23 @@ function normalizePositions(territories) {
   const tx = x => Math.round((safeCx + (x - rawCx) * scale) * 10) / 10;
   const ty = y => Math.round((safeCy + (y - rawCy) * scale) * 10) / 10;
 
-  // Pass 1+2: place all territories; flag null sub-territories for Pass 3
   let nullTopIdx = 0;
   let result = territories.map(t => {
     if (t.x_pos != null && t.y_pos != null) {
       return { ...t, x_pos: tx(t.x_pos), y_pos: ty(t.y_pos) };
     }
     if (!t.parent_id) {
-      // Null top-level: near centre, tiny offset per index so separator can act
       const off = (nullTopIdx++) * 0.15;
       return { ...t, x_pos: safeCx + off, y_pos: safeCy + off };
     }
-    // Null sub-level: will be resolved in Pass 3
     return { ...t, x_pos: null, y_pos: null, _place: true };
   });
 
-  // Pass 3: place null sub-territories in orbit around their (now-positioned) parent
   result = result.map(t => {
     if (!t._place) return t;
     const parent   = result.find(p => p.id === t.parent_id);
     const px       = parent?.x_pos ?? safeCx;
     const py       = parent?.y_pos ?? safeCy;
-    // Count already-placed siblings to pick a free angle slot
     const nPlaced  = result.filter(s => s.parent_id === t.parent_id && !s._place && s.id !== t.id).length;
     const angle    = (nPlaced / Math.max(nPlaced + 1, 1)) * 2 * Math.PI - Math.PI / 2;
     const { _place, ...rest } = t;
@@ -153,7 +130,6 @@ function normalizePositions(territories) {
     };
   });
 
-  // Pass 4: force-separate top-level nodes
   const topBefore = result.filter(t => !t.parent_id);
   const topAfter  = separateNodes(topBefore, 12);
 
@@ -165,7 +141,6 @@ function normalizePositions(territories) {
     };
   });
 
-  // Pass 5: co-move sub-territories by the same delta as their parent
   result = result.map(t => {
     if (!t.parent_id) {
       const d = deltaById[t.id];
@@ -176,7 +151,6 @@ function normalizePositions(territories) {
     return t;
   });
 
-  // Pass 6: separate sibling sub-territories within each parent group
   const parentIds = [...new Set(result.filter(t => t.parent_id).map(t => t.parent_id))];
   parentIds.forEach(pid => {
     const idxs = result.reduce((acc, t, i) => { if (t.parent_id === pid) acc.push(i); return acc; }, []);
@@ -188,38 +162,34 @@ function normalizePositions(territories) {
   return result;
 }
 
-// ── Label offset: place a top-level node's label away from its sub-territories ──
-// Returns { dx, dy } to add to the node centre for the label anchor.
-// Falls back to directly-below (0, +5) when there are no subs or direction is ambiguous.
+// ── Label offset ──────────────────────────────────────────────────────────────
 function getLabelOffset(t, allTerritories) {
   const subs = allTerritories.filter(
     s => s.parent_id === t.id && s.x_pos != null && s.y_pos != null
   );
   if (subs.length === 0) return { dx: 0, dy: 5 };
 
-  // Sum unit vectors from parent toward each sub that is not coincident with it
   let sx = 0, sy = 0;
   subs.forEach(s => {
     const dx  = s.x_pos - t.x_pos;
     const dy  = s.y_pos - t.y_pos;
     const len = Math.sqrt(dx * dx + dy * dy);
-    if (len < 0.5) return; // sub essentially at same position — ignore
+    if (len < 0.5) return;
     sx += dx / len;
     sy += dy / len;
   });
   const len = Math.sqrt(sx * sx + sy * sy);
-  if (len < 0.01) return { dx: 0, dy: 5 }; // no clear direction — use default
+  if (len < 0.01) return { dx: 0, dy: 5 };
 
-  // Place label in the OPPOSITE direction at distance 5
   return { dx: -(sx / len) * 5, dy: -(sy / len) * 5 };
 }
 
-export default function CampaignMap({ territories, factions, influenceData = [], campaignSlug, setting }) {
+// readOnly={true} disables node click navigation (used on the public campaign page)
+export default function CampaignMap({ territories, factions, influenceData = [], campaignSlug, setting, readOnly = false }) {
   const router = useRouter();
   const [hoveredId, setHoveredId] = useState(null);
-  const [tooltip, setTooltip]     = useState(null); // { x, y, territory }
+  const [tooltip, setTooltip]     = useState(null);
 
-  // Apply auto-fit normalization — ensures all nodes sit within the SVG safe zone
   const normalizedTerritories = normalizePositions(territories);
 
   const topLevel    = normalizedTerritories.filter(t => t.depth === 1);
@@ -230,18 +200,13 @@ export default function CampaignMap({ territories, factions, influenceData = [],
 
   const factionColour = Object.fromEntries((factions || []).map(f => [f.id, f.colour]));
 
-  // ── Influence helpers ──────────────────────────────────────────────────────
-  // Use original (non-normalized) territory IDs for influence lookups —
-  // normalization only changes x_pos/y_pos, IDs are preserved.
   function aggregatedInfluenceMap(territory) {
     const result = {};
-
     influenceData
       .filter(i => i.territory_id === territory.id)
       .forEach(i => {
         result[i.faction_id] = (result[i.faction_id] || 0) + i.influence_points;
       });
-
     if (territory.depth === 1) {
       const subs = normalizedTerritories.filter(t => t.parent_id === territory.id);
       subs.forEach(sub => {
@@ -252,7 +217,6 @@ export default function CampaignMap({ territories, factions, influenceData = [],
           });
       });
     }
-
     return result;
   }
 
@@ -275,6 +239,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
   }
 
   function handleNodeClick(t) {
+    if (readOnly) return;
     router.push(`/c/${campaignSlug}/territory/${t.id}`);
   }
 
@@ -287,7 +252,6 @@ export default function CampaignMap({ territories, factions, influenceData = [],
     });
   }
 
-  // ── Tooltip ───────────────────────────────────────────────────────────────
   function renderTooltip() {
     if (!tooltip) return null;
     const t        = tooltip.territory;
@@ -477,7 +441,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
         return (
           <g
             key={sub.id}
-            style={{ cursor: 'pointer' }}
+            style={{ cursor: readOnly ? 'default' : 'pointer' }}
             onClick={() => handleNodeClick(sub)}
             onMouseEnter={() => setHoveredId(sub.id)}
             onMouseLeave={() => { setHoveredId(null); setTooltip(null); }}
@@ -534,7 +498,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
         return (
           <g
             key={t.id}
-            style={{ cursor: 'pointer' }}
+            style={{ cursor: readOnly ? 'default' : 'pointer' }}
             onClick={() => handleNodeClick(t)}
             onMouseEnter={() => setHoveredId(t.id)}
             onMouseLeave={() => { setHoveredId(null); setTooltip(null); }}

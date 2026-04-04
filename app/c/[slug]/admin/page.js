@@ -58,6 +58,13 @@ export default async function AdminPage({ params }) {
     .eq('campaign_id', campaign.id)
     .order('created_at', { ascending: false });
 
+  // Fetch pending join request count (for the Join Requests section)
+  const { count: pendingRequestCount } = await supabase
+    .from('join_requests')
+    .select('*', { count: 'exact', head: true })
+    .eq('campaign_id', campaign.id)
+    .eq('status', 'pending');
+
   const sectionLabel = {
     fontFamily: 'var(--font-display)',
     fontSize: '0.6rem',
@@ -128,6 +135,30 @@ export default async function AdminPage({ params }) {
           inviteCode={campaign.invite_code || null}
           slug={slug}
         />
+      </div>
+
+      {/* ═══ SECTION 2b: Join Requests ══════════════════════════════════════ */}
+      <div style={{ marginBottom: '3.5rem' }}>
+        <div style={{ borderBottom: '1px solid var(--border-dim)', marginBottom: '2rem', paddingBottom: '0.75rem', display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
+          <h2 style={sectionTitle}>Join Requests</h2>
+          {pendingRequestCount > 0 && (
+            <span style={{
+              fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.12em',
+              textTransform: 'uppercase', color: 'var(--text-gold)',
+              border: '1px solid rgba(183,140,64,0.4)', padding: '0.15rem 0.5rem',
+            }}>
+              {pendingRequestCount} pending
+            </span>
+          )}
+        </div>
+        <p style={sectionDesc}>
+          Players who discover your public campaign page can request to join. Review and approve or decline their requests here.
+        </p>
+        <Link href={`/c/${slug}/requests`}>
+          <button className="btn-primary">
+            {pendingRequestCount > 0 ? `Review Requests (${pendingRequestCount} pending) →` : 'View Join Requests →'}
+          </button>
+        </Link>
       </div>
 
       {/* ═══ SECTION 3: Factions ═════════════════════════════════════════════ */}
