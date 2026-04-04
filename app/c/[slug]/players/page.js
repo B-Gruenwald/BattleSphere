@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import PlayerAchievementIcons from '@/components/PlayerAchievementIcons';
+import PlayerAchievementIcons from '@/app/components/PlayerAchievementIcons';
 
 export default async function PlayersPage({ params }) {
   const { slug } = await params;
