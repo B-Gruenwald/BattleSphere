@@ -15,15 +15,18 @@ export default function SetFactionForm({ campaignId, currentFactionId, factions 
     setSaved(false);
     setError('');
 
-    const { error: err } = await supabase
+    const { data: savedRows, error: err } = await supabase
       .from('campaign_members')
       .update({ faction_id: selected || null })
       .eq('campaign_id', campaignId)
-      .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+      .select();
 
     setSaving(false);
     if (err) {
       setError(err.message);
+    } else if (!savedRows || savedRows.length === 0) {
+      setError('Could not save — permission denied. Contact your campaign organiser.');
     } else {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
