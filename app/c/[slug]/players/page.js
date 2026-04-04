@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import PlayerAchievementIcons from '@/components/PlayerAchievementIcons';
 
 export default async function PlayersPage({ params }) {
   const { slug } = await params;
@@ -41,8 +42,25 @@ export default async function PlayersPage({ params }) {
     .select('attacker_player_id, defender_player_id, winner_faction_id, attacker_faction_id, defender_faction_id')
     .eq('campaign_id', campaign.id);
 
-  const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
-  const factionMap = Object.fromEntries((factions || []).map(f => [f.id, f]));
+  // Fetch player achievements for this campaign
+  const { data: achievements } = await supabase
+    .from('achievements')
+    .select('*')
+    .eq('campaign_id', campaign.id)
+    .eq('awarded_to_type', 'player');
+
+  const profileMap  = Object.fromEntries((profiles  || []).map(p => [p.id, p]));
+  const factionMap  = Object.fromEntries((factions  || []).map(f => [f.id, f]));
+
+  // Group achievements by recipient player id
+  const achievementsByPlayer = {};
+  for (const a of (achievements || [])) {
+    if (!a.awarded_to_player_id) continue;
+    if (!achievementsByPlayer[a.awarded_to_player_id]) {
+      achievementsByPlayer[a.awarded_to_player_id] = [];
+    }
+    achievementsByPlayer[a.awarded_to_player_id].push(a);
+  }
 
   function getPlayerStats(userId) {
     const fought = (battles || []).filter(
@@ -61,10 +79,11 @@ export default async function PlayersPage({ params }) {
   const players = (members || [])
     .map(m => ({
       ...m,
-      profile: profileMap[m.user_id],
-      faction: m.faction_id ? factionMap[m.faction_id] : null,
-      stats: getPlayerStats(m.user_id),
-      isMe: m.user_id === user.id,
+      profile:      profileMap[m.user_id],
+      faction:      m.faction_id ? factionMap[m.faction_id] : null,
+      stats:        getPlayerStats(m.user_id),
+      isMe:         m.user_id === user.id,
+      achievements: achievementsByPlayer[m.user_id] || [],
     }))
     .sort((a, b) => b.stats.wins - a.stats.wins || a.profile?.username?.localeCompare(b.profile?.username));
 
@@ -106,8 +125,8 @@ export default async function PlayersPage({ params }) {
         </div>
 
         {players.map(player => {
-          const username = player.profile?.username ?? 'Unknown';
-          const initials = username.slice(0, 2).toUpperCase();
+          const username      = player.profile?.username ?? 'Unknown';
+          const initials      = username.slice(0, 2).toUpperCase();
           const factionColour = player.faction?.colour || 'var(--border-dim)';
 
           return (
@@ -139,6 +158,11 @@ export default async function PlayersPage({ params }) {
                     <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.5rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
                       {player.role}
                     </div>
+                    {/* Achievement icons */}
+                    <PlayerAchievementIcons
+                      achievements={player.achievements}
+                      achievementsHref={`/c/${slug}/achievements`}
+                    />
                   </div>
                 </div>
 

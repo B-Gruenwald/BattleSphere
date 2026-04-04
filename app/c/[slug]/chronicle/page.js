@@ -232,6 +232,90 @@ function EventEntry({ entry, slug }) {
   );
 }
 
+function AchievementEntry({ entry, slug }) {
+  const { achievement, profileMap, factionMap } = entry;
+
+  let recipientName = '?';
+  if (achievement.awarded_to_type === 'player') {
+    recipientName = profileMap[achievement.awarded_to_player_id]?.username ?? '?';
+  } else if (achievement.awarded_to_type === 'faction') {
+    recipientName = factionMap[achievement.awarded_to_faction_id]?.name ?? '?';
+  }
+
+  return (
+    <Link href={`/c/${slug}/achievements`} style={{ textDecoration: 'none', display: 'block' }}>
+      <div style={{
+        display: 'flex',
+        gap: '1.25rem',
+        alignItems: 'flex-start',
+        padding: '1.25rem 1.5rem',
+        background: 'rgba(183,140,64,0.06)',
+        border: '1px solid var(--border-dim)',
+        borderLeft: '3px solid var(--text-gold)',
+        cursor: 'pointer',
+        transition: 'background 0.15s',
+      }}>
+        {/* Icon column */}
+        <div style={{ flexShrink: 0, fontSize: '1.1rem', lineHeight: 1, paddingTop: '0.1rem' }}>
+          {achievement.icon}
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Type label */}
+          <div style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '0.52rem',
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: 'var(--text-muted)',
+            marginBottom: '0.3rem',
+          }}>
+            Achievement
+          </div>
+
+          {/* Title */}
+          <div style={{ fontSize: '1rem', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.35rem' }}>
+            {achievement.title}
+          </div>
+
+          {/* Awarded to */}
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '0.55rem',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--text-gold)',
+            }}>
+              Awarded to {recipientName}
+            </span>
+          </div>
+
+          {/* Description excerpt */}
+          {achievement.description && (
+            <p style={{
+              color: 'var(--text-secondary)',
+              fontSize: '0.85rem',
+              fontStyle: 'italic',
+              marginTop: '0.6rem',
+              lineHeight: 1.55,
+              overflow: 'hidden',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+            }}>
+              {achievement.description}
+            </p>
+          )}
+        </div>
+
+        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', flexShrink: 0, alignSelf: 'center' }}>→</span>
+      </div>
+    </Link>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────
 
 export default async function ChroniclePage({ params }) {
@@ -260,6 +344,12 @@ export default async function ChroniclePage({ params }) {
     .select('*')
     .eq('campaign_id', campaign.id);
 
+  // Fetch all achievements
+  const { data: achievements } = await supabase
+    .from('achievements')
+    .select('*')
+    .eq('campaign_id', campaign.id);
+
   // Fetch factions + territories for battle rendering
   const { data: factions } = await supabase
     .from('factions')
@@ -271,8 +361,19 @@ export default async function ChroniclePage({ params }) {
     .select('id, name')
     .eq('campaign_id', campaign.id);
 
-  const factionMap   = Object.fromEntries((factions   || []).map(f => [f.id, f]));
-  const territoryMap = Object.fromEntries((territories || []).map(t => [t.id, t]));
+  // Fetch profiles for achievement player recipients
+  const achievementPlayerIds = [...new Set(
+    (achievements || [])
+      .filter(a => a.awarded_to_type === 'player' && a.awarded_to_player_id)
+      .map(a => a.awarded_to_player_id)
+  )];
+  const { data: achievementProfiles } = achievementPlayerIds.length > 0
+    ? await supabase.from('profiles').select('id, username').in('id', achievementPlayerIds)
+    : { data: [] };
+
+  const factionMap        = Object.fromEntries((factions           || []).map(f => [f.id, f]));
+  const territoryMap      = Object.fromEntries((territories        || []).map(t => [t.id, t]));
+  const achievementProfileMap = Object.fromEntries((achievementProfiles || []).map(p => [p.id, p]));
 
   // Build unified timeline entries
   const battleEntries = (battles || []).map(b => ({
@@ -289,14 +390,22 @@ export default async function ChroniclePage({ params }) {
     ev:      e,
   }));
 
+  const achievementEntries = (achievements || []).map(a => ({
+    type:        'achievement',
+    sortKey:     a.created_at,
+    achievement: a,
+    profileMap:  achievementProfileMap,
+    factionMap,
+  }));
+
   // Merge and sort newest first
-  const timeline = [...battleEntries, ...eventEntries]
+  const timeline = [...battleEntries, ...eventEntries, ...achievementEntries]
     .sort((a, b) => new Date(b.sortKey) - new Date(a.sortKey));
 
   const dayGroups = groupByDay(timeline);
 
-  const isOrganiser = campaign.organiser_id === user.id;
-  const totalEntries = timeline.length;
+  const isOrganiser   = campaign.organiser_id === user.id;
+  const totalEntries  = timeline.length;
 
   return (
     <div style={{ padding: '4rem 2rem', maxWidth: '860px', margin: '0 auto' }}>
@@ -311,7 +420,7 @@ export default async function ChroniclePage({ params }) {
             Chronicle
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', marginTop: '0.6rem', fontSize: '0.95rem' }}>
-            A unified timeline of battles fought and events decreed.
+            A unified timeline of battles fought, events decreed, and honours bestowed.
           </p>
         </div>
         {isOrganiser && (
@@ -347,6 +456,10 @@ export default async function ChroniclePage({ params }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <div style={{ width: '10px', height: '10px', background: '#b78c40', borderRadius: '2px' }} />
           <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Campaign Event</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <span style={{ fontSize: '0.85rem', lineHeight: 1 }}>🏆</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Achievement</span>
         </div>
       </div>
 
@@ -397,10 +510,16 @@ export default async function ChroniclePage({ params }) {
               {/* Entries for this day */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {group.entries.map((entry, i) => (
-                  <div key={entry.type === 'battle' ? `b-${entry.battle.id}` : `e-${entry.ev.id}`}>
+                  <div key={
+                    entry.type === 'battle'      ? `b-${entry.battle.id}`
+                    : entry.type === 'event'     ? `e-${entry.ev.id}`
+                    : `a-${entry.achievement.id}`
+                  }>
                     {entry.type === 'battle'
                       ? BattleEntry({ entry, slug })
-                      : EventEntry({ entry, slug })
+                      : entry.type === 'event'
+                        ? EventEntry({ entry, slug })
+                        : AchievementEntry({ entry, slug })
                     }
                   </div>
                 ))}
