@@ -90,7 +90,15 @@ export default function RootLayout({ children }) {
           letterSpacing: '0.16em',
           textTransform: 'uppercase',
         }}>
-          BattleSphere · Narrative Campaign Platform · Early Access
+          <div>BattleSphere · Narrative Campaign Platform · Early Access</div>
+          <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'center', gap: '2rem' }}>
+            <Link href="/privacy-policy" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>
+              Privacy Policy
+            </Link>
+            <Link href="/impressum" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>
+              Legal Notice
+            </Link>
+          </div>
         </footer>
       </body>
     </html>
