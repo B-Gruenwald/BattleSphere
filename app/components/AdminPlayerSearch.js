@@ -31,6 +31,7 @@ export default function AdminPlayerSearch({ members: initialMembers, campaignId,
   // Invite code state
   const [generatingCode, setGeneratingCode] = useState(false);
   const [copied,          setCopied]         = useState(false);
+  const [inviteError,     setInviteError]    = useState('');
   const linkRef = useRef(null);
 
   const existingIds = new Set(members.map(m => m.user_id));
@@ -97,13 +98,23 @@ export default function AdminPlayerSearch({ members: initialMembers, campaignId,
 
   async function generateInviteLink() {
     setGeneratingCode(true);
+    setInviteError('');
     const code = generateCode(10);
-    const { error } = await supabase
+    const { data: saved, error } = await supabase
       .from('campaigns')
       .update({ invite_code: code })
-      .eq('id', campaignId);
+      .eq('id', campaignId)
+      .select();
     setGeneratingCode(false);
-    if (!error) setInviteCode(code);
+    if (error) {
+      setInviteError('Could not save invite code: ' + error.message);
+      return;
+    }
+    if (!saved || saved.length === 0) {
+      setInviteError('Update was blocked — make sure the invite_code migration has been run in Supabase.');
+      return;
+    }
+    setInviteCode(code);
   }
 
   async function copyLink() {
@@ -288,6 +299,10 @@ export default function AdminPlayerSearch({ members: initialMembers, campaignId,
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.25rem', lineHeight: 1.5 }}>
           Anyone with this link can join your campaign after registering. Regenerating the link invalidates the previous one.
         </p>
+
+        {inviteError && (
+          <p style={{ color: '#e05a5a', fontSize: '0.85rem', marginBottom: '1rem' }}>{inviteError}</p>
+        )}
 
         {inviteCode ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
