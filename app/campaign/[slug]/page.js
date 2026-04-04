@@ -323,6 +323,7 @@ export default async function PublicCampaignPage({ params }) {
         )}
       </div>
 
+      {/* ── Campaign header + Stats (constrained width) ──────────────────────── */}
       <div style={{ padding: '4rem 2rem', maxWidth: '1100px', margin: '0 auto' }}>
 
         {/* ── Campaign header ───────────────────────────────────────────────── */}
@@ -355,7 +356,6 @@ export default async function PublicCampaignPage({ params }) {
           gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
           borderTop: '1px solid var(--border-dim)',
           borderBottom: '1px solid var(--border-dim)',
-          marginBottom: '3rem',
         }}>
           {[
             { label: 'Factions',    value: factions?.length ?? 0 },
@@ -379,48 +379,48 @@ export default async function PublicCampaignPage({ params }) {
             </div>
           ))}
         </div>
+      </div>
 
-        {/* ── Map + Standings ───────────────────────────────────────────────── */}
+      {/* ── Full-width Map ────────────────────────────────────────────────────── */}
+      <div style={{
+        borderTop: '1px solid var(--border-dim)',
+        borderBottom: '1px solid var(--border-dim)',
+        marginBottom: '3rem',
+      }}>
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '2rem',
-          marginBottom: '3rem',
+          padding: '0.75rem 2rem',
+          borderBottom: '1px solid var(--border-dim)',
+          fontFamily: 'var(--font-display)', fontSize: '0.65rem',
+          letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)',
         }}>
-
-          {/* Map */}
-          <div style={{ border: '1px solid var(--border-dim)' }}>
+          Territory Map
+        </div>
+        <div style={{ height: '65vh', minHeight: '420px', maxHeight: '760px', position: 'relative' }}>
+          {territories && territories.length > 0 ? (
+            <CampaignMap
+              territories={territories}
+              factions={factions || []}
+              influenceData={influenceData || []}
+              campaignSlug={slug}
+              setting={campaign.setting}
+              readOnly={true}
+            />
+          ) : (
             <div style={{
-              padding: '1rem 1.5rem',
-              borderBottom: '1px solid var(--border-dim)',
-              fontFamily: 'var(--font-display)', fontSize: '0.65rem',
-              letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)',
+              height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem',
             }}>
-              Territory Map
+              No territories mapped yet.
             </div>
-            <div style={{ height: '420px', position: 'relative' }}>
-              {territories && territories.length > 0 ? (
-                <CampaignMap
-                  territories={territories}
-                  factions={factions || []}
-                  influenceData={influenceData || []}
-                  campaignSlug={slug}
-                  setting={campaign.setting}
-                  readOnly={true}
-                />
-              ) : (
-                <div style={{
-                  height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem',
-                }}>
-                  No territories mapped yet.
-                </div>
-              )}
-            </div>
-          </div>
+          )}
+        </div>
+      </div>
 
-          {/* Faction Standings */}
-          <div style={{ border: '1px solid var(--border-dim)' }}>
+      {/* ── Standings + Chronicle + CTA (constrained width) ─────────────────── */}
+      <div style={{ padding: '0 2rem', maxWidth: '1100px', margin: '0 auto' }}>
+
+        {/* Faction Standings */}
+        <div style={{ border: '1px solid var(--border-dim)', marginBottom: '3rem' }}>
             <div style={{
               padding: '1rem 1.5rem',
               borderBottom: '1px solid var(--border-dim)',
@@ -485,7 +485,6 @@ export default async function PublicCampaignPage({ params }) {
               </div>
             )}
           </div>
-        </div>
 
         {/* ── Recent Chronicle ──────────────────────────────────────────────── */}
         <div style={{ marginBottom: '3rem' }}>
