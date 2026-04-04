@@ -204,3 +204,12 @@ nav a:hover {
     gap: 0.5rem !important;
   }
 }
+/* Privacy policy table of contents links */
+.toc-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.toc-link:hover {
+  color: var(--gold);
+}

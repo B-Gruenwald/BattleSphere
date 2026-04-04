@@ -87,10 +87,7 @@ export default function PrivacyPolicyPage() {
             ['#contact', 'Contact & Complaints'],
           ].map(([href, label], i) => (
             <li key={href}>
-              <a href={href} style={{ color: 'var(--text-secondary)', textDecoration: 'none' }}
-                onMouseOver={e => e.target.style.color = 'var(--gold)'}
-                onMouseOut={e => e.target.style.color = 'var(--text-secondary)'}
-              >
+              <a href={href} className="toc-link">
                 {label}
               </a>
             </li>
