@@ -124,9 +124,7 @@ function generateTerritories(setting, count, depth) {
   const names   = shuffled(SYSTEM_NAMES[setting] || SYSTEM_NAMES['Custom']).slice(0, count);
   const subPool = shuffled(SUB_TYPES[setting]    || SUB_TYPES['Custom']);
   const lmPool  = shuffled(LANDMARK_TYPES[setting] || LANDMARK_TYPES['Custom']);
-  // Bounds: keep parents ≥10 units inside the separateNodes clamp zone ([12,88]×[12,78])
-  // so sub-territories orbiting at radius ~10 don't get edge-clamped and visually collapse.
-  const topPos  = scatterPos(count, 20, 18, 80, 68);
+  const topPos  = scatterPos(count, 10, 8, 90, 76);
   const result  = [];
 
   names.forEach((name, i) => {

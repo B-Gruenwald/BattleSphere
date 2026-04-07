@@ -155,7 +155,9 @@ function normalizePositions(territories) {
   parentIds.forEach(pid => {
     const idxs = result.reduce((acc, t, i) => { if (t.parent_id === pid) acc.push(i); return acc; }, []);
     if (idxs.length < 2) return;
-    const separated = separateNodes(idxs.map(i => result[i]), 5, 80);
+    // Wide bounds (2–98 × 2–96): sub-territories near a canvas edge must not
+    // be clamped into their parent. Slight overshoot is fine visually.
+    const separated = separateNodes(idxs.map(i => result[i]), 5, 80, 2, 98, 2, 96);
     idxs.forEach((idx, i) => { result[idx] = { ...result[idx], x_pos: separated[i].x_pos, y_pos: separated[i].y_pos }; });
   });
 

@@ -112,9 +112,7 @@ export async function GET() {
 
     if (topLevel.length === 0) { note('  — No territories, skipping'); continue; }
 
-    // Bounds: keep parents ≥10 units inside the separateNodes clamp zone ([12,88]×[12,78])
-    // so sub-territories at orbital radius ~10 don't get edge-clamped.
-    const newPos = scatterPos(topLevel.length, 20, 18, 80, 68);
+    const newPos = scatterPos(topLevel.length, 10, 8, 90, 76);
 
     // Build delta map
     const deltaById = {};
