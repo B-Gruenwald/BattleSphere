@@ -101,7 +101,6 @@ function selBtn(active) {
   };
 }
 
-const SETTINGS = ['Gothic Sci-Fi','Space Opera','High Fantasy','Historical','Custom'];
 const SCALES   = ['Landmark','City','Planet','Star System','Star Sector','Galaxy'];
 const FACTION_COLOURS = ['#e63946','#457b9d','#2a9d8f','#e9c46a','#f4a261','#9b5de5'];
 
@@ -114,7 +113,7 @@ export default function CreateCampaignPage() {
   const [error, setError]   = useState(null);
   const [form, setForm]     = useState({
     name: '', setting: 'Gothic Sci-Fi', description: '', visibility: 'Private',
-    scale: 'Star System', territoryCount: 6, depth: 1,
+    scale: 'Star Sector', territoryCount: 6, depth: 1,
     factions: [{ name: '', colour: '#e63946' }, { name: '', colour: '#457b9d' }],
   });
 
@@ -204,14 +203,6 @@ export default function CreateCampaignPage() {
             onBlur={e => e.target.style.borderColor = 'var(--border-dim)'} />
         </div>
         <div>
-          <label style={labelStyle}>Setting</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.5rem' }}>
-            {SETTINGS.map(s => (
-              <button key={s} type="button" onClick={() => set('setting', s)} style={selBtn(form.setting === s)}>{s}</button>
-            ))}
-          </div>
-        </div>
-        <div>
           <label style={labelStyle}>Description <span style={{ opacity: 0.5 }}>(optional)</span></label>
           <textarea value={form.description} onChange={e => set('description', e.target.value)}
             placeholder="Describe your campaign's premise..." rows={3}
@@ -238,14 +229,6 @@ export default function CreateCampaignPage() {
   function Step2() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        <div>
-          <label style={labelStyle}>Scale</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
-            {SCALES.map(s => (
-              <button key={s} type="button" onClick={() => set('scale', s)} style={selBtn(form.scale === s)}>{s}</button>
-            ))}
-          </div>
-        </div>
         <div>
           <label style={labelStyle}>
             Number of Territories — <span style={{ color: 'var(--text-primary)' }}>{form.territoryCount}</span>
@@ -325,7 +308,6 @@ export default function CreateCampaignPage() {
         </p>
         {[
           { label: 'Campaign Name', value: form.name },
-          { label: 'Setting', value: form.setting },
           { label: 'Visibility', value: form.visibility },
           { label: 'Description', value: form.description || '—' },
           { label: 'Map Scale', value: `${form.scale} · ${form.territoryCount} territories · Depth ${form.depth}` },
