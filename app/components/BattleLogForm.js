@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
 const BATTLE_TYPES = [
+  'KillTeam / Gang War',
   'Boarding Action',
   'Combat Patrol',
   'Incursion',

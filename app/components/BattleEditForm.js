@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { reverseInfluence } from '@/app/lib/influence';
 
 const BATTLE_TYPES = [
+  'KillTeam / Gang War',
   'Boarding Action',
   'Combat Patrol',
   'Incursion',

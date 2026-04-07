@@ -172,6 +172,19 @@ export default async function TerritoryPage({ params }) {
         </div>
       </div>
 
+      {/* Territory description */}
+      {territory.description && (
+        <p style={{
+          fontSize: '0.95rem',
+          color: 'var(--text-secondary)',
+          lineHeight: 1.7,
+          fontStyle: 'italic',
+          marginBottom: '2.5rem',
+        }}>
+          {territory.description}
+        </p>
+      )}
+
       {/* Divider line */}
       <div style={{ borderTop: '1px solid var(--border-dim)', marginBottom: '2.5rem' }} />
 
@@ -389,11 +402,6 @@ export default async function TerritoryPage({ params }) {
         <Link href={`/c/${slug}/map`}>
           <button className="btn-secondary">← Back to Map</button>
         </Link>
-        {isOrganiser && (
-          <Link href={`/c/${slug}/territory/${territory.id}/edit`}>
-            <button className="btn-secondary">Edit Territory</button>
-          </Link>
-        )}
       </div>
     </div>
   );

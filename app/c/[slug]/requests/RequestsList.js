@@ -36,6 +36,16 @@ export default function RequestsList({ initialRequests, campaignId, campaignSlug
       }
     }
 
+    // Add a chronicle entry so the join appears in the campaign timeline
+    const playerName = req.profile?.display_name || req.profile?.username || 'A new player';
+    await supabase.from('campaign_events').insert({
+      campaign_id: campaignId,
+      title:       `${playerName} joined the Campaign`,
+      body:        null,
+      event_type:  'narrative',
+      status:      'resolved',
+    });
+
     // Mark request approved
     const { error: updateErr } = await supabase
       .from('join_requests')
