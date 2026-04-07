@@ -114,16 +114,38 @@ export async function GET() {
 
     const newPos = scatterPos(topLevel.length, 10, 8, 90, 76);
 
-    // Build delta map
-    const deltaById = {};
-    topLevel.forEach((t, i) => {
-      deltaById[t.id] = {
-        dx: newPos[i].x - (t.x_pos ?? 50),
-        dy: newPos[i].y - (t.y_pos ?? 50),
-      };
+    // ── Build a fresh position map for every territory ─────────────────────
+    // Rather than delta-shifting (which preserves any historical bad positions),
+    // recalculate all sub-territory positions from scratch based on their
+    // parent's new position. Handles all depths correctly.
+
+    const newPosMap = {};
+    topLevel.forEach((t, i) => { newPosMap[t.id] = { x: newPos[i].x, y: newPos[i].y }; });
+
+    // Group children by parent_id for quick lookup
+    const byParent = {};
+    children.forEach(t => {
+      (byParent[t.parent_id] = byParent[t.parent_id] || []).push(t);
     });
 
-    // Update top-level positions
+    // Recursively assign orbital positions depth-by-depth.
+    // depth-2: radius 9×7   depth-3: radius 4×3
+    function assignOrbits(parentId, rx, ry) {
+      const subs = byParent[parentId] || [];
+      const px   = newPosMap[parentId]?.x ?? 50;
+      const py   = newPosMap[parentId]?.y ?? 50;
+      subs.forEach((sub, idx) => {
+        const angle = (idx / subs.length) * 2 * Math.PI - Math.PI / 2;
+        newPosMap[sub.id] = {
+          x: Math.round((px + rx * Math.cos(angle)) * 10) / 10,
+          y: Math.round((py + ry * Math.sin(angle)) * 10) / 10,
+        };
+        assignOrbits(sub.id, 4, 3); // depth-3 landmarks use tighter orbit
+      });
+    }
+    topLevel.forEach(t => assignOrbits(t.id, 9, 7));
+
+    // ── Write all positions to the database ─────────────────────────────────
     let topOk = 0;
     for (let i = 0; i < topLevel.length; i++) {
       const { error } = await admin
@@ -135,20 +157,17 @@ export async function GET() {
     }
     note(`  ✓ Repositioned ${topOk}/${topLevel.length} top-level territories`);
 
-    // Shift sub-territories by the same delta as their parent
     let subOk = 0;
     for (const sub of children) {
-      const delta = deltaById[sub.parent_id];
-      if (!delta) continue; // depth-3 node whose parent is not a root — skip
-      const newX = Math.round(((sub.x_pos ?? 50) + delta.dx) * 10) / 10;
-      const newY = Math.round(((sub.y_pos ?? 50) + delta.dy) * 10) / 10;
+      const pos = newPosMap[sub.id];
+      if (!pos) continue;
       const { error } = await admin
         .from('territories')
-        .update({ x_pos: newX, y_pos: newY })
+        .update({ x_pos: pos.x, y_pos: pos.y })
         .eq('id', sub.id);
       if (!error) subOk++;
     }
-    if (children.length > 0) note(`  ✓ Shifted ${subOk}/${children.length} sub-territories`);
+    if (children.length > 0) note(`  ✓ Recalculated ${subOk}/${children.length} sub-territory positions`);
 
     // Warp routes — insert only if none exist yet
     const { data: existingRoutes } = await admin
