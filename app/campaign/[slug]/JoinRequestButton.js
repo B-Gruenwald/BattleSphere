@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
 
 export default function JoinRequestButton({ campaignId, campaignSlug, userId, isMember, existingRequest: initialRequest }) {
   const [request, setRequest]   = useState(initialRequest);
@@ -109,17 +108,27 @@ export default function JoinRequestButton({ campaignId, campaignSlug, userId, is
   async function handleSubmit() {
     setLoading(true);
     setError(null);
-    const supabase = createClient();
-    const { error: err } = await supabase
-      .from('join_requests')
-      .insert({ campaign_id: campaignId, user_id: userId, status: 'pending' });
-    if (err) {
-      setError('Could not send your request. Please try again.');
+
+    try {
+      const res = await fetch('/api/join-request', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ campaignId }),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        setError(json.error ?? 'Could not send your request. Please try again.');
+      } else {
+        setRequest({ status: 'pending' });
+      }
+    } catch (err) {
       console.error(err);
-    } else {
-      setRequest({ status: 'pending' });
+      setError('Could not send your request. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (
