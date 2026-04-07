@@ -8,24 +8,28 @@ import { createClient }  from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 // ── Scatter positions (mirrors scatterPos in campaign/new/page.js) ────────────
-function scatterPos(count, cx, cy, rx, ry) {
-  const positions = [];
-  const minDist = Math.min(rx, ry) * Math.max(0.28, 1.3 / Math.sqrt(count));
-  for (let i = 0; i < count; i++) {
-    let x, y, tries = 0;
-    do {
-      const angle = Math.random() * 2 * Math.PI;
-      const r = Math.sqrt(Math.random());
-      x = Math.round((cx + rx * 0.88 * r * Math.cos(angle)) * 10) / 10;
-      y = Math.round((cy + ry * 0.88 * r * Math.sin(angle)) * 10) / 10;
-      tries++;
-    } while (
-      tries < 120 &&
-      positions.some(p => Math.hypot(p.x - x, p.y - y) < minDist)
-    );
-    positions.push({ x, y });
+// Grid-jitter: full canvas coverage, no clustering.
+function scatterPos(count, x1, y1, x2, y2) {
+  const ratio = (x2 - x1) / (y2 - y1);
+  const cols  = Math.max(1, Math.round(Math.sqrt(count * ratio)));
+  const rows  = Math.ceil(count / cols);
+  const cellW = (x2 - x1) / cols;
+  const cellH = (y2 - y1) / rows;
+
+  const cells = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      cells.push({
+        x: Math.round((x1 + (col + 0.15 + Math.random() * 0.7) * cellW) * 10) / 10,
+        y: Math.round((y1 + (row + 0.15 + Math.random() * 0.7) * cellH) * 10) / 10,
+      });
+    }
   }
-  return positions;
+  for (let i = cells.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cells[i], cells[j]] = [cells[j], cells[i]];
+  }
+  return cells.slice(0, count);
 }
 
 // ── Nearest-neighbour warp route graph with connectivity guarantee ─────────────
@@ -108,8 +112,8 @@ export async function GET() {
 
     if (topLevel.length === 0) { note('  — No territories, skipping'); continue; }
 
-    // Generate new scatter positions
-    const newPos = scatterPos(topLevel.length, 50, 50, 36, 28);
+    // Generate new scatter positions across full canvas
+    const newPos = scatterPos(topLevel.length, 10, 8, 90, 76);
 
     // Build delta map
     const deltaById = {};
@@ -156,7 +160,7 @@ export async function GET() {
     if (existingRoutes && existingRoutes.length > 0) {
       note(`  ↩ Already has ${existingRoutes.length} warp route(s) — leaving untouched`);
     } else {
-      const updatedTop = topLevel.map((t, i) => ({ ...t, x_pos: newPos[i].x, y_pos: newPos[i].y }));
+      const updatedTop = topLevel.map((t, i) => ({ ...t, x_pos: newPos[i].x, y_pos: newPos[i].y  }));
       const routePairs = generateWarpRoutes(updatedTop);
       const routeData  = routePairs.map(([idA, idB]) => {
         const [a, b] = [idA, idB].sort();

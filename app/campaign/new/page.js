@@ -45,25 +45,34 @@ function circlePos(count, cx, cy, r) {
   });
 }
 
-// scatterPos: random organic placement for top-level territories
-function scatterPos(count, cx, cy, rx, ry) {
-  const positions = [];
-  const minDist = Math.min(rx, ry) * Math.max(0.28, 1.3 / Math.sqrt(count));
-  for (let i = 0; i < count; i++) {
-    let x, y, tries = 0;
-    do {
-      const angle = Math.random() * 2 * Math.PI;
-      const r = Math.sqrt(Math.random()); // uniform distribution within ellipse
-      x = Math.round((cx + rx * 0.88 * r * Math.cos(angle)) * 10) / 10;
-      y = Math.round((cy + ry * 0.88 * r * Math.sin(angle)) * 10) / 10;
-      tries++;
-    } while (
-      tries < 120 &&
-      positions.some(p => Math.hypot(p.x - x, p.y - y) < minDist)
-    );
-    positions.push({ x, y });
+// scatterPos: grid-jitter scatter across the full canvas rectangle.
+// Divides the area into a grid, places one node per cell at a random offset.
+// Guarantees full coverage while still looking organic — no clustering.
+// x1,y1 = top-left corner; x2,y2 = bottom-right corner (in SVG %-coords).
+function scatterPos(count, x1, y1, x2, y2) {
+  const ratio = (x2 - x1) / (y2 - y1);
+  const cols  = Math.max(1, Math.round(Math.sqrt(count * ratio)));
+  const rows  = Math.ceil(count / cols);
+  const cellW = (x2 - x1) / cols;
+  const cellH = (y2 - y1) / rows;
+
+  const cells = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      // Random position within the inner 70% of each cell (0.15–0.85 range)
+      cells.push({
+        x: Math.round((x1 + (col + 0.15 + Math.random() * 0.7) * cellW) * 10) / 10,
+        y: Math.round((y1 + (row + 0.15 + Math.random() * 0.7) * cellH) * 10) / 10,
+      });
+    }
   }
-  return positions;
+
+  // Shuffle and take the required count
+  for (let i = cells.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cells[i], cells[j]] = [cells[j], cells[i]];
+  }
+  return cells.slice(0, count);
 }
 
 // generateWarpRoutes: connect each node to its nearest neighbours, ensure full connectivity
@@ -115,7 +124,7 @@ function generateTerritories(setting, count, depth) {
   const names   = shuffled(SYSTEM_NAMES[setting] || SYSTEM_NAMES['Custom']).slice(0, count);
   const subPool = shuffled(SUB_TYPES[setting]    || SUB_TYPES['Custom']);
   const lmPool  = shuffled(LANDMARK_TYPES[setting] || LANDMARK_TYPES['Custom']);
-  const topPos  = scatterPos(count, 50, 50, 36, 28);
+  const topPos  = scatterPos(count, 10, 8, 90, 76);
   const result  = [];
 
   names.forEach((name, i) => {
