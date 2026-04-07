@@ -22,6 +22,17 @@ async function NavBar() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Check for admin flag on the logged-in user's profile
+  let isAdmin = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+    isAdmin = profile?.is_admin === true;
+  }
+
   return (
     <nav style={{
       position: 'fixed',
@@ -54,6 +65,9 @@ async function NavBar() {
         {user ? (
           <>
             <Link href="/dashboard" style={navLinkStyle}>Dashboard</Link>
+            {isAdmin && (
+              <Link href="/admin" style={{ ...navLinkStyle, color: '#e05a5a' }}>Admin</Link>
+            )}
             <span style={{ ...navLinkStyle, opacity: 0.5 }}>
               {user.user_metadata?.username || user.email}
             </span>
