@@ -36,6 +36,12 @@ export default async function MapPage({ params }) {
     .select('*')
     .eq('campaign_id', campaign.id);
 
+  // Fetch warp routes for this campaign
+  const { data: warpRoutes } = await supabase
+    .from('warp_routes')
+    .select('*')
+    .eq('campaign_id', campaign.id);
+
   // Check if current user is admin
   const { data: membership } = await supabase
     .from('campaign_members')
@@ -123,6 +129,7 @@ export default async function MapPage({ params }) {
             territories={territories || []}
             factions={factions || []}
             influenceData={influenceData || []}
+            warpRoutes={warpRoutes || []}
             campaignSlug={slug}
             setting={campaign.setting}
           />

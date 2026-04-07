@@ -37,6 +37,7 @@ function shuffled(arr) {
   return a;
 }
 
+// circlePos is still used for sub-territory and landmark orbits
 function circlePos(count, cx, cy, r) {
   return Array.from({ length: count }, (_, i) => {
     const angle = (i / count) * 2 * Math.PI - Math.PI / 2;
@@ -44,11 +45,77 @@ function circlePos(count, cx, cy, r) {
   });
 }
 
+// scatterPos: random organic placement for top-level territories
+function scatterPos(count, cx, cy, rx, ry) {
+  const positions = [];
+  const minDist = Math.min(rx, ry) * Math.max(0.28, 1.3 / Math.sqrt(count));
+  for (let i = 0; i < count; i++) {
+    let x, y, tries = 0;
+    do {
+      const angle = Math.random() * 2 * Math.PI;
+      const r = Math.sqrt(Math.random()); // uniform distribution within ellipse
+      x = Math.round((cx + rx * 0.88 * r * Math.cos(angle)) * 10) / 10;
+      y = Math.round((cy + ry * 0.88 * r * Math.sin(angle)) * 10) / 10;
+      tries++;
+    } while (
+      tries < 120 &&
+      positions.some(p => Math.hypot(p.x - x, p.y - y) < minDist)
+    );
+    positions.push({ x, y });
+  }
+  return positions;
+}
+
+// generateWarpRoutes: connect each node to its nearest neighbours, ensure full connectivity
+function generateWarpRoutes(topLevelTerritories) {
+  const n = topLevelTerritories.length;
+  if (n < 2) return [];
+
+  const edgeSet = new Set();
+  const add = (i, j) => edgeSet.add([Math.min(i, j), Math.max(i, j)].join('-'));
+
+  const connectPer = n <= 6 ? 3 : 2;
+  for (let i = 0; i < n; i++) {
+    const t = topLevelTerritories[i];
+    topLevelTerritories
+      .map((o, j) => ({ j, d: Math.hypot(o.x_pos - t.x_pos, o.y_pos - t.y_pos) }))
+      .filter(({ j }) => j !== i)
+      .sort((a, b) => a.d - b.d)
+      .slice(0, connectPer)
+      .forEach(({ j }) => add(i, j));
+  }
+
+  // Union-Find: ensure the graph is fully connected
+  const parent = topLevelTerritories.map((_, i) => i);
+  const find = i => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  const union = (i, j) => { parent[find(i)] = find(j); };
+  [...edgeSet].forEach(k => { const [a, b] = k.split('-').map(Number); union(a, b); });
+  for (let i = 1; i < n; i++) {
+    if (find(i) !== find(0)) {
+      const t = topLevelTerritories[i];
+      let bestJ = 0, bestD = Infinity;
+      for (let j = 0; j < n; j++) {
+        if (j === i || find(j) !== find(0)) continue;
+        const d = Math.hypot(topLevelTerritories[j].x_pos - t.x_pos, topLevelTerritories[j].y_pos - t.y_pos);
+        if (d < bestD) { bestD = d; bestJ = j; }
+      }
+      add(i, bestJ);
+      union(i, bestJ);
+    }
+  }
+
+  // Return as pairs of temp _ids (resolved to real UUIDs in handleCreate)
+  return [...edgeSet].map(k => {
+    const [a, b] = k.split('-').map(Number);
+    return [topLevelTerritories[a]._id, topLevelTerritories[b]._id];
+  });
+}
+
 function generateTerritories(setting, count, depth) {
   const names   = shuffled(SYSTEM_NAMES[setting] || SYSTEM_NAMES['Custom']).slice(0, count);
   const subPool = shuffled(SUB_TYPES[setting]    || SUB_TYPES['Custom']);
   const lmPool  = shuffled(LANDMARK_TYPES[setting] || LANDMARK_TYPES['Custom']);
-  const topPos  = circlePos(count, 50, 50, 36);
+  const topPos  = scatterPos(count, 50, 50, 36, 28);
   const result  = [];
 
   names.forEach((name, i) => {
@@ -182,6 +249,20 @@ export default function CreateCampaignPage() {
           }))).select();
         if (eT) throw eT;
         batch.forEach((t, i) => { idMap[t._id] = inserted[i].id; });
+      }
+
+      // 5. Generate and insert warp routes
+      const topLevelTemps = territories.filter(t => t.depth === 1);
+      const routePairs = generateWarpRoutes(topLevelTemps);
+      if (routePairs.length > 0) {
+        const routeData = routePairs
+          .map(([aTmp, bTmp]) => {
+            const [a, b] = [idMap[aTmp], idMap[bTmp]].sort(); // normalise order
+            return a && b ? { campaign_id: campaign.id, territory_a: a, territory_b: b } : null;
+          })
+          .filter(Boolean);
+        const { error: eR } = await supabase.from('warp_routes').insert(routeData);
+        if (eR) throw eR;
       }
 
       router.push(`/c/${slug}`);

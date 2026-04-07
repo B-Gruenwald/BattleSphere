@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import MapEditForm from '@/app/components/MapEditForm';
+import MapRouteEditor from '@/app/components/MapRouteEditor';
 
 export default async function EditMapPage({ params }) {
   const { slug } = await params;
@@ -40,6 +41,11 @@ export default async function EditMapPage({ params }) {
 
   const { data: factions } = await supabase
     .from('factions')
+    .select('*')
+    .eq('campaign_id', campaign.id);
+
+  const { data: warpRoutes } = await supabase
+    .from('warp_routes')
     .select('*')
     .eq('campaign_id', campaign.id);
 
@@ -82,6 +88,43 @@ export default async function EditMapPage({ params }) {
       </div>
 
       <div style={{ borderTop: '1px solid var(--border-dim)', marginBottom: '2.5rem' }} />
+
+      {/* ── Warp Route Editor ─────────────────────────────────────────────── */}
+      <div style={{ marginBottom: '3rem' }}>
+        <h2 style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: '0.65rem',
+          letterSpacing: '0.2em',
+          textTransform: 'uppercase',
+          color: 'var(--text-gold)',
+          marginBottom: '0.5rem',
+        }}>
+          Warp Routes
+        </h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+          Click a territory to select it, then click another to add or remove a connection.
+          Only top-level territories can have warp routes.
+        </p>
+        <MapRouteEditor
+          territories={territories || []}
+          initialRoutes={warpRoutes || []}
+          campaignId={campaign.id}
+        />
+      </div>
+
+      <div style={{ borderTop: '1px solid var(--border-dim)', marginBottom: '2.5rem' }} />
+
+      {/* ── Territory List ────────────────────────────────────────────────── */}
+      <h2 style={{
+        fontFamily: 'var(--font-display)',
+        fontSize: '0.65rem',
+        letterSpacing: '0.2em',
+        textTransform: 'uppercase',
+        color: 'var(--text-gold)',
+        marginBottom: '1.5rem',
+      }}>
+        Territories
+      </h2>
 
       <MapEditForm
         territories={territories || []}

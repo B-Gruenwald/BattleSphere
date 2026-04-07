@@ -185,16 +185,28 @@ function getLabelOffset(t, allTerritories) {
 }
 
 // readOnly={true} disables node click navigation (used on the public campaign page)
-export default function CampaignMap({ territories, factions, influenceData = [], campaignSlug, setting, readOnly = false }) {
+// warpRoutes: array of { territory_a: uuid, territory_b: uuid } from the DB.
+//   If empty/absent, falls back to the auto-generated ring topology (legacy campaigns).
+export default function CampaignMap({ territories, factions, influenceData = [], campaignSlug, setting, readOnly = false, warpRoutes = [] }) {
   const router = useRouter();
   const [hoveredId, setHoveredId] = useState(null);
   const [tooltip, setTooltip]     = useState(null);
 
   const normalizedTerritories = normalizePositions(territories);
 
-  const topLevel    = normalizedTerritories.filter(t => t.depth === 1);
-  const subLevel    = normalizedTerritories.filter(t => t.depth === 2);
-  const connections = buildConnections(topLevel);
+  const topLevel = normalizedTerritories.filter(t => t.depth === 1);
+  const subLevel = normalizedTerritories.filter(t => t.depth === 2);
+
+  // Build connection pairs as [territoryA, territoryB] using DB routes if available,
+  // otherwise fall back to the auto-generated ring topology (for legacy campaigns).
+  const connections = warpRoutes && warpRoutes.length > 0
+    ? warpRoutes
+        .map(r => [
+          topLevel.find(t => t.id === r.territory_a),
+          topLevel.find(t => t.id === r.territory_b),
+        ])
+        .filter(([a, b]) => a && b)
+    : buildConnections(topLevel).map(([a, b]) => [topLevel[a], topLevel[b]]);
 
   const theme = SETTING_BG[setting] || SETTING_BG['Custom'];
 
@@ -388,9 +400,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
       <rect x="0" y="0" width="100%" height="100%" fill="rgba(5,5,10,0.58)" />
 
       {/* ── Warp route connections ────────────────────────────────────────── */}
-      {connections.map(([a, b], i) => {
-        const ta = topLevel[a];
-        const tb = topLevel[b];
+      {connections.map(([ta, tb], i) => {
         if (!ta || !tb) return null;
         const isHovered = hoveredId === ta.id || hoveredId === tb.id;
         return (
