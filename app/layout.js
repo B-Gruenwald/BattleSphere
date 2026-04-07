@@ -2,6 +2,7 @@ import './globals.css';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import LogoutButton from './components/LogoutButton';
+import FeedbackButton from './components/FeedbackButton';
 
 export const metadata = {
   title: 'BattleSphere',
@@ -32,6 +33,8 @@ async function NavBar() {
       .single();
     isAdmin = profile?.is_admin === true;
   }
+
+  const username = user?.user_metadata?.username || user?.email || null;
 
   return (
     <nav style={{
@@ -68,6 +71,7 @@ async function NavBar() {
             {isAdmin && (
               <Link href="/admin" style={{ ...navLinkStyle, color: '#e05a5a' }}>Admin</Link>
             )}
+            <FeedbackButton username={username} />
             <span style={{ ...navLinkStyle, opacity: 0.5 }}>
               {user.user_metadata?.username || user.email}
             </span>
