@@ -198,35 +198,49 @@ export default async function CampaignDashboard({ params }) {
         )}
       </div>
 
-      {/* Stats strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', borderTop: '1px solid var(--border-dim)', borderBottom: '1px solid var(--border-dim)', marginBottom: '3rem' }}>
-        {[
-          { label: 'Factions',    value: factions?.length ?? 0,  href: `/c/${slug}/factions` },
-          { label: 'Players',     value: memberCount ?? 0,        href: `/c/${slug}/players` },
-          { label: 'Territories', value: territoryCount ?? 0,     href: `/c/${slug}/map` },
-          { label: 'Battles',     value: battleCount ?? 0,        href: `/c/${slug}/battles` },
-        ].map((stat, i, arr) => (
-          <Link key={stat.label} href={stat.href} style={{ textDecoration: 'none' }}>
-            <div style={{ padding: '1.5rem 1rem', textAlign: 'center', borderRight: i < arr.length - 1 ? '1px solid var(--border-dim)' : 'none', cursor: 'pointer' }}>
-              <div style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{stat.value}</div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.58rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>{stat.label}</div>
-            </div>
-          </Link>
-        ))}
-      </div>
+      {/* ── Stats + Map ──────────────────────────────────────────────────── */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '200px 1fr',
+        border: '1px solid var(--border-dim)',
+        height: '62vh',
+        minHeight: '440px',
+        maxHeight: '660px',
+        marginBottom: '3rem',
+        overflow: 'hidden',
+      }}>
 
-      {/* ── Campaign Map ─────────────────────────────────────────────────── */}
-      {territories && territories.length > 0 && (
-        <div style={{ marginBottom: '3rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.75rem' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
-              Campaign Map
-            </h2>
-            <Link href={`/c/${slug}/map`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
-              Full map →
+        {/* Left: stat items stacked vertically */}
+        <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-dim)' }}>
+          {[
+            { label: 'Factions',    value: factions?.length ?? 0, href: `/c/${slug}/factions` },
+            { label: 'Players',     value: memberCount ?? 0,       href: `/c/${slug}/players` },
+            { label: 'Territories', value: territoryCount ?? 0,    href: `/c/${slug}/map` },
+            { label: 'Battles',     value: battleCount ?? 0,       href: `/c/${slug}/battles` },
+          ].map((stat, i, arr) => (
+            <Link key={stat.label} href={stat.href} style={{ textDecoration: 'none', flex: 1 }}>
+              <div style={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                padding: '0 1.75rem',
+                borderBottom: i < arr.length - 1 ? '1px solid var(--border-dim)' : 'none',
+              }}>
+                <div style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.3rem', letterSpacing: '-0.01em' }}>
+                  {stat.value}
+                </div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.56rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+                  {stat.label}
+                </div>
+              </div>
             </Link>
-          </div>
-          <div style={{ height: '52vh', minHeight: '380px', maxHeight: '560px', border: '1px solid var(--border-dim)', overflow: 'hidden' }}>
+          ))}
+        </div>
+
+        {/* Right: map */}
+        <div style={{ position: 'relative', overflow: 'hidden' }}>
+          {territories && territories.length > 0 ? (
             <CampaignMap
               territories={territories}
               factions={factions || []}
@@ -235,9 +249,34 @@ export default async function CampaignDashboard({ params }) {
               campaignSlug={slug}
               setting={campaign.setting}
             />
-          </div>
+          ) : (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
+              No territories mapped yet.
+            </div>
+          )}
+          {/* Full map link — sits over the map bottom-right */}
+          <Link
+            href={`/c/${slug}/map`}
+            style={{
+              position: 'absolute',
+              bottom: '1rem',
+              right: '1rem',
+              background: 'rgba(8,8,12,0.82)',
+              border: '1px solid rgba(183,140,64,0.3)',
+              padding: '0.35rem 0.85rem',
+              fontFamily: 'var(--font-display)',
+              fontSize: '0.52rem',
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--text-gold)',
+              textDecoration: 'none',
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            Full Map →
+          </Link>
         </div>
-      )}
+      </div>
 
       {/* Main grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
