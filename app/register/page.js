@@ -27,6 +27,9 @@ function RegisterForm() {
       password,
       options: {
         data: { username },
+        // Redirect to our callback route so the confirmation works properly
+        // and the user lands on the dashboard (or back on their invite link).
+        emailRedirectTo: `${window.location.origin}/auth/callback${redirectTo ? `?next=${encodeURIComponent(redirectTo)}` : ''}`,
       },
     });
 

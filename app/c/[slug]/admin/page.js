@@ -65,6 +65,13 @@ export default async function AdminPage({ params }) {
     .eq('campaign_id', campaign.id)
     .eq('status', 'pending');
 
+  // Fetch existing invite codes for the multi-link invite system
+  const { data: inviteCodes } = await supabase
+    .from('campaign_invite_codes')
+    .select('*')
+    .eq('campaign_id', campaign.id)
+    .order('created_at', { ascending: false });
+
   const sectionLabel = {
     fontFamily: 'var(--font-display)',
     fontSize: '0.6rem',
@@ -132,7 +139,7 @@ export default async function AdminPage({ params }) {
           members={membersWithProfiles}
           campaignId={campaign.id}
           organiserId={campaign.organiser_id}
-          inviteCode={campaign.invite_code || null}
+          initialInviteCodes={inviteCodes || []}
           slug={slug}
         />
       </div>
