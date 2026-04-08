@@ -13,101 +13,93 @@ I'm Benjamin Grünwald, a Warhammer 40,000 hobbyist with limited coding skills. 
 - **GitHub repo**: https://github.com/B-Gruenwald/BattleSphere
 
 ### Local code
-- **Folder**: `/Users/benjamingrunwald/Desktop/BattleSphere` — this is mounted in Cowork
+- **Folder**: `/Users/benjamingrunwald/Desktop/BattleSphere` — request access at the start of every session with `request_cowork_directory: ~/Desktop/BattleSphere`
 - **Cowork project folder** (for deliverables like SQL migrations): `/Users/benjamingrunwald/Documents/Claude/BattleSphere Cowork Project`
 
 ### Backend
-- **Supabase** project: the database, auth, and storage. SQL migrations must be run manually in the Supabase SQL Editor (I paste and run them).
-- **Stack**: Next.js 16.2, React 19, Tailwind CSS v4, @supabase/supabase-js, @supabase/ssr
+- **Supabase**: database, auth, and storage. SQL migrations must be run manually in the Supabase SQL Editor.
+- **Stack**: Next.js 16.2, React 19, Tailwind CSS v4, @supabase/supabase-js, @supabase/ssr, resend
 - **All files use `.js`** — never `.tsx` or TypeScript.
 
 ---
 
 ## Project state
 
-### What's built (Phases 1–3 complete)
+### Last commit
+`9ffb7ce` — `fix(onboarding): fix email confirmation, invite links, and public page access`
 
-**Phase 1** — Design system, landing page, auth (register / login / forgot password), protected dashboard listing campaigns.
+### Phase 1–3: Complete
+Full campaign management system — auth, campaigns, map, territories, battles, factions, players, influence, events, chronicle, achievements. See memory file for full detail.
 
-**Phase 2** — Full campaign system:
-- Create Campaign wizard (4-step, generates factions + territories)
-- Campaign Dashboard: live stats, faction standings, recent battles
-- Interactive SVG map (node/network, not geographic tiles)
-- Territory Detail: controlling faction, sub-territories, battle history
-- Battle Log form: player/faction/territory/result/chronicle, control transfer
-- Battle Detail page
-- Faction Standings & Faction Detail pages
-- Player List & Player Profile pages (set-own-faction form, battle history)
+### Phase 4: Playtest & iterate (in progress)
 
-**Phase 3** — Narrative layers:
-- **Influence system**: territory_influence table, points per battle, organiser override form
-- **Campaign Events**: post/edit/delete events (organiser), events list, event detail, active events panel on dashboard
-- **Campaign Chronicle**: unified timeline of battles + events grouped by day
-- **Achievements / Hall of Honours**: 8 presets + emoji palette, award form (organiser), achievements strip on player/faction pages, revoke button
+**Completed this session (2026-04-08):**
 
-**Phase 4** — Playtest & iterate (in progress, user testing started 2026-04-01):
+1. **XP system** — `app/lib/xp.js` with `calcPlayerXP()` and `getXPRank()`. Ranks: Recruit → Warrior → Veteran → Champion → Hero → Legend. XP shown on player detail, players list, faction detail, and campaign dashboard (new "Player Standings" panel).
 
-Bug fixes completed:
-- Battle form: removed "transfer control" checkbox, improved faction-missing validation, fixed silent RLS failure in BattleEditForm with `.select()` guard
-- Battle co-ownership: attackers, defenders, logger, or organiser can all edit a battle record
-- Personal Battle Log on dashboard: shows all battles the logged-in user participated in
-- Map territory visibility: 6-pass normalisation pipeline ensures nodes never overlap; sub-territory label placement improved
-- Territory editing (MapEditForm): new territories now saved with computed x_pos/y_pos
+2. **Influence rebalance** — Win +3 / Draw +2 (both factions) / Loss +1. `BattleLogForm.js` `updateInfluence` rewritten. `influence.js` `reverseInfluence` updated to match.
 
-Public campaign page (built this session):
-- `/campaign/[slug]` — unauthenticated/public view with read-only map (full browser width), faction standings, recent chronicle, and "Request to Join" CTA
-- Join request flow: `join_requests` table, JoinRequestButton client component, organiser approval/decline UI at `/c/[slug]/requests`
-- Admin page now shows pending join request count and link to requests list
-- "Share Public Page ↗" button added to campaign dashboard for all members
+3. **Territory images**:
+   - `territories.image_url TEXT` column added (migration run)
+   - Supabase Storage bucket `territory-images` created (public, policies set)
+   - `TerritoryImageUpload.js` — upload/replace/remove, 5 MB limit, jpg/png/webp
+   - `TerritoryImageSection.js` — client wrapper for territory detail page
+   - Territory detail page: image hero visible to all; upload panel for organisers only
+   - `MapEditForm.js`: image upload row in map editor per territory
+   - `CampaignMap.js`: hover tooltip shows image thumbnail (SVG `<image>` + gradient fade)
 
-Other fixes this session:
-- Privacy policy build error fixed (removed event handlers from server component, replaced with CSS hover class)
-- Username rename: `TheNamd` → `TheNamad` via SQL
-- Faction save bug fixed in `SetFactionForm.js` (`.select()` added; silent RLS failure now surfaces as user-visible error)
+4. **Email confirmation fixed**:
+   - `app/auth/callback/route.js` created — exchanges Supabase one-time code for a session, redirects to `/dashboard`
+   - `register/page.js` now passes `emailRedirectTo: /auth/callback`
+   - Supabase Site URL and redirect URL configured in Supabase dashboard
+   - Cosmetic TODO for Benjamin: update email template subject/body to say "BattleSphere"
 
----
+5. **Invite system overhauled**:
+   - New `campaign_invite_codes` table (migration run) — per-row codes with 7-day expiry
+   - `AdminPlayerSearch.js` rewritten: multiple simultaneous invite links, per-link expiry + individual Revoke button, expired codes shown separately
+   - `join/[code]/page.js` updated: looks up `campaign_invite_codes`, checks expiry, distinct error messages for expired vs invalid
+   - `admin/page.js` fetches and passes `initialInviteCodes`
 
-## Pending SQL migrations (must be run in Supabase SQL Editor)
-
-These files are in the Cowork Project folder. Check which have already been run before re-applying.
-
-1. **`migration_public_access.sql`** — anon SELECT policies on 8 tables + `join_requests` table DDL + 4 RLS policies. Required for the public campaign page and join request flow to work.
-2. **`migration_battle_co_ownership.sql`** — RLS UPDATE policy allowing attacker/defender/logger/organiser to edit battle records.
-3. **`migration_faction_update_policy.sql`** — RLS UPDATE policy allowing members to update their own `faction_id` on `campaign_members`. Required to fix BENDER GMX's faction save bug.
+6. **RLS fixed for authenticated non-members**:
+   - Two migrations run: `migration_invite_codes.sql` and `migration_public_page_rls.sql`
+   - Tables now readable by authenticated users (not just anon): `campaigns`, `factions`, `territories`, `battles`, `territory_influence`, `campaign_events`, `achievements`, `campaign_members`, `profiles`
+   - Fixed: logged-in non-members can now view the public campaign page with full data, and join via invite link
 
 ---
 
 ## Key technical rules (must follow every session)
 
-- **Always replace full files** — never partial edits; write the complete file content.
-- **`@` alias** maps to the project root: use `@/app/components/...` not `@/components/...`.
-- **Event handlers must be in `'use client'` components** — `onMouseEnter`, `onClick`, etc. cannot exist in server components. Extract to a separate client component file if needed.
+- **`@` alias** maps to the project root: use `@/app/components/...`
+- **Event handlers** must be in `'use client'` components — extract to a client component if needed.
 - **`export const metadata`** only works in server components — never add `'use client'` to a page that exports metadata.
-- **Supabase RLS silent failure pattern**: UPDATE/INSERT blocked by RLS returns `{ data: [], error: null }`. Always add `.select()` and check `savedRows.length === 0` to detect it.
-- **Always use `select('*')`** — specific column lists silently fail if a column is missing from the schema.
-- **Step components in Create Campaign wizard** must be called as `Step1()` not `<Step1 />` (avoids focus loss).
-- **middleware is named `proxy.js`** and exports `proxy` (not `middleware`) — Next.js 16 naming.
-- **Git push works directly** from the BattleSphere terminal — GitHub token is embedded in the remote URL.
-- If `git commit` fails with `HEAD.lock`: run `rm -f .git/HEAD.lock` (requires Cowork file delete permission).
-
----
-
-## Likely next Phase 4 tasks
-
-- Mobile responsiveness pass across all pages
-- Invite system: join a campaign via a link or code (rather than requesting to join from the public page)
-- Any further user testing feedback from live players
-
-## Phase 5 (not started)
-- Launch & grow / monetisation
+- **Supabase RLS silent failure**: UPDATE/INSERT blocked by RLS returns `{ data: [], error: null }`. Always add `.select()` and check `savedRows.length === 0`.
+- **Always use `select('*')`** — specific column lists silently fail if a column is missing.
+- **Step components in Create Campaign wizard** must be called as `Step1()` not `<Step1 />`.
+- **Middleware** is `proxy.js`, exports `proxy` (not `middleware`) — Next.js 16 naming.
+- **Git push works directly** — token is embedded in the remote URL.
+- If `git commit` fails with `HEAD.lock`: request Cowork file delete permission, then `rm -f .git/HEAD.lock`.
+- **Server components** use `createClient` from `@/lib/supabase/server`. **Client components** use `createClient` from `@/lib/supabase/client`.
+- **Admin client**: `lib/supabase/admin.js` exports `createAdminClient()` using `SUPABASE_SERVICE_ROLE_KEY` — server-side API routes only, never browser.
+- **Storage bucket** `territory-images` is public. Upload path: `{campaign_id}/{territory_id}/image.{ext}`. Use `upsert: true`.
 
 ---
 
 ## Supabase DB tables (all with RLS)
-`profiles`, `campaigns`, `campaign_members`, `factions`, `territories`, `battles`, `territory_influence`, `campaign_events`, `achievements`, `join_requests`
 
-Key columns to know:
-- `territories.controlling_faction_id`
+`profiles`, `campaigns`, `campaign_members`, `factions`, `territories`, `battles`, `territory_influence`, `campaign_events`, `achievements`, `join_requests`, `campaign_invite_codes`, `warp_routes`
+
+Key columns:
+- `territories.controlling_faction_id`, `territories.image_url`
 - `campaign_members.faction_id`
 - `battles.attacker_player_id`, `battles.defender_player_id`, `battles.logged_by`
 - `join_requests.status` — `'pending'` | `'approved'` | `'rejected'`
+- `campaign_invite_codes.code`, `campaign_invite_codes.expires_at`
+
+---
+
+## Likely next tasks
+
+- Mobile responsiveness pass across all pages
+- Any further user testing feedback from live players
+- Secure a domain for BattleSphere → needed to unlock full Resend email delivery to all organisers (currently only delivers to Benjamin's Resend account email)
+- Phase 5: Launch & grow / monetisation
