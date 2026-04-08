@@ -278,29 +278,64 @@ export default function CampaignMap({ territories, factions, influenceData = [],
       normalizedTerritories.filter(s => s.parent_id === t.id).map(s => s.id).includes(i.territory_id) && i.influence_points > 0
     );
 
+    const hasImage = !!t.image_url;
+    const IMG_H    = hasImage ? 13 : 0;   // height reserved for the thumbnail
+
     const TW      = 36;
     const ROW_H   = 2.5;
     const FOOT_H  = hasSubInfluence ? 2.2 : 0;
-    const TH      = 8.5 + Math.max(1, rows.length) * ROW_H + FOOT_H;
+    const TH      = IMG_H + 8.5 + Math.max(1, rows.length) * ROW_H + FOOT_H;
 
     const TX = Math.min(tooltip.x + 2, 100 - TW - 1);
     const TY = Math.max(1, tooltip.y - TH - 2);
 
-    const nameY      = TY + 3.0;
-    const typeY      = TY + 5.0;
-    const divY       = TY + 6.2;
-    const firstRowY  = TY + 8.0;
+    // Text positions are offset downward by the image area
+    const textBaseY  = TY + IMG_H;
+    const nameY      = textBaseY + 3.0;
+    const typeY      = textBaseY + 5.0;
+    const divY       = textBaseY + 6.2;
+    const firstRowY  = textBaseY + 8.0;
 
     return (
       <g style={{ pointerEvents: 'none' }}>
+
+        {/* ── Dark background (full tooltip area) ── */}
         <rect
           x={`${TX}%`} y={`${TY}%`}
           width={`${TW}%`} height={`${TH}%`}
           fill="rgba(8,8,12,0.97)"
+          rx="0.4"
+        />
+
+        {/* ── Thumbnail image ── */}
+        {hasImage && (
+          <>
+            <image
+              href={t.image_url}
+              x={`${TX}%`} y={`${TY}%`}
+              width={`${TW}%`} height={`${IMG_H}%`}
+              preserveAspectRatio="xMidYMid slice"
+            />
+            {/* Fade gradient: bottom 30% of image fades to the dark panel below */}
+            <rect
+              x={`${TX}%`} y={`${TY + IMG_H * 0.7}%`}
+              width={`${TW}%`} height={`${IMG_H * 0.3}%`}
+              fill="url(#tooltipImgFade)"
+            />
+          </>
+        )}
+
+        {/* ── Gold border drawn on top of image ── */}
+        <rect
+          x={`${TX}%`} y={`${TY}%`}
+          width={`${TW}%`} height={`${TH}%`}
+          fill="none"
           stroke="rgba(183,140,64,0.35)"
           strokeWidth="0.25"
           rx="0.4"
         />
+
+        {/* ── Territory name ── */}
         <text
           x={`${TX + 2}%`} y={`${nameY}%`}
           fill="rgba(183,140,64,0.95)"
@@ -311,6 +346,8 @@ export default function CampaignMap({ territories, factions, influenceData = [],
         >
           {t.name.length > 22 ? t.name.slice(0, 20) + '…' : t.name}
         </text>
+
+        {/* ── Type · Controlling faction ── */}
         <text
           x={`${TX + 2}%`} y={`${typeY}%`}
           fill="rgba(200,180,140,0.45)"
@@ -321,11 +358,15 @@ export default function CampaignMap({ territories, factions, influenceData = [],
         >
           {[t.type, domName].filter(Boolean).join(' · ') || 'No control'}
         </text>
+
+        {/* ── Divider ── */}
         <line
           x1={`${TX + 1.5}%`} y1={`${divY}%`}
           x2={`${TX + TW - 1.5}%`} y2={`${divY}%`}
           stroke="rgba(183,140,64,0.12)" strokeWidth="0.2"
         />
+
+        {/* ── Influence rows ── */}
         {rows.length > 0 ? rows.map((row, i) => {
           const faction = factions?.find(f => f.id === row.faction_id);
           if (!faction) return null;
@@ -366,6 +407,8 @@ export default function CampaignMap({ territories, factions, influenceData = [],
             No battles fought here yet
           </text>
         )}
+
+        {/* ── Sub-territory footnote ── */}
         {hasSubInfluence && (
           <text
             x={`${TX + TW / 2}%`} y={`${TY + TH - 1.2}%`}
@@ -392,6 +435,14 @@ export default function CampaignMap({ territories, factions, influenceData = [],
       style={{ background: theme.bg, display: 'block', cursor: 'default' }}
       onMouseLeave={() => { setHoveredId(null); setTooltip(null); }}
     >
+      {/* ── Gradient definitions ──────────────────────────────────────────── */}
+      <defs>
+        <linearGradient id="tooltipImgFade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(8,8,12,0)" />
+          <stop offset="100%" stopColor="rgba(8,8,12,0.97)" />
+        </linearGradient>
+      </defs>
+
       {/* ── Background image ──────────────────────────────────────────────── */}
       <image
         href="/map-background.jpg"
