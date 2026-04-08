@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import TerritoryChildList from '@/app/components/TerritoryChildList';
 import InfluenceOverrideForm from '@/app/components/InfluenceOverrideForm';
+import TerritoryImageSection from '@/app/components/TerritoryImageSection';
 
 export default async function TerritoryPage({ params }) {
   const { slug, id } = await params;
@@ -184,6 +185,14 @@ export default async function TerritoryPage({ params }) {
           {territory.description}
         </p>
       )}
+
+      {/* Territory image (visible to all) / upload control (organisers only) */}
+      <TerritoryImageSection
+        campaignId={campaign.id}
+        territoryId={territory.id}
+        initialImageUrl={territory.image_url || null}
+        isOrganiser={isOrganiser}
+      />
 
       {/* Divider line */}
       <div style={{ borderTop: '1px solid var(--border-dim)', marginBottom: '2.5rem' }} />

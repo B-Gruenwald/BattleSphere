@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import TerritoryImageUpload from './TerritoryImageUpload';
 
 // ─── Small inline form used for both Add Territory and Add Sub-territory ───────
 function AddForm({ onAdd, onCancel, placeholder = 'Territory name' }) {
@@ -77,6 +78,11 @@ export default function MapEditForm({ territories: initial, factions, campaignId
   const [confirmDelete, setConfirmDelete] = useState(null); // territory id pending confirm
   const [deleting, setDeleting]           = useState({});
 
+  // Image URLs per territory (updated live after upload/remove)
+  const [imageUrls, setImageUrls] = useState(() =>
+    Object.fromEntries(initial.map(t => [t.id, t.image_url || null]))
+  );
+
   // Which add-form is open: 'root' | { parentId } | null
   const [addingFor, setAddingFor] = useState(null);
 
@@ -135,6 +141,7 @@ export default function MapEditForm({ territories: initial, factions, campaignId
     if (error) return error.message;
     setItems(prev => [...prev, data]);
     setRows(prev => ({ ...prev, [data.id]: { name: data.name || '', description: data.description || '', type: data.type || '' } }));
+    setImageUrls(prev => ({ ...prev, [data.id]: null }));
     setAddingFor(null);
     return null; // no error
   }
@@ -314,6 +321,17 @@ export default function MapEditForm({ territories: initial, factions, campaignId
               <div style={{ marginBottom: '1rem' }}>
                 <label style={labelStyle}>Description</label>
                 <textarea value={row.description} onChange={e => update(t.id, 'description', e.target.value)} rows={2} placeholder="A brief description of this territory…" style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }} />
+              </div>
+
+              {/* Territory image upload */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={labelStyle}>Territory Image</label>
+                <TerritoryImageUpload
+                  campaignId={campaignId}
+                  territoryId={t.id}
+                  currentImageUrl={imageUrls[t.id] || null}
+                  onImageChange={url => setImageUrls(prev => ({ ...prev, [t.id]: url }))}
+                />
               </div>
 
               {/* Row actions */}
