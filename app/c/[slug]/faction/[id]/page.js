@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { calcPlayerXP, getXPRank } from '@/app/lib/xp';
 
 export default async function FactionDetailPage({ params }) {
   const { slug, id } = await params;
@@ -69,6 +70,12 @@ export default async function FactionDetailPage({ params }) {
     .eq('awarded_to_type', 'faction')
     .eq('awarded_to_faction_id', id)
     .order('created_at', { ascending: false });
+
+  // All campaign battles — needed for complete player XP (players may have fought in other factions)
+  const { data: allCampaignBattles } = await supabase
+    .from('battles')
+    .select('attacker_player_id, defender_player_id, attacker_faction_id, defender_faction_id, winner_faction_id, territory_id')
+    .eq('campaign_id', campaign.id);
 
   const factionMap = Object.fromEntries((allFactions || []).map(f => [f.id, f]));
 
@@ -205,16 +212,30 @@ export default async function FactionDetailPage({ params }) {
           </h2>
           {playerProfiles && playerProfiles.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {playerProfiles.map(p => (
-                <Link key={p.id} href={`/c/${slug}/player/${p.id}`} style={{ textDecoration: 'none' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ width: '28px', height: '28px', background: 'var(--surface-2)', border: `1px solid ${faction.colour}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: faction.colour, fontWeight: '700', flexShrink: 0 }}>
-                      {p.username.slice(0, 2).toUpperCase()}
+              {playerProfiles.map(p => {
+                const pXP   = calcPlayerXP(allCampaignBattles, p.id);
+                const pRank = getXPRank(pXP);
+                return (
+                  <Link key={p.id} href={`/c/${slug}/player/${p.id}`} style={{ textDecoration: 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ width: '28px', height: '28px', background: 'var(--surface-2)', border: `1px solid ${faction.colour}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', color: faction.colour, fontWeight: '700', flexShrink: 0 }}>
+                        {p.username.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>{p.username}</div>
+                        <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.48rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                          {pRank}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: '700', color: pXP > 0 ? 'var(--text-gold)' : 'var(--text-muted)' }}>
+                          {pXP}<span style={{ fontSize: '0.6rem', fontWeight: '400', marginLeft: '0.15rem', opacity: 0.7 }}>xp</span>
+                        </span>
+                      </div>
                     </div>
-                    <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>{p.username}</span>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           ) : (
             <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No players assigned yet.</p>

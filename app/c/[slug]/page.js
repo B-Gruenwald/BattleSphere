@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { calcPlayerXP, getXPRank } from '@/app/lib/xp';
 
 const STATUS_COLOURS = {
   upcoming: '#6a8fc7',
@@ -48,10 +49,10 @@ export default async function CampaignDashboard({ params }) {
     .select('*', { count: 'exact', head: true })
     .eq('campaign_id', campaign.id);
 
-  // Fetch all battles for faction win counts
+  // Fetch all battles — used for faction win counts and player XP
   const { data: allBattles } = await supabase
     .from('battles')
-    .select('attacker_faction_id, defender_faction_id, winner_faction_id')
+    .select('attacker_player_id, defender_player_id, attacker_faction_id, defender_faction_id, winner_faction_id, territory_id')
     .eq('campaign_id', campaign.id);
 
   // ── Recent Chronicle panel data ────────────────────────────
@@ -111,6 +112,30 @@ export default async function CampaignDashboard({ params }) {
     .in('status', ['active', 'upcoming'])
     .order('created_at', { ascending: false })
     .limit(5);
+
+  // ── Player XP Standings ────────────────────────────────────
+  const { data: allMembers } = await supabase
+    .from('campaign_members')
+    .select('user_id, faction_id')
+    .eq('campaign_id', campaign.id);
+
+  const allMemberIds = (allMembers || []).map(m => m.user_id);
+  const { data: allProfiles } = allMemberIds.length > 0
+    ? await supabase.from('profiles').select('id, username').in('id', allMemberIds)
+    : { data: [] };
+
+  const profileMapForXP  = Object.fromEntries((allProfiles  || []).map(p => [p.id, p]));
+  const factionMapForXP  = Object.fromEntries((factions     || []).map(f => [f.id, f]));
+
+  const playerStandings = (allMembers || [])
+    .map(m => ({
+      userId:   m.user_id,
+      username: profileMapForXP[m.user_id]?.username ?? 'Unknown',
+      colour:   factionMapForXP[m.faction_id]?.colour ?? 'var(--border-dim)',
+      xp:       calcPlayerXP(allBattles, m.user_id),
+    }))
+    .sort((a, b) => b.xp - a.xp)
+    .slice(0, 6);
 
   const isOrganiser = campaign.organiser_id === user.id;
 
@@ -201,6 +226,39 @@ export default async function CampaignDashboard({ params }) {
               </Link>
             )) : (
               <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No factions yet.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Player XP Standings */}
+        <div style={{ border: '1px solid var(--border-dim)', padding: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+              Player Standings
+            </h2>
+            <Link href={`/c/${slug}/players`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>View all →</Link>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            {playerStandings.length > 0 ? playerStandings.map((p, i) => (
+              <Link key={p.userId} href={`/c/${slug}/player/${p.userId}`} style={{ textDecoration: 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.2rem 0' }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.5rem', color: 'var(--text-muted)', width: '14px', textAlign: 'right', flexShrink: 0 }}>
+                    {i + 1}
+                  </span>
+                  <div style={{ width: '26px', height: '26px', background: 'var(--surface-2)', border: `1px solid ${p.colour}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', color: p.colour, fontWeight: '700', flexShrink: 0 }}>
+                    {p.username.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.username}</div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.45rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: '0.1rem' }}>{getXPRank(p.xp)}</div>
+                  </div>
+                  <span style={{ fontSize: '0.85rem', fontWeight: '700', color: p.xp > 0 ? 'var(--text-gold)' : 'var(--text-muted)', flexShrink: 0 }}>
+                    {p.xp}<span style={{ fontSize: '0.6rem', fontWeight: '400', marginLeft: '0.15rem', opacity: 0.7 }}>xp</span>
+                  </span>
+                </div>
+              </Link>
+            )) : (
+              <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No battles recorded yet.</p>
             )}
           </div>
         </div>

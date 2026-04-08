@@ -2,8 +2,8 @@
  * Shared influence helpers.
  *
  * Influence rules (matches BattleLogForm.updateInfluence):
- *   Win  → winner +3, loser unchanged
- *   Draw → both factions +1
+ *   Win  → winner +3, loser +1
+ *   Draw → both factions +2
  *
  * reverseInfluence undoes those exact amounts when a battle is deleted.
  * Influence is clamped at 0 and never goes negative.
@@ -17,14 +17,19 @@ export async function reverseInfluence(supabase, battle) {
   const attackerWon = battle.winner_faction_id === battle.attacker_faction_id;
 
   // Build a map of { factionId → pointsDelta }
+  // Mirrors the inverse of BattleLogForm.updateInfluence:
+  //   Win  → winner −3, loser −1
+  //   Draw → both −2
   const factionDeltas = {};
   if (isDraw) {
-    factionDeltas[battle.attacker_faction_id] = -1;
-    factionDeltas[battle.defender_faction_id] = -1;
+    factionDeltas[battle.attacker_faction_id] = -2;
+    factionDeltas[battle.defender_faction_id] = -2;
   } else if (attackerWon) {
     factionDeltas[battle.attacker_faction_id] = -3;
+    factionDeltas[battle.defender_faction_id] = -1;
   } else {
     factionDeltas[battle.defender_faction_id] = -3;
+    factionDeltas[battle.attacker_faction_id] = -1;
   }
 
   const factionIds = Object.keys(factionDeltas);

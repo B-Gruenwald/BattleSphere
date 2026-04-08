@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import SetFactionForm from '@/app/components/SetFactionForm';
+import { calcPlayerXP, getXPRank } from '@/app/lib/xp';
 
 export default async function PlayerProfilePage({ params }) {
   const { slug, userId } = await params;
@@ -42,7 +43,7 @@ export default async function PlayerProfilePage({ params }) {
     .eq('campaign_id', campaign.id)
     .order('created_at');
 
-  // Fetch battles involving this player
+  // Fetch battles involving this player (select * covers all fields incl. territory_id for XP)
   const { data: battles } = await supabase
     .from('battles')
     .select('*')
@@ -75,6 +76,9 @@ export default async function PlayerProfilePage({ params }) {
   const wins   = (battles || []).filter(b => calcResult(b) === 'win').length;
   const draws  = (battles || []).filter(b => calcResult(b) === 'draw').length;
   const losses = (battles || []).filter(b => calcResult(b) === 'loss').length;
+
+  const xp     = calcPlayerXP(battles, userId);
+  const rank   = getXPRank(xp);
 
   // Fetch opponent player profiles for battle display
   const opponentIds = [...new Set(
@@ -131,15 +135,18 @@ export default async function PlayerProfilePage({ params }) {
       </div>
 
       {/* Record strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderTop: '1px solid var(--border-dim)', borderBottom: '1px solid var(--border-dim)', marginBottom: '2.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', borderTop: '1px solid var(--border-dim)', borderBottom: '1px solid var(--border-dim)', marginBottom: '2.5rem' }}>
         {[
-          { label: 'Victories', value: wins,   colour: wins > 0 ? avatarColour : 'var(--text-secondary)' },
-          { label: 'Draws',     value: draws,  colour: 'var(--text-secondary)' },
-          { label: 'Defeats',   value: losses, colour: losses > 0 ? '#e05a5a' : 'var(--text-secondary)' },
+          { label: 'Victories', value: wins,                   colour: wins > 0 ? avatarColour : 'var(--text-secondary)' },
+          { label: 'Draws',     value: draws,                  colour: 'var(--text-secondary)' },
+          { label: 'Defeats',   value: losses,                 colour: losses > 0 ? '#e05a5a' : 'var(--text-secondary)' },
           { label: 'Battles',   value: (battles || []).length, colour: 'var(--text-primary)' },
+          { label: rank,        value: xp,                     colour: xp > 0 ? 'var(--text-gold)' : 'var(--text-secondary)', isXP: true },
         ].map((stat, i, arr) => (
           <div key={stat.label} style={{ padding: '1.25rem 0.75rem', textAlign: 'center', borderRight: i < arr.length - 1 ? '1px solid var(--border-dim)' : 'none' }}>
-            <div style={{ fontSize: '1.75rem', fontWeight: '700', color: stat.colour, marginBottom: '0.25rem' }}>{stat.value}</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: '700', color: stat.colour, marginBottom: '0.25rem' }}>
+              {stat.value}{stat.isXP && <span style={{ fontSize: '0.8rem', fontWeight: '400', marginLeft: '0.2rem', opacity: 0.7 }}>xp</span>}
+            </div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>{stat.label}</div>
           </div>
         ))}

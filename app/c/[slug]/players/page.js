@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import PlayerAchievementIcons from '@/app/components/PlayerAchievementIcons';
+import { calcPlayerXP, getXPRank } from '@/app/lib/xp';
 
 export default async function PlayersPage({ params }) {
   const { slug } = await params;
@@ -36,10 +37,10 @@ export default async function PlayersPage({ params }) {
     .select('*')
     .eq('campaign_id', campaign.id);
 
-  // Fetch all battles for win counts
+  // Fetch all battles for win counts + XP calculation
   const { data: battles } = await supabase
     .from('battles')
-    .select('attacker_player_id, defender_player_id, winner_faction_id, attacker_faction_id, defender_faction_id')
+    .select('attacker_player_id, defender_player_id, winner_faction_id, attacker_faction_id, defender_faction_id, territory_id')
     .eq('campaign_id', campaign.id);
 
   // Fetch player achievements for this campaign
@@ -84,6 +85,7 @@ export default async function PlayersPage({ params }) {
       stats:        getPlayerStats(m.user_id),
       isMe:         m.user_id === user.id,
       achievements: achievementsByPlayer[m.user_id] || [],
+      xp:           calcPlayerXP(battles, m.user_id),
     }))
     .sort((a, b) => b.stats.wins - a.stats.wins || a.profile?.username?.localeCompare(b.profile?.username));
 
@@ -116,8 +118,8 @@ export default async function PlayersPage({ params }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
 
         {/* Table header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 60px 60px 60px 60px', gap: '0.5rem', padding: '0.6rem 1.25rem', borderBottom: '1px solid var(--border-dim)' }}>
-          {['Player', 'Faction', 'W', 'D', 'L', 'Played'].map(h => (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 80px 60px 60px 60px 60px', gap: '0.5rem', padding: '0.6rem 1.25rem', borderBottom: '1px solid var(--border-dim)' }}>
+          {['Player', 'Faction', 'XP', 'W', 'D', 'L', 'Played'].map(h => (
             <span key={h} style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: h === 'Player' || h === 'Faction' ? 'left' : 'center' }}>
               {h}
             </span>
@@ -133,7 +135,7 @@ export default async function PlayersPage({ params }) {
             <Link key={player.user_id} href={`/c/${slug}/player/${player.user_id}`} style={{ textDecoration: 'none' }}>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 140px 60px 60px 60px 60px',
+                gridTemplateColumns: '1fr 140px 80px 60px 60px 60px 60px',
                 gap: '0.5rem',
                 padding: '0.9rem 1.25rem',
                 borderBottom: '1px solid var(--border-dim)',
@@ -178,6 +180,16 @@ export default async function PlayersPage({ params }) {
                   ) : (
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Unassigned</span>
                   )}
+                </div>
+
+                {/* XP */}
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.9rem', fontWeight: '700', color: player.xp > 0 ? 'var(--text-gold)' : 'var(--text-muted)' }}>
+                    {player.xp}<span style={{ fontSize: '0.6rem', fontWeight: '400', marginLeft: '0.15rem', opacity: 0.7 }}>xp</span>
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.45rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                    {getXPRank(player.xp)}
+                  </div>
                 </div>
 
                 {/* Stats */}

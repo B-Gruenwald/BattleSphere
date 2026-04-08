@@ -57,29 +57,26 @@ export default function BattleLogForm({ campaign, territories, factions, members
     result === 'defender' ? defenderFactionId : null;
 
   // ── Influence update helper ──────────────────────────────────────────────────
-  // Win: winner +3, loser unchanged. Draw: both +1.
+  // Win: winner +3, loser +1. Draw: both +2.
   async function updateInfluence() {
     if (!territoryId || !attackerFactionId || !defenderFactionId || !result) return;
 
-    let gainerId = null;
-    let gainAmount = 0;
-    let secondGainerId = null;
-
+    // Build a map of { factionId → pointsDelta }
+    const deltas = {};
     if (result === 'attacker') {
-      gainerId   = attackerFactionId;
-      gainAmount = 3;
+      deltas[attackerFactionId] = 3;
+      deltas[defenderFactionId] = 1;
     } else if (result === 'defender') {
-      gainerId   = defenderFactionId;
-      gainAmount = 3;
+      deltas[defenderFactionId] = 3;
+      deltas[attackerFactionId] = 1;
     } else if (result === 'draw') {
-      gainerId       = attackerFactionId;
-      secondGainerId = defenderFactionId;
-      gainAmount     = 1;
+      deltas[attackerFactionId] = 2;
+      deltas[defenderFactionId] = 2;
     }
 
-    if (!gainerId) return;
+    const factionIds = Object.keys(deltas);
+    if (factionIds.length === 0) return;
 
-    const factionIds = [gainerId, secondGainerId].filter(Boolean);
     const { data: current, error: fetchError } = await supabase
       .from('territory_influence')
       .select('*')
@@ -91,21 +88,12 @@ export default function BattleLogForm({ campaign, territories, factions, members
     const getPoints = (factionId) =>
       current?.find(i => i.faction_id === factionId)?.influence_points ?? 0;
 
-    const updates = [{
+    const updates = factionIds.map(fid => ({
       campaign_id:      campaign.id,
       territory_id:     territoryId,
-      faction_id:       gainerId,
-      influence_points: getPoints(gainerId) + gainAmount,
-    }];
-
-    if (secondGainerId) {
-      updates.push({
-        campaign_id:      campaign.id,
-        territory_id:     territoryId,
-        faction_id:       secondGainerId,
-        influence_points: getPoints(secondGainerId) + gainAmount,
-      });
-    }
+      faction_id:       fid,
+      influence_points: getPoints(fid) + deltas[fid],
+    }));
 
     const { error: upsertError } = await supabase
       .from('territory_influence')
