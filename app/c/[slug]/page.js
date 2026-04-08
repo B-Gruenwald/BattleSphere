@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { calcPlayerXP, getXPRank } from '@/app/lib/xp';
+import CampaignMap from '@/app/components/CampaignMap';
 
 const STATUS_COLOURS = {
   upcoming: '#6a8fc7',
@@ -47,6 +48,24 @@ export default async function CampaignDashboard({ params }) {
   const { count: battleCount } = await supabase
     .from('battles')
     .select('*', { count: 'exact', head: true })
+    .eq('campaign_id', campaign.id);
+
+  // Fetch territories, influence, and warp routes for the embedded map
+  const { data: territories } = await supabase
+    .from('territories')
+    .select('*')
+    .eq('campaign_id', campaign.id)
+    .order('depth')
+    .order('created_at');
+
+  const { data: influenceData } = await supabase
+    .from('territory_influence')
+    .select('*')
+    .eq('campaign_id', campaign.id);
+
+  const { data: warpRoutes } = await supabase
+    .from('warp_routes')
+    .select('*')
     .eq('campaign_id', campaign.id);
 
   // Fetch all battles — used for faction win counts and player XP
@@ -195,6 +214,30 @@ export default async function CampaignDashboard({ params }) {
           </Link>
         ))}
       </div>
+
+      {/* ── Campaign Map ─────────────────────────────────────────────────── */}
+      {territories && territories.length > 0 && (
+        <div style={{ marginBottom: '3rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.75rem' }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+              Campaign Map
+            </h2>
+            <Link href={`/c/${slug}/map`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
+              Full map →
+            </Link>
+          </div>
+          <div style={{ height: '52vh', minHeight: '380px', maxHeight: '560px', border: '1px solid var(--border-dim)', overflow: 'hidden' }}>
+            <CampaignMap
+              territories={territories}
+              factions={factions || []}
+              influenceData={influenceData || []}
+              warpRoutes={warpRoutes || []}
+              campaignSlug={slug}
+              setting={campaign.setting}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Main grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
