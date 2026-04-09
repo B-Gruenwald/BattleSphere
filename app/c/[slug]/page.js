@@ -156,7 +156,14 @@ export default async function CampaignDashboard({ params }) {
     .sort((a, b) => b.xp - a.xp)
     .slice(0, 6);
 
-  const isOrganiser = campaign.organiser_id === user.id;
+  const { data: myMembership } = await supabase
+    .from('campaign_members')
+    .select('role')
+    .eq('campaign_id', campaign.id)
+    .eq('user_id', user.id)
+    .single();
+  const isOrganiser = campaign.organiser_id === user.id
+    || ['organiser', 'admin'].includes(myMembership?.role);
 
   const SETTING_LABELS = {
     'Gothic Sci-Fi': 'Gothic Sci-Fi · Warhammer 40,000',

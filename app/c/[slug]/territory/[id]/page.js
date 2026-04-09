@@ -80,7 +80,14 @@ export default async function TerritoryPage({ params }) {
     ? factionMap[territory.controlling_faction_id]
     : null;
 
-  const isOrganiser = campaign.organiser_id === user.id;
+  const { data: myMembership } = await supabase
+    .from('campaign_members')
+    .select('role')
+    .eq('campaign_id', campaign.id)
+    .eq('user_id', user.id)
+    .single();
+  const isOrganiser = campaign.organiser_id === user.id
+    || ['organiser', 'admin'].includes(myMembership?.role);
 
   const DEPTH_LABELS = { 1: 'Region', 2: 'Sector', 3: 'Location' };
   const depthLabel = DEPTH_LABELS[territory.depth] || 'Territory';

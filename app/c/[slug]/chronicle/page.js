@@ -404,7 +404,14 @@ export default async function ChroniclePage({ params }) {
 
   const dayGroups = groupByDay(timeline);
 
-  const isOrganiser   = campaign.organiser_id === user.id;
+  const { data: myMembership } = await supabase
+    .from('campaign_members')
+    .select('role')
+    .eq('campaign_id', campaign.id)
+    .eq('user_id', user.id)
+    .single();
+  const isOrganiser   = campaign.organiser_id === user.id
+    || ['organiser', 'admin'].includes(myMembership?.role);
   const totalEntries  = timeline.length;
 
   return (

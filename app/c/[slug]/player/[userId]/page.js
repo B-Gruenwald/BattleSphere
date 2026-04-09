@@ -63,7 +63,14 @@ export default async function PlayerProfilePage({ params }) {
   const factionMap = Object.fromEntries((factions || []).map(f => [f.id, f]));
   const assignedFaction = membership.faction_id ? factionMap[membership.faction_id] : null;
   const isOwnProfile = user.id === userId;
-  const isOrganiser  = campaign.organiser_id === user.id;
+  const { data: myMembership } = await supabase
+    .from('campaign_members')
+    .select('role')
+    .eq('campaign_id', campaign.id)
+    .eq('user_id', user.id)
+    .single();
+  const isOrganiser = campaign.organiser_id === user.id
+    || ['organiser', 'admin'].includes(myMembership?.role);
 
   // Compute record
   function calcResult(battle) {

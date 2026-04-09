@@ -84,7 +84,14 @@ export default async function FactionDetailPage({ params }) {
   const draws  = (battles || []).filter(b => b.winner_faction_id === null).length;
   const losses = (battles || []).length - wins - draws;
 
-  const isOrganiser = campaign.organiser_id === user.id;
+  const { data: myMembership } = await supabase
+    .from('campaign_members')
+    .select('role')
+    .eq('campaign_id', campaign.id)
+    .eq('user_id', user.id)
+    .single();
+  const isOrganiser = campaign.organiser_id === user.id
+    || ['organiser', 'admin'].includes(myMembership?.role);
 
   // Fetch player profiles for battle display
   const battlePlayerIds = [...new Set(

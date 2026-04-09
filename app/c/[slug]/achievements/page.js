@@ -41,7 +41,14 @@ export default async function AchievementsPage({ params }) {
   const factionMap = Object.fromEntries((factions || []).map(f => [f.id, f]));
   const profileMap = Object.fromEntries((playerProfiles || []).map(p => [p.id, p]));
 
-  const isOrganiser = campaign.organiser_id === user.id;
+  const { data: myMembership } = await supabase
+    .from('campaign_members')
+    .select('role')
+    .eq('campaign_id', campaign.id)
+    .eq('user_id', user.id)
+    .single();
+  const isOrganiser = campaign.organiser_id === user.id
+    || ['organiser', 'admin'].includes(myMembership?.role);
 
   // Group by recipient
   const byFaction = {};
