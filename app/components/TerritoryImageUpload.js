@@ -50,7 +50,7 @@ export default function TerritoryImageUpload({ campaignId, territoryId, currentI
         .from(BUCKET)
         .getPublicUrl(path);
 
-      const publicUrl = urlData.publicUrl;
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
 
       // Save URL to territories table
       const { error: dbError } = await supabase
