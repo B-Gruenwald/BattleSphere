@@ -354,8 +354,8 @@ export default function SendOnboardingPage() {
             disabled={!canSend}
             style={{
               padding:       '0.8rem 2.5rem',
-              background:    canSend ? 'var(--accent)' : 'transparent',
-              color:         canSend ? '#07070a' : 'var(--text-muted)',
+              background:    'transparent',
+              color:         canSend ? 'var(--accent)' : 'var(--text-muted)',
               border:        `1px solid ${canSend ? 'var(--accent)' : 'var(--border)'}`,
               fontFamily:    'var(--font-display)',
               fontSize:      '0.65rem',
