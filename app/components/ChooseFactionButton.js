@@ -7,13 +7,15 @@ export default function ChooseFactionButton({ campaignId, factions, currentFacti
   const supabase = createClient();
 
   const [open,     setOpen]     = useState(false);
-  const [selected, setSelected] = useState(currentFactionId || '');
+  const [selected, setSelected] = useState('');
   const [saving,   setSaving]   = useState(false);
   const [saved,    setSaved]    = useState(false);
   const [error,    setError]    = useState('');
 
-  // Don't render at all if user already has a faction
+  // Don't render at all once the user has a faction
   if (currentFactionId) return null;
+
+  const selectedFaction = factions.find(f => f.id === selected) || null;
 
   async function handleSave() {
     if (!selected) return;
@@ -33,12 +35,11 @@ export default function ChooseFactionButton({ campaignId, factions, currentFacti
       setError('Could not save — try refreshing the page.');
     } else {
       setSaved(true);
-      // Brief confirmation, then remove the button entirely
       setTimeout(() => window.location.reload(), 1200);
     }
   }
 
-  // ── Collapsed state: gold prompt button ──────────────────────────────────
+  // ── Collapsed: prompt button ─────────────────────────────────────────────
   if (!open) {
     return (
       <button
@@ -63,90 +64,89 @@ export default function ChooseFactionButton({ campaignId, factions, currentFacti
     );
   }
 
-  // ── Expanded state: inline faction picker ────────────────────────────────
+  // ── Expanded: dropdown + commit button appears once faction is picked ─────
   return (
     <div style={{
-      display:    'flex',
-      alignItems: 'center',
-      gap:        '0.6rem',
-      flexWrap:   'wrap',
-      background: 'rgba(183,140,64,0.06)',
-      border:     '1px solid rgba(183,140,64,0.3)',
-      padding:    '0.5rem 0.9rem',
+      display:        'flex',
+      alignItems:     'center',
+      gap:            '0.6rem',
+      flexWrap:       'wrap',
+      background:     'rgba(183,140,64,0.06)',
+      border:         '1px solid rgba(183,140,64,0.3)',
+      padding:        '0.5rem 0.9rem',
     }}>
-      <span style={{
-        fontFamily:    'var(--font-display)',
-        fontSize:      '0.56rem',
-        letterSpacing: '0.14em',
-        textTransform: 'uppercase',
-        color:         'var(--accent)',
-        whiteSpace:    'nowrap',
-      }}>
-        Your Faction:
-      </span>
 
+      {/* Dropdown */}
       <select
         value={selected}
-        onChange={e => { setSelected(e.target.value); setSaved(false); }}
+        onChange={e => setSelected(e.target.value)}
+        autoFocus
         style={{
-          background:   'var(--surface-2)',
-          border:       '1px solid var(--border-dim)',
-          color:        'var(--text-primary)',
-          padding:      '0.35rem 0.65rem',
-          fontSize:     '0.88rem',
-          outline:      'none',
-          appearance:   'none',
-          cursor:       'pointer',
-          minWidth:     '140px',
+          background:  'var(--surface-2)',
+          border:      '1px solid var(--border-dim)',
+          color:       selected ? 'var(--text-primary)' : 'var(--text-muted)',
+          padding:     '0.4rem 0.7rem',
+          fontSize:    '0.88rem',
+          outline:     'none',
+          cursor:      'pointer',
+          minWidth:    '160px',
         }}
       >
-        <option value="">— Select —</option>
+        <option value="">— Choose your side —</option>
         {factions.map(f => (
           <option key={f.id} value={f.id}>{f.name}</option>
         ))}
       </select>
 
-      {saved ? (
-        <span style={{ fontSize: '0.82rem', color: 'var(--accent)', fontStyle: 'italic' }}>
-          ✓ Joined!
-        </span>
-      ) : (
+      {/* Commit button — only appears after a selection is made */}
+      {selectedFaction && !saved && (
         <button
           type="button"
           onClick={handleSave}
-          disabled={saving || !selected}
+          disabled={saving}
           style={{
-            padding:       '0.35rem 0.9rem',
+            padding:       '0.4rem 1rem',
             background:    'var(--accent)',
             color:         '#07070a',
             border:        '1px solid var(--accent)',
             fontFamily:    'var(--font-display)',
-            fontSize:      '0.56rem',
+            fontSize:      '0.6rem',
             fontWeight:    '700',
             letterSpacing: '0.12em',
             textTransform: 'uppercase',
-            cursor:        saving || !selected ? 'default' : 'pointer',
-            opacity:       saving || !selected ? 0.6 : 1,
+            cursor:        saving ? 'default' : 'pointer',
+            opacity:       saving ? 0.7 : 1,
             whiteSpace:    'nowrap',
           }}
         >
-          {saving ? 'Saving…' : 'Confirm'}
+          {saving ? 'Joining…' : `Join ${selectedFaction.name} →`}
         </button>
       )}
 
+      {/* Success */}
+      {saved && (
+        <span style={{ fontSize: '0.85rem', color: 'var(--accent)' }}>
+          ✓ Joined!
+        </span>
+      )}
+
+      {/* Cancel */}
       {!saved && (
         <button
           type="button"
-          onClick={() => setOpen(false)}
-          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.9rem', padding: '0 0.1rem', lineHeight: 1 }}
+          onClick={() => { setOpen(false); setSelected(''); setError(''); }}
+          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1rem', padding: '0 0.1rem', lineHeight: 1 }}
           title="Cancel"
         >
           ✕
         </button>
       )}
 
+      {/* Error */}
       {error && (
-        <span style={{ fontSize: '0.78rem', color: '#e05a5a', width: '100%' }}>{error}</span>
+        <span style={{ fontSize: '0.78rem', color: '#e05a5a', width: '100%' }}>
+          ✗ {error}
+        </span>
       )}
     </div>
   );
