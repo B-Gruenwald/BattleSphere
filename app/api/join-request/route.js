@@ -67,7 +67,7 @@ export async function POST(request) {
     // ── 6. Send notification email via Resend ────────────────────────────────
     const resend   = new Resend(process.env.RESEND_API_KEY);
     const fromAddr = process.env.RESEND_FROM_EMAIL;
-    const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? 'https://battle-sphere-topaz.vercel.app';
+    const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.battlesphere.cc';
     const requestsUrl = `${appUrl}/c/${campaign.slug}/requests`;
 
     const { error: emailError } = await resend.emails.send({

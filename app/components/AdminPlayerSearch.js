@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 
 const APP_URL = typeof window !== 'undefined'
   ? window.location.origin
-  : 'https://battle-sphere-topaz.vercel.app';
+  : 'https://www.battlesphere.cc';
 
 function generateCode(length = 10) {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
