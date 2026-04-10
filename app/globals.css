@@ -309,6 +309,85 @@ nav a:hover {
 }
 
 /* ══════════════════════════════════════════════════════════
+   CAMPAIGN HEADER ACTION BUTTONS / KEBAB MENU
+   ══════════════════════════════════════════════════════════ */
+
+/* Desktop: full row of buttons */
+.dash-actions-desktop {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Mobile: hidden by default */
+.dash-actions-mobile {
+  display: none;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Kebab trigger button */
+.dash-kebab-btn {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 0.4rem 0.55rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  letter-spacing: 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.dash-kebab-btn:hover {
+  border-color: var(--gold-dim);
+  color: var(--text-gold);
+}
+
+/* Kebab dropdown panel */
+.dash-kebab-dropdown {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 50;
+  background: #0d0d0f;
+  border: 1px solid var(--border-dim);
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+
+/* Each item in the kebab dropdown */
+.dash-kebab-item {
+  display: block;
+  padding: 0.85rem 1.1rem;
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border-dim);
+  transition: color 0.15s, background 0.15s;
+}
+
+.dash-kebab-item:last-child {
+  border-bottom: none;
+}
+
+.dash-kebab-item:hover {
+  color: var(--text-gold);
+  background: rgba(183, 140, 64, 0.05);
+}
+
+@media (max-width: 640px) {
+  .dash-actions-desktop { display: none; }
+  .dash-actions-mobile  { display: flex; }
+}
+
+/* ══════════════════════════════════════════════════════════
    CAMPAIGN DASHBOARD — MOBILE LAYOUT
    ══════════════════════════════════════════════════════════ */
 

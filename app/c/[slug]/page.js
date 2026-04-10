@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { calcPlayerXP, getXPRank } from '@/app/lib/xp';
 import CampaignMap from '@/app/components/CampaignMap';
-import ChooseFactionButton from '@/app/components/ChooseFactionButton';
+import CampaignHeaderActions from '@/app/components/CampaignHeaderActions';
 
 const STATUS_COLOURS = {
   upcoming: '#6a8fc7',
@@ -187,25 +187,15 @@ export default async function CampaignDashboard({ params }) {
           <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: '900', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             {campaign.name}
           </h1>
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            {isMember && !myMembership?.faction_id && factions && factions.length > 0 && (
-              <ChooseFactionButton
-                campaignId={campaign.id}
-                factions={factions}
-                currentFactionId={myMembership?.faction_id || null}
-              />
-            )}
-            <Link href={`/campaign/${slug}`} target="_blank" style={{ textDecoration: 'none' }}>
-              <button className="btn-secondary" style={{ padding: '0.5rem 1.25rem', fontSize: '0.6rem' }}>
-                Share Public Page ↗
-              </button>
-            </Link>
-            {isOrganiser && (
-              <Link href={`/c/${slug}/admin`}>
-                <button className="btn-secondary" style={{ padding: '0.5rem 1.25rem' }}>Admin</button>
-              </Link>
-            )}
-          </div>
+          <CampaignHeaderActions
+            campaignId={campaign.id}
+            campaignSlug={slug}
+            publicSlug={slug}
+            factions={factions || []}
+            showFactionChooser={!!(isMember && !myMembership?.faction_id && factions && factions.length > 0)}
+            currentFactionId={myMembership?.faction_id || null}
+            isOrganiser={!!isOrganiser}
+          />
         </div>
         {campaign.description && (
           <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', marginTop: '0.75rem', maxWidth: '600px', lineHeight: 1.6 }}>
