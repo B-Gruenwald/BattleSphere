@@ -176,7 +176,7 @@ export default async function CampaignDashboard({ params }) {
   };
 
   return (
-    <div style={{ padding: '4rem 2rem', maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="dash-page-root" style={{ padding: '4rem 2rem', maxWidth: '1100px', margin: '0 auto' }}>
 
       {/* Campaign header */}
       <div style={{ marginBottom: '3rem' }}>
@@ -215,7 +215,7 @@ export default async function CampaignDashboard({ params }) {
       </div>
 
       {/* ── Stats + Map ──────────────────────────────────────────────────── */}
-      <div style={{
+      <div className="dash-stats-map" style={{
         display: 'grid',
         gridTemplateColumns: '200px 1fr',
         border: '1px solid var(--border-dim)',
@@ -227,7 +227,7 @@ export default async function CampaignDashboard({ params }) {
       }}>
 
         {/* Left: stat items stacked vertically */}
-        <div style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-dim)' }}>
+        <div className="dash-stats-col" style={{ display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-dim)' }}>
           {[
             { label: 'Factions',    value: factions?.length ?? 0, href: `/c/${slug}/factions` },
             { label: 'Players',     value: memberCount ?? 0,       href: `/c/${slug}/players` },
@@ -255,7 +255,7 @@ export default async function CampaignDashboard({ params }) {
         </div>
 
         {/* Right: map */}
-        <div style={{ position: 'relative', overflow: 'hidden' }}>
+        <div className="dash-map-wrap" style={{ position: 'relative', overflow: 'hidden' }}>
           {territories && territories.length > 0 ? (
             <CampaignMap
               territories={territories}

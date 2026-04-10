@@ -432,7 +432,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
       height="100%"
       viewBox="0 0 100 100"
       preserveAspectRatio="xMidYMid meet"
-      style={{ background: theme.bg, display: 'block', cursor: 'default' }}
+      style={{ background: theme.bg, display: 'block', cursor: 'default', touchAction: 'manipulation' }}
       onMouseLeave={() => { setHoveredId(null); setTooltip(null); }}
     >
       {/* ── Gradient definitions ──────────────────────────────────────────── */}
@@ -510,6 +510,11 @@ export default function CampaignMap({ territories, factions, influenceData = [],
             onMouseLeave={() => { setHoveredId(null); setTooltip(null); }}
             onMouseMove={e => handleMouseMove(e, sub)}
           >
+            {/* Invisible larger touch target for mobile */}
+            <circle
+              cx={`${sub.x_pos}%`} cy={`${sub.y_pos}%`} r="3%"
+              fill="transparent" stroke="none"
+            />
             {isHov && (
               <circle
                 cx={`${sub.x_pos}%`} cy={`${sub.y_pos}%`} r="2.2%"
@@ -567,6 +572,8 @@ export default function CampaignMap({ territories, factions, influenceData = [],
             onMouseLeave={() => { setHoveredId(null); setTooltip(null); }}
             onMouseMove={e => handleMouseMove(e, t)}
           >
+            {/* Invisible larger touch target for mobile */}
+            <circle cx={cx} cy={cy} r="5.5%" fill="transparent" stroke="none" />
             {isHov && (
               <circle cx={cx} cy={cy} r="4.5%"
                 fill={`${baseColour}18`} stroke={`${baseColour}40`} strokeWidth="0.3"

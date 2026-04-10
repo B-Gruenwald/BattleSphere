@@ -213,3 +213,201 @@ nav a:hover {
 .toc-link:hover {
   color: var(--gold);
 }
+
+/* ══════════════════════════════════════════════════════════
+   SITE NAVIGATION
+   ══════════════════════════════════════════════════════════ */
+
+.site-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  height: 64px;
+  background: linear-gradient(180deg, rgba(10,10,15,0.98) 0%, rgba(10,10,15,0.92) 100%);
+  border-bottom: 1px solid var(--border-dim);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  padding: 0 2rem;
+  justify-content: space-between;
+}
+
+.site-nav__logo {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.site-nav__logo:hover {
+  color: var(--gold-bright) !important;
+}
+
+.site-nav__desktop {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+
+/* Hidden on desktop, shown on mobile */
+.site-nav__hamburger {
+  display: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  color: var(--text-secondary);
+  align-items: center;
+  letter-spacing: 0;
+  transition: color 0.15s;
+}
+
+.site-nav__hamburger:hover {
+  color: var(--text-primary);
+}
+
+/* Dropdown — controlled by React (only rendered when open).
+   Hidden on desktop via the media query below. */
+.site-nav__dropdown {
+  position: fixed;
+  top: 64px;
+  left: 0; right: 0;
+  z-index: 99;
+  background: rgba(8,8,13,0.99);
+  border-bottom: 1px solid var(--border-dim);
+  backdrop-filter: blur(12px);
+  flex-direction: column;
+  display: none; /* shown only on mobile when React renders it */
+}
+
+.site-nav__dropdown-link {
+  display: block;
+  padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.site-nav__dropdown-link:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 768px) {
+  .site-nav {
+    padding: 0 1.25rem;
+  }
+  .site-nav__desktop {
+    display: none;
+  }
+  .site-nav__hamburger {
+    display: flex;
+  }
+  .site-nav__dropdown {
+    display: flex; /* visible when React renders the element */
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   CAMPAIGN DASHBOARD — MOBILE LAYOUT
+   ══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+  /* Reduce page top/bottom padding */
+  .dash-page-root {
+    padding: 2rem 1.25rem !important;
+  }
+
+  /* Stats + Map: stack vertically instead of side by side */
+  .dash-stats-map {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+  }
+
+  /* Stats column becomes a horizontal scrollable row */
+  .dash-stats-col {
+    flex-direction: row !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-dim) !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    min-height: 0 !important;
+  }
+
+  /* Each stat link becomes a fixed-width cell */
+  .dash-stats-col > a {
+    flex: 1 0 auto !important;
+    min-width: 72px !important;
+  }
+
+  /* Inner stat div: tighter padding, horizontal dividers become vertical */
+  .dash-stats-col > a > div {
+    height: auto !important;
+    padding: 1rem 1rem !important;
+    border-bottom: none !important;
+    border-right: 1px solid var(--border-dim) !important;
+    justify-content: center !important;
+  }
+
+  .dash-stats-col > a:last-child > div {
+    border-right: none !important;
+  }
+
+  /* Stat number: slightly smaller on mobile */
+  .dash-stats-col > a > div > div:first-child {
+    font-size: 1.5rem !important;
+  }
+
+  /* Map wrapper: fixed height below the stats row */
+  .dash-map-wrap {
+    height: 55vw !important;
+    min-height: 240px !important;
+    max-height: 360px !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   FORM LAYOUTS — COLLAPSE 2-COLUMN TO 1-COLUMN ON MOBILE
+   ══════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  .form-2col {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Reduce form max-width on mobile so it uses full width */
+  .battle-form {
+    max-width: 100% !important;
+  }
+
+  /* Battle result buttons: stack on very small screens */
+  .result-btn-row {
+    flex-direction: column !important;
+  }
+  .result-btn-row > button {
+    flex: none !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   GENERAL MOBILE POLISH
+   ══════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  /* Give standard page wrappers a tighter left/right margin */
+  .page-wrap {
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+  }
+
+  /* Table scroll wrapper: ensure full-bleed on mobile */
+  .table-scroll-wrap {
+    margin-left: -1.25rem;
+    margin-right: -1.25rem;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+}

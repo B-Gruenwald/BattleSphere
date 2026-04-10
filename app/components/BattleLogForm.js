@@ -206,7 +206,7 @@ export default function BattleLogForm({ campaign, territories, factions, members
   const hintStyle = { fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.4rem', fontStyle: 'italic' };
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: '700px' }}>
+    <form onSubmit={handleSubmit} className="battle-form" style={{ maxWidth: '700px' }}>
 
       {/* ── Headline ── */}
       <div style={sectionStyle}>
@@ -225,7 +225,7 @@ export default function BattleLogForm({ campaign, territories, factions, members
 
       {/* ── Battle Type + Scenario + Theatre ── */}
       <div style={sectionStyle}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+        <div className="form-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
           <div>
             <label style={labelStyle}>Battle Type</label>
             <select value={battleType} onChange={e => setBattleType(e.target.value)} style={inputStyle}>
@@ -266,7 +266,7 @@ export default function BattleLogForm({ campaign, territories, factions, members
 
       {/* ── Players & Armies ── */}
       <div style={sectionStyle}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+        <div className="form-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
 
           {/* Registering Player column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
@@ -357,12 +357,12 @@ export default function BattleLogForm({ campaign, territories, factions, members
       {/* ── Result ── */}
       <div style={sectionStyle}>
         <label style={labelStyle}>Battle Result</label>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div className="result-btn-row" style={{ display: 'flex', gap: '0.75rem' }}>
           <button type="button" style={resultBtnStyle(result === 'attacker')} onClick={() => setResult('attacker')}>Registering Player Wins</button>
           <button type="button" style={resultBtnStyle(result === 'draw')}     onClick={() => setResult('draw')}>Draw</button>
           <button type="button" style={resultBtnStyle(result === 'defender')} onClick={() => setResult('defender')}>Opponent Wins</button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '1.25rem' }}>
+        <div className="form-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '1.25rem' }}>
           <div>
             <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Registering Player Score <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
             <input type="number" min="0" value={attackerScore} onChange={e => setAttackerScore(e.target.value)} placeholder="e.g. 42" style={inputStyle} />
@@ -377,7 +377,7 @@ export default function BattleLogForm({ campaign, territories, factions, members
       {/* ── Battle Chronicles ── */}
       <div style={sectionStyle}>
         <label style={labelStyle}>Battle Chronicles <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+        <div className="form-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
           <div>
             <span style={{ ...sublabelStyle, marginBottom: '0.5rem' }}>Registering Player's Account</span>
             <textarea
