@@ -309,63 +309,60 @@ nav a:hover {
 }
 
 /* ══════════════════════════════════════════════════════════
-   CAMPAIGN HEADER ACTION BUTTONS / KEBAB MENU
+   CAMPAIGN SUB-NAVIGATION
    ══════════════════════════════════════════════════════════ */
 
-/* Desktop: full row of buttons */
-.dash-actions-desktop {
+/* Desktop: full flex bar — matches original layout */
+.camp-nav-desktop {
   display: flex;
-  gap: 0.75rem;
   align-items: center;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: 0 2rem;
+  height: 44px;
 }
 
-/* Mobile: hidden by default */
-.dash-actions-mobile {
+/* Mobile bar: hidden by default */
+.camp-nav-mobile {
   display: none;
-  gap: 0.5rem;
   align-items: center;
+  padding: 0 1.25rem;
+  height: 44px;
+  gap: 0.75rem;
 }
 
-/* Kebab trigger button */
-.dash-kebab-btn {
+/* Hamburger button in mobile nav */
+.camp-nav-hamburger {
   background: transparent;
-  border: 1px solid var(--border-subtle);
+  border: none;
   color: var(--text-secondary);
-  padding: 0.4rem 0.55rem;
+  padding: 0.35rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   letter-spacing: 0;
-  transition: border-color 0.15s, color 0.15s;
+  transition: color 0.15s;
+  flex-shrink: 0;
 }
 
-.dash-kebab-btn:hover {
-  border-color: var(--gold-dim);
-  color: var(--text-gold);
+.camp-nav-hamburger:hover {
+  color: var(--text-primary);
 }
 
-/* Kebab dropdown panel */
-.dash-kebab-dropdown {
-  position: absolute;
-  top: calc(100% + 0.4rem);
-  right: 0;
-  z-index: 50;
-  background: #0d0d0f;
-  border: 1px solid var(--border-dim);
-  min-width: 190px;
+/* Mobile dropdown — full width, below the nav bar */
+.camp-nav-dropdown {
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  background: rgba(8,8,13,0.99);
+  border-top: 1px solid var(--border-dim);
+  border-bottom: 1px solid var(--border-dim);
 }
 
-/* Each item in the kebab dropdown */
-.dash-kebab-item {
+.camp-nav-dropdown-item {
   display: block;
-  padding: 0.85rem 1.1rem;
+  padding: 0.85rem 1.25rem;
   font-family: var(--font-display);
   font-size: 0.6rem;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--text-secondary);
   text-decoration: none;
@@ -373,18 +370,18 @@ nav a:hover {
   transition: color 0.15s, background 0.15s;
 }
 
-.dash-kebab-item:last-child {
+.camp-nav-dropdown-item:last-child {
   border-bottom: none;
 }
 
-.dash-kebab-item:hover {
+.camp-nav-dropdown-item:hover {
   color: var(--text-gold);
-  background: rgba(183, 140, 64, 0.05);
+  background: rgba(183, 140, 64, 0.04);
 }
 
-@media (max-width: 640px) {
-  .dash-actions-desktop { display: none; }
-  .dash-actions-mobile  { display: flex; }
+@media (max-width: 768px) {
+  .camp-nav-desktop { display: none; }
+  .camp-nav-mobile  { display: flex; }
 }
 
 /* ══════════════════════════════════════════════════════════
