@@ -22,10 +22,14 @@ export async function POST(request) {
     }
 
     // ── 2. Parse body ────────────────────────────────────────────────────────
-    const { to, inviteLink } = await request.json();
+    const { to, firstName, inviteLink } = await request.json();
     if (!to || !inviteLink) {
       return Response.json({ error: 'Recipient email and invite link are required.' }, { status: 400 });
     }
+
+    const salutation = firstName
+      ? `<p style="font-size:1rem; line-height:1.8; color:#e8e0d0; margin:0 0 1.2rem;">Dear ${firstName},</p>`
+      : '';
 
     // ── 3. Send email via Resend ─────────────────────────────────────────────
     const resend   = new Resend(process.env.RESEND_API_KEY);
@@ -69,6 +73,9 @@ export async function POST(request) {
 
     <!-- ── Main card ── -->
     <div style="background:#0d0d0f; border:1px solid #2a2018; border-top:none; padding:2.5rem 2rem;">
+
+      <!-- Salutation (optional) -->
+      ${salutation}
 
       <!-- Personal note -->
       <p style="font-size:1rem; line-height:1.8; color:#e8e0d0; margin:0 0 1.4rem;">

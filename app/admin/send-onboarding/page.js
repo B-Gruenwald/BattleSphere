@@ -33,6 +33,7 @@ export default function SendOnboardingPage() {
   const [campaignError,  setCampaignError]  = useState('');
 
   const [to,             setTo]             = useState('');
+  const [firstName,      setFirstName]      = useState('');
   const [inviteCode,     setInviteCode]     = useState(null);   // the generated code row
   const [generating,     setGenerating]     = useState(false);
   const [inviteError,    setInviteError]    = useState('');
@@ -122,7 +123,7 @@ export default function SendOnboardingPage() {
       const res  = await fetch('/api/send-onboarding', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ to: to.trim(), inviteLink }),
+        body:    JSON.stringify({ to: to.trim(), firstName: firstName.trim() || null, inviteLink }),
       });
       const data = await res.json();
 
@@ -134,6 +135,7 @@ export default function SendOnboardingPage() {
         setSendMessage(`Email sent to ${to.trim()}.`);
         // Reset for next send
         setTo('');
+        setFirstName('');
         setInviteCode(null);
       }
     } catch {
@@ -207,16 +209,33 @@ export default function SendOnboardingPage() {
           <p style={{ ...labelStyle, color: 'var(--accent)', marginBottom: '1.2rem' }}>
             Step 1 — Recipient
           </p>
-          <label htmlFor="to" style={labelStyle}>Email Address</label>
-          <input
-            id="to"
-            type="email"
-            required
-            value={to}
-            onChange={e => setTo(e.target.value)}
-            placeholder="tester@example.com"
-            style={inputStyle}
-          />
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <div style={{ flex: 1 }}>
+              <label htmlFor="to" style={labelStyle}>Email Address</label>
+              <input
+                id="to"
+                type="email"
+                required
+                value={to}
+                onChange={e => setTo(e.target.value)}
+                placeholder="tester@example.com"
+                style={inputStyle}
+              />
+            </div>
+            <div style={{ flex: '0 0 180px' }}>
+              <label htmlFor="firstName" style={labelStyle}>
+                First Name <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span>
+              </label>
+              <input
+                id="firstName"
+                type="text"
+                value={firstName}
+                onChange={e => setFirstName(e.target.value)}
+                placeholder="Sarah"
+                style={inputStyle}
+              />
+            </div>
+          </div>
         </div>
 
         {/* ── Step 2: Invite Link ─────────────────────────────────────────────── */}
