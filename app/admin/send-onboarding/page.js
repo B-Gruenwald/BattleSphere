@@ -79,6 +79,8 @@ export default function SendOnboardingPage() {
       return;
     }
     setInviteCode(saved);
+    // Scroll the send button into view now that the link card has expanded
+    setTimeout(() => document.getElementById('send-btn')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
   }
 
   // ── Revoke generated link (so user can start fresh) ─────────────────────────
@@ -347,6 +349,7 @@ export default function SendOnboardingPage() {
           )}
 
           <button
+            id="send-btn"
             type="submit"
             disabled={!canSend}
             style={{
