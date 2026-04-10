@@ -107,7 +107,7 @@ export default function ChooseFactionButton({ campaignId, factions, currentFacti
           style={{
             padding:       '0.4rem 1rem',
             background:    'var(--accent)',
-            color:         '#07070a',
+            color:         '#ffffff',
             border:        '1px solid var(--accent)',
             fontFamily:    'var(--font-display)',
             fontSize:      '0.6rem',
