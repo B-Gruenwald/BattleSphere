@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createAdminClient } from '@/lib/supabase/admin';
+import DeleteCampaignButton from './DeleteCampaignButton';
 
 export const metadata = {
   title: 'Campaign Detail · Admin · BattleSphere',
@@ -146,6 +147,7 @@ export default async function AdminCampaignDetail({ params }) {
               Public Page ↗
             </button>
           </Link>
+          <DeleteCampaignButton campaignId={campaign.id} campaignName={campaign.name} />
         </div>
       </div>
 

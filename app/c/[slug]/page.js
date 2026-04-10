@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { calcPlayerXP, getXPRank } from '@/app/lib/xp';
 import CampaignMap from '@/app/components/CampaignMap';
+import ChooseFactionButton from '@/app/components/ChooseFactionButton';
 
 const STATUS_COLOURS = {
   upcoming: '#6a8fc7',
@@ -158,12 +159,13 @@ export default async function CampaignDashboard({ params }) {
 
   const { data: myMembership } = await supabase
     .from('campaign_members')
-    .select('role')
+    .select('role, faction_id')
     .eq('campaign_id', campaign.id)
     .eq('user_id', user.id)
     .single();
   const isOrganiser = campaign.organiser_id === user.id
     || ['organiser', 'admin'].includes(myMembership?.role);
+  const isMember = !!myMembership;
 
   const SETTING_LABELS = {
     'Gothic Sci-Fi': 'Gothic Sci-Fi · Warhammer 40,000',
@@ -186,6 +188,13 @@ export default async function CampaignDashboard({ params }) {
             {campaign.name}
           </h1>
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            {isMember && !myMembership?.faction_id && factions && factions.length > 0 && (
+              <ChooseFactionButton
+                campaignId={campaign.id}
+                factions={factions}
+                currentFactionId={myMembership?.faction_id || null}
+              />
+            )}
             <Link href={`/campaign/${slug}`} target="_blank" style={{ textDecoration: 'none' }}>
               <button className="btn-secondary" style={{ padding: '0.5rem 1.25rem', fontSize: '0.6rem' }}>
                 Share Public Page ↗
