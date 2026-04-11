@@ -12,14 +12,13 @@ export default function BulletinDrawer({
   campaignId,
   territoryMap,
   factionMap,
-  weekLabel,
 }) {
-  const [isOpen,          setIsOpen]          = useState(false);
-  const [isEditing,       setIsEditing]        = useState(false);
-  const [expandedId,      setExpandedId]       = useState(null);
-  const [saving,          setSaving]           = useState(false);
-  const [saveError,       setSaveError]        = useState(null);
-  const [liveDispatch,    setLiveDispatch]     = useState(currentDispatch);
+  const [isOpen,       setIsOpen]       = useState(false);
+  const [isEditing,    setIsEditing]    = useState(false);
+  const [expandedId,   setExpandedId]   = useState(null);
+  const [saving,       setSaving]       = useState(false);
+  const [saveError,    setSaveError]    = useState(null);
+  const [liveDispatch, setLiveDispatch] = useState(currentDispatch);
 
   const [form, setForm] = useState({
     act_label:       currentDispatch?.act_label       ?? '',
@@ -29,12 +28,16 @@ export default function BulletinDrawer({
     week_label:      currentDispatch?.week_label      ?? '',
   });
 
-  // Close on Escape key
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Escape') {
-      setIsOpen(false);
-      setIsEditing(false);
+  // ── Auto-enter edit mode when opening with no dispatch ──
+  useEffect(() => {
+    if (isOpen && !liveDispatch && isOrganiser) {
+      setIsEditing(true);
     }
+  }, [isOpen]);
+
+  // ── Close on Escape ──
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') { setIsOpen(false); setIsEditing(false); }
   }, []);
 
   useEffect(() => {
@@ -51,7 +54,7 @@ export default function BulletinDrawer({
     };
   }, [isOpen, handleKeyDown]);
 
-  // Keep form in sync if the dispatch prop changes (e.g. after save + router refresh)
+  // ── Keep form in sync if prop changes ──
   useEffect(() => {
     setLiveDispatch(currentDispatch);
     setForm({
@@ -63,29 +66,47 @@ export default function BulletinDrawer({
     });
   }, [currentDispatch]);
 
+  // ── Save: INSERT if no dispatch exists, UPDATE if one does ──
   async function handleSave() {
-    if (!liveDispatch?.id) return;
     setSaving(true);
     setSaveError(null);
     const supabase = createClient();
-    const { data, error } = await supabase
-      .from('bulletin_dispatches')
-      .update({
-        act_label:       form.act_label,
-        dispatch_number: Number(form.dispatch_number),
-        title:           form.title,
-        body:            form.body,
-        week_label:      form.week_label,
-      })
-      .eq('id', liveDispatch.id)
-      .select('*')
-      .single();
+
+    let data, error;
+
+    if (liveDispatch?.id) {
+      // UPDATE existing dispatch
+      ({ data, error } = await supabase
+        .from('bulletin_dispatches')
+        .update({
+          act_label:       form.act_label,
+          dispatch_number: Number(form.dispatch_number) || 1,
+          title:           form.title,
+          body:            form.body,
+          week_label:      form.week_label,
+        })
+        .eq('id', liveDispatch.id)
+        .select('*')
+        .single());
+    } else {
+      // INSERT first dispatch for this campaign
+      ({ data, error } = await supabase
+        .from('bulletin_dispatches')
+        .insert({
+          campaign_id:     campaignId,
+          act_label:       form.act_label,
+          dispatch_number: Number(form.dispatch_number) || 1,
+          title:           form.title,
+          body:            form.body,
+          week_label:      form.week_label,
+          is_current:      true,
+        })
+        .select('*')
+        .single());
+    }
 
     setSaving(false);
-    if (error) {
-      setSaveError(error.message);
-      return;
-    }
+    if (error) { setSaveError(error.message); return; }
     setLiveDispatch(data);
     setIsEditing(false);
   }
@@ -100,27 +121,25 @@ export default function BulletinDrawer({
     });
     setIsEditing(false);
     setSaveError(null);
+    // If we were in "post first dispatch" mode and cancelled, close drawer
+    if (!liveDispatch) setIsOpen(false);
   }
 
   const issuedDate = liveDispatch?.issued_at
     ? new Date(liveDispatch.issued_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     : null;
+  const displayWeekLabel = liveDispatch?.week_label ?? '';
 
-  const displayWeekLabel = liveDispatch?.week_label ?? weekLabel ?? '';
+  const territoryNames = Object.keys(territoryMap || {});
+  const factionNames   = Object.keys(factionMap   || {});
 
   return (
     <>
       {/* ── Panel footer (always visible inside BulletinPanel) ── */}
       <div className="bulletin-footer">
-        {liveDispatch ? (
-          <button className="read-more-btn" onClick={() => setIsOpen(true)}>
-            Read full dispatch →
-          </button>
-        ) : (
-          isOrganiser
-            ? <button className="read-more-btn" onClick={() => setIsOpen(true)}>Post first dispatch →</button>
-            : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>No dispatch yet.</span>
-        )}
+        <button className="read-more-btn" onClick={() => setIsOpen(true)}>
+          {liveDispatch ? 'Read full dispatch →' : (isOrganiser ? 'Post first dispatch →' : 'No dispatch yet')}
+        </button>
         {displayWeekLabel && issuedDate && (
           <span className="bulletin-meta">
             {displayWeekLabel} · {issuedDate}
@@ -131,13 +150,11 @@ export default function BulletinDrawer({
       {/* ── Drawer overlay + panel ── */}
       {isOpen && (
         <>
-          {/* Darkened overlay */}
           <div
             className="drawer-overlay"
             onClick={() => { setIsOpen(false); setIsEditing(false); }}
           />
 
-          {/* Slide-in drawer */}
           <div className="bulletin-drawer">
 
             {/* Sticky header */}
@@ -145,31 +162,29 @@ export default function BulletinDrawer({
               <div>
                 {liveDispatch && (
                   <p className="drawer-act-label">
-                    {liveDispatch.act_label} · Dispatch No.&nbsp;{liveDispatch.dispatch_number}
+                    {liveDispatch.act_label}
+                    {liveDispatch.dispatch_number ? ` · Dispatch No. ${liveDispatch.dispatch_number}` : ''}
                   </p>
                 )}
                 <h2 className="drawer-title">
-                  {liveDispatch?.title ?? 'Campaign Bulletin'}
+                  {isEditing && !liveDispatch
+                    ? 'Post First Dispatch'
+                    : (liveDispatch?.title ?? 'Campaign Bulletin')}
                 </h2>
               </div>
               <button
                 className="drawer-close"
                 onClick={() => { setIsOpen(false); setIsEditing(false); }}
-                aria-label="Close dispatch"
-              >
-                ✕
-              </button>
+                aria-label="Close"
+              >✕</button>
             </div>
 
             {/* Scrollable body */}
             <div className="drawer-body">
 
-              {/* ── Edit form (organisers only, when editing) ── */}
+              {/* ── Edit / New dispatch form ── */}
               {isEditing && isOrganiser ? (
                 <div className="bulletin-edit-form">
-                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '1.5rem' }}>
-                    Edit Dispatch
-                  </h3>
 
                   <div className="edit-field-row">
                     <div className="edit-field">
@@ -187,7 +202,7 @@ export default function BulletinDrawer({
                         type="number"
                         value={form.dispatch_number}
                         onChange={e => setForm(f => ({ ...f, dispatch_number: e.target.value }))}
-                        placeholder="7"
+                        placeholder="1"
                       />
                     </div>
                   </div>
@@ -203,14 +218,49 @@ export default function BulletinDrawer({
                   </div>
 
                   <div className="edit-field">
-                    <label>Body</label>
+                    <label>Body text</label>
+                    <p className="edit-hint">
+                      Start a line with <code>##&nbsp;</code> to create a section heading.
+                      Leave a blank line between paragraphs.
+                    </p>
                     <textarea
                       value={form.body}
                       onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
                       rows={14}
-                      placeholder="Write your dispatch here…"
+                      placeholder={'## Opening heading\n\nFirst paragraph of narrative text…\n\n## Second heading\n\nMore text…'}
                     />
                   </div>
+
+                  {/* ── Territory / faction link helper ── */}
+                  {(territoryNames.length > 0 || factionNames.length > 0) && (
+                    <div className="edit-link-helper">
+                      <p className="edit-link-helper-title">Auto-links</p>
+                      <p className="edit-link-helper-desc">
+                        These names are recognised in your text and become clickable links automatically.
+                        Use the exact spelling shown below.
+                      </p>
+                      {territoryNames.length > 0 && (
+                        <div className="edit-link-group">
+                          <span className="edit-link-group-label">Territories →</span>
+                          <div className="edit-link-chips">
+                            {territoryNames.map(name => (
+                              <span key={name} className="edit-chip edit-chip--territory">{name}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {factionNames.length > 0 && (
+                        <div className="edit-link-group">
+                          <span className="edit-link-group-label">Factions →</span>
+                          <div className="edit-link-chips">
+                            {factionNames.map(name => (
+                              <span key={name} className="edit-chip edit-chip--faction">{name}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="edit-field">
                     <label>Week Label</label>
@@ -218,13 +268,13 @@ export default function BulletinDrawer({
                       type="text"
                       value={form.week_label}
                       onChange={e => setForm(f => ({ ...f, week_label: e.target.value }))}
-                      placeholder="Campaign Week 3"
+                      placeholder="Campaign Week 1"
                     />
                   </div>
 
                   {saveError && (
                     <p style={{ color: 'var(--crimson-bright)', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                      {saveError}
+                      Error: {saveError}
                     </p>
                   )}
 
@@ -235,7 +285,7 @@ export default function BulletinDrawer({
                       disabled={saving}
                       style={{ fontSize: '0.6rem' }}
                     >
-                      {saving ? 'Saving…' : 'Save Dispatch'}
+                      {saving ? 'Saving…' : (liveDispatch ? 'Save Dispatch' : 'Post Dispatch')}
                     </button>
                     <button
                       className="btn-secondary"
@@ -246,6 +296,7 @@ export default function BulletinDrawer({
                     </button>
                   </div>
                 </div>
+
               ) : (
                 /* ── Full bulletin text — two columns ── */
                 liveDispatch?.body ? (
@@ -254,7 +305,7 @@ export default function BulletinDrawer({
                   </div>
                 ) : (
                   <p style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                    No bulletin text yet.
+                    No bulletin text posted yet.
                   </p>
                 )
               )}
@@ -267,13 +318,13 @@ export default function BulletinDrawer({
                     {displayWeekLabel ? ` · ${displayWeekLabel}` : ''}
                     {issuedDate ? ` · ${issuedDate}` : ''}
                   </span>
-                  {isOrganiser && liveDispatch && (
+                  {isOrganiser && (
                     <button
                       className="btn-secondary"
                       onClick={() => setIsEditing(true)}
                       style={{ fontSize: '0.58rem' }}
                     >
-                      ✎ Edit Bulletin
+                      {liveDispatch ? '✎ Edit Bulletin' : '✎ Post Bulletin'}
                     </button>
                   )}
                 </div>
@@ -295,17 +346,13 @@ export default function BulletinDrawer({
                           onClick={() => setExpandedId(isExpanded ? null : pd.id)}
                         >
                           <div>
-                            <span className="accordion-dispatch-num">
-                              Dispatch No.&nbsp;{pd.dispatch_number}
-                            </span>
+                            <span className="accordion-dispatch-num">Dispatch No. {pd.dispatch_number}</span>
                             <span className="accordion-title">{pd.title}</span>
                           </div>
                           <span
                             className="accordion-chevron"
                             style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                          >
-                            ▾
-                          </span>
+                          >▾</span>
                         </button>
                         {isExpanded && (
                           <div className="accordion-body">

@@ -1042,6 +1042,108 @@ a:hover .stat-cell {
   color: var(--text-gold);
 }
 
+/* ── Section heading inside bulletin body ── */
+.bulletin-section-heading {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-gold);
+  margin: 1.4em 0 0.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid rgba(183,140,64,0.2);
+  break-after: avoid; /* keeps heading with the following paragraph in columns */
+}
+
+/* ── Edit form hint text ── */
+.edit-hint {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.edit-hint code {
+  font-family: monospace;
+  background: rgba(255,255,255,0.06);
+  padding: 0.1em 0.35em;
+  border-radius: 2px;
+  font-size: 0.85em;
+  color: var(--text-gold);
+}
+
+/* ── Auto-links helper panel ── */
+.edit-link-helper {
+  background: rgba(183,140,64,0.05);
+  border: 1px solid rgba(183,140,64,0.18);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.edit-link-helper-title {
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-gold);
+  margin-bottom: 0.35rem;
+}
+
+.edit-link-helper-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 0.85rem;
+}
+
+.edit-link-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.edit-link-group-label {
+  font-family: var(--font-display);
+  font-size: 0.44rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding-top: 0.25rem;
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
+.edit-link-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.edit-chip {
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.55rem;
+  cursor: default;
+}
+
+.edit-chip--territory {
+  color: var(--text-gold);
+  background: rgba(183,140,64,0.1);
+  border: 1px solid rgba(183,140,64,0.3);
+  text-transform: uppercase;
+}
+
+.edit-chip--faction {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-dim);
+  font-style: italic;
+}
+
 /* ══════════════════════════════════════════════════════════
    BULLETIN — MOBILE RESPONSIVE
    ══════════════════════════════════════════════════════════ */
