@@ -8,14 +8,14 @@ export default async function BulletinPanel({ campaignId, campaignSlug, isOrgani
   const supabase = await createClient();
 
   // Current dispatch
-  const { data: currentDispatch } = await supabase
+  const { data: currentDispatchRows } = await supabase
     .from('bulletin_dispatches')
     .select('*')
     .eq('campaign_id', campaignId)
     .eq('is_current', true)
     .order('issued_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+  const currentDispatch = currentDispatchRows?.[0] ?? null;
 
   // Previous dispatches (for accordion)
   const { data: previousDispatches } = await supabase

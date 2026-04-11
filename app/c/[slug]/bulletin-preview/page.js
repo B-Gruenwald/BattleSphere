@@ -132,10 +132,11 @@ export default async function CampaignDashboardPreview({ params }) {
   const isMember = !!myMembership;
 
   // ── Current act label (from latest current bulletin, if any) ─
-  const { data: currentBulletin } = await supabase
+  const { data: currentBulletinRows } = await supabase
     .from('bulletin_dispatches').select('act_label')
     .eq('campaign_id', campaign.id).eq('is_current', true)
-    .limit(1).maybeSingle();
+    .limit(1);
+  const currentBulletin = currentBulletinRows?.[0] ?? null;
 
   const SETTING_LABELS = {
     'Gothic Sci-Fi': 'Gothic Sci-Fi · Warhammer 40,000',
