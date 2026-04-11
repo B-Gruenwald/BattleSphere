@@ -14,18 +14,6 @@ const NAV_LINK_STYLE = {
   transition: 'color 0.15s',
 };
 
-const LOG_BTN_STYLE = {
-  fontFamily: 'var(--font-display)',
-  fontSize: '0.55rem',
-  letterSpacing: '0.12em',
-  textTransform: 'uppercase',
-  background: 'rgba(183,140,64,0.12)',
-  border: '1px solid rgba(183,140,64,0.4)',
-  color: 'var(--text-gold)',
-  padding: '0.3rem 0.85rem',
-  cursor: 'pointer',
-  whiteSpace: 'nowrap',
-};
 
 export default function CampaignNavLinks({ slug, campaignName, links }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -51,16 +39,13 @@ export default function CampaignNavLinks({ slug, campaignName, links }) {
           {campaignName}
         </Link>
 
-        {/* Nav links + Log Battle */}
+        {/* Nav links */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', overflow: 'auto' }}>
           {links.map(l => (
             <Link key={l.label} href={l.href} style={NAV_LINK_STYLE}>
               {l.label}
             </Link>
           ))}
-          <Link href={`/c/${slug}/battle/new`}>
-            <button style={LOG_BTN_STYLE}>+ Log Battle</button>
-          </Link>
         </div>
       </div>
 
@@ -83,14 +68,8 @@ export default function CampaignNavLinks({ slug, campaignName, links }) {
           {campaignName}
         </Link>
 
-        {/* Right side: Log Battle + hamburger */}
+        {/* Right side: hamburger */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
-          <Link href={`/c/${slug}/battle/new`}>
-            <button style={{ ...LOG_BTN_STYLE, fontSize: '0.5rem', padding: '0.3rem 0.65rem' }}>
-              + Log Battle
-            </button>
-          </Link>
-
           <button
             className="camp-nav-hamburger"
             onClick={() => setMenuOpen(!menuOpen)}

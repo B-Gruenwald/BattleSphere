@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import LogoutButton from './LogoutButton';
 import FeedbackButton from './FeedbackButton';
@@ -17,13 +18,26 @@ const navLinkStyle = {
 
 export default function NavBar({ user, isAdmin, username }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Extract campaign slug if the user is anywhere inside /c/[slug]/...
+  const campaignSlugMatch = pathname?.match(/^\/c\/([^/]+)/);
+  const campaignSlug = campaignSlugMatch ? campaignSlugMatch[1] : null;
 
   return (
     <>
       <nav className="site-nav">
-        <Link href="/" className="site-nav__logo">
-          BattleSphere
-        </Link>
+        {/* Left side: wordmark + always-visible Log a Battle button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+          <Link href="/" className="site-nav__logo">
+            BattleSphere
+          </Link>
+          {user && campaignSlug && (
+            <Link href={`/c/${campaignSlug}/battle/new`}>
+              <button className="btn-primary nav-log-battle">+ Log a Battle</button>
+            </Link>
+          )}
+        </div>
 
         {/* Desktop nav links */}
         <div className="site-nav__desktop">
