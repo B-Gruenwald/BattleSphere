@@ -13,12 +13,15 @@ export default function BulletinDrawer({
   territoryMap,
   factionMap,
 }) {
-  const [isOpen,       setIsOpen]       = useState(false);
-  const [isEditing,    setIsEditing]    = useState(false);
-  const [expandedId,   setExpandedId]   = useState(null);
-  const [saving,       setSaving]       = useState(false);
-  const [saveError,    setSaveError]    = useState(null);
-  const [liveDispatch, setLiveDispatch] = useState(currentDispatch);
+  const [isOpen,                 setIsOpen]                 = useState(false);
+  const [isEditing,              setIsEditing]              = useState(false);
+  const [isNewDispatch,          setIsNewDispatch]          = useState(false);
+  const [expandedId,             setExpandedId]             = useState(null);
+  const [saving,                 setSaving]                 = useState(false);
+  const [deleting,               setDeleting]               = useState(false);
+  const [saveError,              setSaveError]              = useState(null);
+  const [liveDispatch,           setLiveDispatch]           = useState(currentDispatch);
+  const [livePreviousDispatches, setLivePreviousDispatches] = useState(previousDispatches ?? []);
 
   const [form, setForm] = useState({
     act_label:       currentDispatch?.act_label       ?? '',
@@ -37,7 +40,7 @@ export default function BulletinDrawer({
 
   // ── Close on Escape ──
   const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Escape') { setIsOpen(false); setIsEditing(false); }
+    if (e.key === 'Escape') { setIsOpen(false); setIsEditing(false); setIsNewDispatch(false); }
   }, []);
 
   useEffect(() => {
@@ -57,6 +60,7 @@ export default function BulletinDrawer({
   // ── Keep form in sync if prop changes ──
   useEffect(() => {
     setLiveDispatch(currentDispatch);
+    setLivePreviousDispatches(previousDispatches ?? []);
     setForm({
       act_label:       currentDispatch?.act_label       ?? '',
       dispatch_number: currentDispatch?.dispatch_number ?? '',
@@ -64,33 +68,40 @@ export default function BulletinDrawer({
       body:            currentDispatch?.body            ?? '',
       week_label:      currentDispatch?.week_label      ?? '',
     });
-  }, [currentDispatch]);
+  }, [currentDispatch, previousDispatches]);
 
-  // ── Save: INSERT if no dispatch exists, UPDATE if one does ──
+  // ── Open drawer in "new dispatch" mode (archive current, write fresh) ──
+  function handleNewDispatch() {
+    setForm({
+      act_label:       liveDispatch?.act_label ?? '',
+      dispatch_number: liveDispatch?.dispatch_number
+        ? String(Number(liveDispatch.dispatch_number) + 1)
+        : '',
+      title:           '',
+      body:            '',
+      week_label:      '',
+    });
+    setIsNewDispatch(true);
+    setIsEditing(true);
+    setIsOpen(true);
+  }
+
+  // ── Save: archive+insert (new dispatch), UPDATE (edit), or INSERT (first ever) ──
   async function handleSave() {
     setSaving(true);
     setSaveError(null);
     const supabase = createClient();
 
-    let data, error;
-
-    if (liveDispatch?.id) {
-      // UPDATE existing dispatch
-      ({ data, error } = await supabase
+    if (isNewDispatch && liveDispatch?.id) {
+      // Archive the current dispatch
+      const { error: archiveError } = await supabase
         .from('bulletin_dispatches')
-        .update({
-          act_label:       form.act_label,
-          dispatch_number: Number(form.dispatch_number) || 1,
-          title:           form.title,
-          body:            form.body,
-          week_label:      form.week_label,
-        })
-        .eq('id', liveDispatch.id)
-        .select('*')
-        .single());
-    } else {
-      // INSERT first dispatch for this campaign
-      ({ data, error } = await supabase
+        .update({ is_current: false })
+        .eq('id', liveDispatch.id);
+      if (archiveError) { setSaving(false); setSaveError(archiveError.message); return; }
+
+      // Insert the new current dispatch
+      const { data, error } = await supabase
         .from('bulletin_dispatches')
         .insert({
           campaign_id:     campaignId,
@@ -102,13 +113,90 @@ export default function BulletinDrawer({
           is_current:      true,
         })
         .select('*')
-        .single());
+        .single();
+
+      setSaving(false);
+      if (error) { setSaveError(error.message); return; }
+      setLivePreviousDispatches(prev => [{ ...liveDispatch, is_current: false }, ...prev]);
+      setLiveDispatch(data);
+      setIsEditing(false);
+      setIsNewDispatch(false);
+
+    } else if (liveDispatch?.id) {
+      // UPDATE existing dispatch
+      const { data, error } = await supabase
+        .from('bulletin_dispatches')
+        .update({
+          act_label:       form.act_label,
+          dispatch_number: Number(form.dispatch_number) || 1,
+          title:           form.title,
+          body:            form.body,
+          week_label:      form.week_label,
+        })
+        .eq('id', liveDispatch.id)
+        .select('*')
+        .single();
+
+      setSaving(false);
+      if (error) { setSaveError(error.message); return; }
+      setLiveDispatch(data);
+      setIsEditing(false);
+
+    } else {
+      // INSERT first dispatch for this campaign
+      const { data, error } = await supabase
+        .from('bulletin_dispatches')
+        .insert({
+          campaign_id:     campaignId,
+          act_label:       form.act_label,
+          dispatch_number: Number(form.dispatch_number) || 1,
+          title:           form.title,
+          body:            form.body,
+          week_label:      form.week_label,
+          is_current:      true,
+        })
+        .select('*')
+        .single();
+
+      setSaving(false);
+      if (error) { setSaveError(error.message); return; }
+      setLiveDispatch(data);
+      setIsEditing(false);
+    }
+  }
+
+  // ── Delete current dispatch ──
+  async function handleDelete() {
+    if (!liveDispatch?.id) return;
+    if (!window.confirm('Permanently delete this dispatch? This cannot be undone.')) return;
+    setDeleting(true);
+    setSaveError(null);
+    const supabase = createClient();
+
+    const { error } = await supabase
+      .from('bulletin_dispatches')
+      .delete()
+      .eq('id', liveDispatch.id);
+
+    if (error) { setDeleting(false); setSaveError(error.message); return; }
+
+    // Promote most recent previous dispatch to current (if any)
+    if (livePreviousDispatches.length > 0) {
+      const toPromote = livePreviousDispatches[0];
+      await supabase
+        .from('bulletin_dispatches')
+        .update({ is_current: true })
+        .eq('id', toPromote.id);
+      setLiveDispatch({ ...toPromote, is_current: true });
+      setLivePreviousDispatches(prev => prev.slice(1));
+    } else {
+      setLiveDispatch(null);
     }
 
-    setSaving(false);
-    if (error) { setSaveError(error.message); return; }
-    setLiveDispatch(data);
+    setDeleting(false);
     setIsEditing(false);
+    setIsNewDispatch(false);
+    setForm({ act_label: '', dispatch_number: '', title: '', body: '', week_label: '' });
   }
 
   function handleCancelEdit() {
@@ -120,6 +208,7 @@ export default function BulletinDrawer({
       week_label:      liveDispatch?.week_label      ?? '',
     });
     setIsEditing(false);
+    setIsNewDispatch(false);
     setSaveError(null);
     // If we were in "post first dispatch" mode and cancelled, close drawer
     if (!liveDispatch) setIsOpen(false);
@@ -137,9 +226,20 @@ export default function BulletinDrawer({
     <>
       {/* ── Panel footer (always visible inside BulletinPanel) ── */}
       <div className="bulletin-footer">
-        <button className="read-more-btn" onClick={() => setIsOpen(true)}>
-          {liveDispatch ? 'Read full dispatch →' : (isOrganiser ? 'Post first dispatch →' : 'No dispatch yet')}
-        </button>
+        <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button className="read-more-btn" onClick={() => setIsOpen(true)}>
+            {liveDispatch ? 'Read full dispatch →' : (isOrganiser ? 'Post first dispatch →' : 'No dispatch yet')}
+          </button>
+          {isOrganiser && liveDispatch && (
+            <button
+              className="read-more-btn"
+              onClick={handleNewDispatch}
+              style={{ opacity: 0.7, fontSize: '0.6rem' }}
+            >
+              + New Dispatch
+            </button>
+          )}
+        </div>
         {displayWeekLabel && issuedDate && (
           <span className="bulletin-meta">
             {displayWeekLabel} · {issuedDate}
@@ -167,7 +267,9 @@ export default function BulletinDrawer({
                   </p>
                 )}
                 <h2 className="drawer-title">
-                  {isEditing && !liveDispatch
+                  {isEditing && isNewDispatch
+                    ? 'New Dispatch'
+                    : isEditing && !liveDispatch
                     ? 'Post First Dispatch'
                     : (liveDispatch?.title ?? 'Campaign Bulletin')}
                 </h2>
@@ -298,7 +400,13 @@ export default function BulletinDrawer({
                       disabled={saving}
                       style={{ fontSize: '0.6rem' }}
                     >
-                      {saving ? 'Saving…' : (liveDispatch ? 'Save Dispatch' : 'Post Dispatch')}
+                      {saving
+                        ? 'Saving…'
+                        : isNewDispatch
+                        ? 'Publish New Dispatch'
+                        : liveDispatch
+                        ? 'Save Dispatch'
+                        : 'Post Dispatch'}
                     </button>
                     <button
                       className="btn-secondary"
@@ -308,6 +416,37 @@ export default function BulletinDrawer({
                       Cancel
                     </button>
                   </div>
+
+                  {/* ── Delete — only for existing dispatches, not when writing new/first ── */}
+                  {liveDispatch?.id && !isNewDispatch && (
+                    <div style={{
+                      marginTop: '1.5rem',
+                      paddingTop: '1rem',
+                      borderTop: '1px solid rgba(255,255,255,0.08)',
+                    }}>
+                      <button
+                        onClick={handleDelete}
+                        disabled={deleting}
+                        style={{
+                          background:    'transparent',
+                          border:        '1px solid var(--crimson-bright, #c0392b)',
+                          color:         'var(--crimson-bright, #c0392b)',
+                          padding:       '0.4rem 0.9rem',
+                          borderRadius:  '4px',
+                          fontSize:      '0.58rem',
+                          cursor:        deleting ? 'not-allowed' : 'pointer',
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase',
+                          opacity:       deleting ? 0.6 : 1,
+                        }}
+                      >
+                        {deleting ? 'Deleting…' : '🗑 Delete Dispatch'}
+                      </button>
+                      <p style={{ marginTop: '0.4rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        Permanently removes this dispatch. Cannot be undone.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
               ) : (
@@ -344,10 +483,10 @@ export default function BulletinDrawer({
               )}
 
               {/* ── Previous Dispatches accordion ── */}
-              {previousDispatches && previousDispatches.length > 0 && !isEditing && (
+              {livePreviousDispatches && livePreviousDispatches.length > 0 && !isEditing && (
                 <div className="drawer-previous">
                   <p className="drawer-previous-label">Previous Dispatches</p>
-                  {previousDispatches.map(pd => {
+                  {livePreviousDispatches.map(pd => {
                     const isExpanded = expandedId === pd.id;
                     const pdDate = pd.issued_at
                       ? new Date(pd.issued_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
