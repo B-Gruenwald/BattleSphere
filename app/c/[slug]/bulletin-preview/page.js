@@ -264,8 +264,8 @@ export default async function CampaignDashboardPreview({ params }) {
                       <span style={{ color: statusColour }}>{isActive ? 'Active' : 'Upcoming'}</span>
                     </div>
                     <p className="event-card-title">{ev.title}</p>
-                    {ev.description && (
-                      <p className="event-card-desc">{ev.description}</p>
+                    {ev.body && (
+                      <p className="event-card-desc">{ev.body}</p>
                     )}
                     <div className="event-card-meta">
                       {endWeek && <span>Ends Week {endWeek}</span>}

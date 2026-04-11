@@ -951,12 +951,9 @@ nav a:hover {
 .event-card-desc {
   font-size: 0.82rem;
   color: var(--text-secondary);
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  line-height: 1.6;
   margin-bottom: 0.5rem;
+  white-space: pre-wrap;
 }
 
 .event-card-meta {
