@@ -36,7 +36,7 @@ export function renderBulletinText(body, territoryMap, factionMap, campaignSlug)
   function resolve(target) {
     const key = target.trim().toLowerCase();
     if (territoryLower[key]) return { href: `/c/${campaignSlug}/territory/${territoryLower[key].id}`, type: 'territory' };
-    if (factionLower[key])   return { href: `/c/${campaignSlug}/factions/${factionLower[key].id}`,   type: 'faction'   };
+    if (factionLower[key])   return { href: `/c/${campaignSlug}/faction/${factionLower[key].id}`,   type: 'faction'   };
     return null;
   }
 
