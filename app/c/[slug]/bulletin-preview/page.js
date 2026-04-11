@@ -5,6 +5,7 @@ import { calcPlayerXP, getXPRank } from '@/app/lib/xp';
 import CampaignMap from '@/app/components/CampaignMap';
 import CampaignHeaderActions from '@/app/components/CampaignHeaderActions';
 import BulletinPanel from '@/app/components/BulletinPanel';
+import EventCardBody from '@/app/components/EventCardBody';
 
 const STATUS_COLOURS = {
   upcoming: '#6a8fc7',
@@ -264,9 +265,7 @@ export default async function CampaignDashboardPreview({ params }) {
                       <span style={{ color: statusColour }}>{isActive ? 'Active' : 'Upcoming'}</span>
                     </div>
                     <p className="event-card-title">{ev.title}</p>
-                    {ev.body && (
-                      <p className="event-card-desc">{ev.body}</p>
-                    )}
+                    {ev.body && <EventCardBody body={ev.body} />}
                     <div className="event-card-meta">
                       {endWeek && <span>Ends Week {endWeek}</span>}
                     </div>

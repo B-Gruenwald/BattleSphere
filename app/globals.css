@@ -907,7 +907,7 @@ nav a:hover {
 
 .events-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(440px, 100%), 1fr));
   border-top: 1px solid rgba(183,140,64,0.12);
 }
 
@@ -952,8 +952,24 @@ nav a:hover {
   font-size: 0.82rem;
   color: var(--text-secondary);
   line-height: 1.6;
-  margin-bottom: 0.5rem;
-  white-space: pre-wrap;
+}
+
+.event-expand-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-family: var(--font-display);
+  font-size: 0.48rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-gold);
+  cursor: pointer;
+  transition: color 0.15s;
+  margin-top: 0.3rem;
+}
+
+.event-expand-btn:hover {
+  color: var(--gold-bright);
 }
 
 .event-card-meta {
