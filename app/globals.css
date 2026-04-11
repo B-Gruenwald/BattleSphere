@@ -526,11 +526,12 @@ nav a:hover {
 
 .bulletin-act-label {
   font-family: var(--font-display);
-  font-size: 0.46rem;
-  letter-spacing: 0.18em;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-gold);
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.3rem;
+  line-height: 1.2;
 }
 
 .bulletin-title {
@@ -684,11 +685,12 @@ nav a:hover {
 
 .drawer-act-label {
   font-family: var(--font-display);
-  font-size: 0.46rem;
-  letter-spacing: 0.18em;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-gold);
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.3rem;
+  line-height: 1.2;
 }
 
 .drawer-title {
@@ -725,11 +727,9 @@ nav a:hover {
   scrollbar-color: var(--border-active) transparent;
 }
 
-/* Two-column bulletin text */
+/* Single-column bulletin text */
 .drawer-text-cols {
-  column-count: 2;
-  column-gap: 2.5rem;
-  column-rule: 1px solid var(--border-dim);
+  column-count: 1;
 }
 
 .drawer-text-cols p {
@@ -737,7 +737,6 @@ nav a:hover {
   font-size: 0.92rem;
   line-height: 1.85;
   color: var(--text-primary);
-  break-inside: avoid;
 }
 
 /* Drawer footer */

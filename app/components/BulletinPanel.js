@@ -3,6 +3,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import BulletinDrawer from './BulletinDrawer';
+import { renderBulletinText } from '@/app/lib/bulletinText';
 
 export default async function BulletinPanel({ campaignId, campaignSlug, isOrganiser, factions, territories }) {
   const supabase = await createClient();
@@ -64,11 +65,7 @@ export default async function BulletinPanel({ campaignId, campaignSlug, isOrgani
       <div className="bulletin-scroll">
         {hasDispatch && currentDispatch.body ? (
           <div className="bulletin-prose">
-            {currentDispatch.body.split('\n').map((line, i) =>
-              line.trim()
-                ? <p key={i}>{line}</p>
-                : <br key={i} />
-            )}
+            {renderBulletinText(currentDispatch.body, territoryMap, factionMap, campaignSlug)}
           </div>
         ) : (
           <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem', padding: '1rem 0' }}>
