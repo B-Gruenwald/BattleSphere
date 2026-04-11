@@ -219,15 +219,28 @@ export default function BulletinDrawer({
 
                   <div className="edit-field">
                     <label>Body text</label>
-                    <p className="edit-hint">
-                      Start a line with <code>##&nbsp;</code> to create a section heading.
-                      Leave a blank line between paragraphs.
-                    </p>
+                    <div className="edit-hint-block">
+                      <p className="edit-hint">
+                        <strong>Headings:</strong> Start a line with <code>## </code> for a section heading.
+                      </p>
+                      <p className="edit-hint">
+                        <strong>Auto-links:</strong> Writing an exact territory or faction name links it automatically (see names below).
+                      </p>
+                      <p className="edit-hint">
+                        <strong>Custom links:</strong> Use <code>{'[[Target|display text]]'}</code> to link any phrase to a territory or faction — the Target must match a name below, but the display text can be anything you like. Example:
+                      </p>
+                      <p className="edit-hint-example">
+                        <code>{'the [[Forces of the Hivemind|Genestealer Cults]] struck at dawn'}</code>
+                      </p>
+                      <p className="edit-hint" style={{ marginTop: '0.25rem' }}>
+                        → displays <em>"the Genestealer Cults struck at dawn"</em> as a link to Forces of the Hivemind.
+                      </p>
+                    </div>
                     <textarea
                       value={form.body}
                       onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
                       rows={14}
-                      placeholder={'## Opening heading\n\nFirst paragraph of narrative text…\n\n## Second heading\n\nMore text…'}
+                      placeholder={'## Opening heading\n\nFirst paragraph of narrative text…\n\nThe [[Forces of the Hivemind|Genestealer Cults]] struck at dawn.\n\n## Second heading\n\nMore text…'}
                     />
                   </div>
 
