@@ -2,6 +2,7 @@ import './globals.css';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import NavBar from './components/NavBar';
+import NewsletterOptinModal from './components/NewsletterOptinModal';
 
 export const metadata = {
   title: 'BattleSphere',
@@ -32,6 +33,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         <NavBarServer />
+        <NewsletterOptinModal />
         <main style={{ paddingTop: '64px' }}>
           {children}
         </main>

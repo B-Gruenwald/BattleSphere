@@ -12,6 +12,9 @@ function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [optinCampaigns, setOptinCampaigns] = useState(true);
+  const [optinPlatform, setOptinPlatform] = useState(true);
+  const [digestFrequency, setDigestFrequency] = useState('weekly');
 
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || null;
@@ -22,7 +25,7 @@ function RegisterForm() {
     setError(null);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -37,6 +40,23 @@ function RegisterForm() {
       setError(error.message);
       setLoading(false);
     } else {
+      // Save newsletter preferences to the profile row created by the DB trigger
+      if (signUpData?.user?.id) {
+        await supabase.from('profiles').update({
+          optin_platform_news: optinPlatform,
+          optin_campaign_digests: optinCampaigns,
+          digest_frequency: (optinPlatform || optinCampaigns) ? digestFrequency : null,
+        }).eq('id', signUpData.user.id);
+
+        // Sync Resend audience for platform newsletter optin
+        try {
+          await fetch('/api/newsletter/sync-audience', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ optin: optinPlatform }),
+          });
+        } catch (_) { /* non-fatal */ }
+      }
       setSuccess(true);
       setLoading(false);
     }
@@ -187,6 +207,100 @@ function RegisterForm() {
                 onFocus={e => e.target.style.borderColor = 'var(--gold)'}
                 onBlur={e => e.target.style.borderColor = 'var(--border-dim)'}
               />
+            </div>
+
+            {/* Newsletter preferences */}
+            <div style={{
+              borderTop: '1px solid var(--border-dim)',
+              paddingTop: '1.25rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+            }}>
+              <span style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '0.58rem',
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: 'var(--text-muted)',
+                marginBottom: '0.25rem',
+              }}>
+                Email updates
+              </span>
+
+              {/* Campaign digests */}
+              <label style={{
+                display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
+                cursor: 'pointer', padding: '0.65rem 0',
+              }}>
+                <input
+                  type="checkbox"
+                  checked={optinCampaigns}
+                  onChange={e => setOptinCampaigns(e.target.checked)}
+                  style={{ marginTop: '3px', accentColor: 'var(--gold)', flexShrink: 0 }}
+                />
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  <strong style={{ color: 'var(--text-primary)', fontWeight: '600' }}>Campaign updates</strong>
+                  {' '}— stay on top of the action. Bulletins, events and messages from your commanders, at your pace.
+                </span>
+              </label>
+
+              {/* Platform news */}
+              <label style={{
+                display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
+                cursor: 'pointer', padding: '0.25rem 0',
+              }}>
+                <input
+                  type="checkbox"
+                  checked={optinPlatform}
+                  onChange={e => setOptinPlatform(e.target.checked)}
+                  style={{ marginTop: '3px', accentColor: 'var(--gold)', flexShrink: 0 }}
+                />
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  <strong style={{ color: 'var(--text-primary)', fontWeight: '600' }}>BattleSphere news</strong>
+                  {' '}— occasional updates about new features. Rare, no noise.
+                </span>
+              </label>
+
+              {/* Frequency — only shown when at least one is ticked */}
+              {(optinCampaigns || optinPlatform) && (
+                <div style={{ paddingTop: '0.5rem' }}>
+                  <label style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '0.56rem',
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                    color: 'var(--text-gold)',
+                    display: 'block',
+                    marginBottom: '0.5rem',
+                  }}>
+                    How often?
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {[
+                      { value: 'weekly',      label: 'Weekly' },
+                      { value: 'fortnightly', label: 'Every two weeks' },
+                      { value: 'monthly',     label: 'Monthly' },
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setDigestFrequency(opt.value)}
+                        style={{
+                          padding: '0.35rem 0.75rem',
+                          fontSize: '0.78rem',
+                          border: `1px solid ${digestFrequency === opt.value ? 'var(--gold)' : 'var(--border-dim)'}`,
+                          background: digestFrequency === opt.value ? 'rgba(183,140,64,0.1)' : 'transparent',
+                          color: digestFrequency === opt.value ? 'var(--text-gold)' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Error */}

@@ -5,6 +5,7 @@ import AdminCampaignSettings from '@/app/components/AdminCampaignSettings';
 import AdminPlayerSearch from '@/app/components/AdminPlayerSearch';
 import AdminFactionEditor from '@/app/components/AdminFactionEditor';
 import AdminBattleManager from '@/app/components/AdminBattleManager';
+import OrganiserDigestMessage from '@/app/components/OrganiserDigestMessage';
 
 export default async function AdminPage({ params }) {
   const { slug } = await params;
@@ -50,6 +51,14 @@ export default async function AdminPage({ params }) {
     .select('*')
     .eq('campaign_id', campaign.id)
     .order('created_at');
+
+  // Fetch queued digest messages for this campaign
+  const { data: digestMessages } = await supabase
+    .from('campaign_digest_messages')
+    .select('*')
+    .eq('campaign_id', campaign.id)
+    .order('created_at', { ascending: false })
+    .limit(10);
 
   // Fetch battles (for battle management section)
   const { data: battles } = await supabase
@@ -190,6 +199,21 @@ export default async function AdminPage({ params }) {
         <Link href={`/c/${slug}/map/edit`}>
           <button className="btn-primary">Edit Campaign Map →</button>
         </Link>
+      </div>
+
+      {/* ═══ SECTION 4b: Campaign Digest Messages ═══════════════════════════ */}
+      <div style={{ marginBottom: '3.5rem' }}>
+        <div style={{ borderBottom: '1px solid var(--border-dim)', marginBottom: '2rem', paddingBottom: '0.75rem' }}>
+          <h2 style={sectionTitle}>Campaign Digest</h2>
+        </div>
+        <p style={sectionDesc}>
+          Queue a short message for your subscribers — it will appear at the top of their next campaign digest, before bulletins and events.
+        </p>
+        <OrganiserDigestMessage
+          campaignId={campaign.id}
+          userId={user.id}
+          initialMessages={digestMessages || []}
+        />
       </div>
 
       {/* ═══ SECTION 5: Battle Records ═══════════════════════════════════════ */}

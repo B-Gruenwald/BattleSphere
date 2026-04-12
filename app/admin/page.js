@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const metadata = {
@@ -6,6 +8,13 @@ export const metadata = {
 };
 
 export default async function SuperAdminOverview() {
+  // Auth guard — super admin only
+  const authClient = await createClient();
+  const { data: { user } } = await authClient.auth.getUser();
+  if (!user) redirect('/login');
+  const { data: selfProfile } = await authClient.from('profiles').select('*').eq('id', user.id).limit(1);
+  if (!selfProfile?.[0]?.is_admin) redirect('/dashboard');
+
   const supabase = createAdminClient();
 
   // All campaigns, newest first
@@ -103,6 +112,15 @@ export default async function SuperAdminOverview() {
           Platform Administration
         </p>
         <h1 style={{ fontSize: '2.2rem', fontWeight: '700' }}>BattleSphere Overview</h1>
+      </div>
+
+      {/* Quick links */}
+      <div style={{ marginBottom: '2rem' }}>
+        <Link href="/admin/announcements">
+          <button className="btn-secondary" style={{ fontSize: '0.8rem', padding: '0.5rem 1.1rem' }}>
+            ✦ Platform Announcements →
+          </button>
+        </Link>
       </div>
 
       {/* Platform stats */}
