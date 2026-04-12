@@ -147,14 +147,23 @@ export default async function TerritoryPage({ params }) {
           {depthLabel} · {territory.type || 'Territory'}
         </p>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-          <h1 style={{
-            fontSize: 'clamp(1.6rem, 4vw, 2.6rem)',
-            fontWeight: '900',
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-          }}>
-            {territory.name}
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
+            <h1 style={{
+              fontSize: 'clamp(1.6rem, 4vw, 2.6rem)',
+              fontWeight: '900',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+            }}>
+              {territory.name}
+            </h1>
+            {user && (
+              <Link href={`/c/${slug}/battle/new?territory=${territory.id}`}>
+                <button className="btn-primary" style={{ padding: '0.35rem 0.85rem', fontSize: '0.55rem' }}>
+                  + Log a Battle Here
+                </button>
+              </Link>
+            )}
+          </div>
 
           {/* Control status badge */}
           <div style={{
@@ -412,9 +421,6 @@ export default async function TerritoryPage({ params }) {
 
       {/* Quick actions */}
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-        <Link href={`/c/${slug}/battle/new?territory=${territory.id}`}>
-          <button className="btn-primary">Log a Battle Here</button>
-        </Link>
         <Link href={`/c/${slug}/map`}>
           <button className="btn-secondary">← Back to Map</button>
         </Link>
