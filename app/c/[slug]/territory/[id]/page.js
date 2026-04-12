@@ -1,4 +1,4 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import TerritoryChildList from '@/app/components/TerritoryChildList';
@@ -10,7 +10,7 @@ export default async function TerritoryPage({ params }) {
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  // Public visitors may view territory detail pages (no redirect)
 
   // Fetch campaign
   const { data: campaign } = await supabase

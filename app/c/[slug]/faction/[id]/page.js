@@ -1,4 +1,4 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { calcPlayerXP, getXPRank } from '@/app/lib/xp';
@@ -8,7 +8,7 @@ export default async function FactionDetailPage({ params }) {
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  // Public visitors may view faction detail pages (no redirect)
 
   const { data: campaign } = await supabase
     .from('campaigns')

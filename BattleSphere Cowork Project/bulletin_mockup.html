@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BattleSphere — Campaign Dashboard Mockup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-void:     #0a0a0f;
+      --bg-deep:     #0f0f1a;
+      --bg-surface:  #141422;
+      --bg-raised:   #1a1a2e;
+      --border-dim:  rgba(255,255,255,0.06);
+      --border-sub:  rgba(255,255,255,0.10);
+      --border-gold: rgba(183,140,64,0.35);
+      --gold:        #b78c40;
+      --gold-bright: #d4a853;
+      --gold-dim:    #8a6a28;
+      --gold-glow:   rgba(183,140,64,0.10);
+      --text-pri:    #e8e0d0;
+      --text-sec:    #a09880;
+      --text-muted:  #5a5445;
+      --text-gold:   #b78c40;
+      --font-d:      'Cinzel', serif;
+      --font-b:      'Crimson Pro', Georgia, serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      background: var(--bg-void);
+      color: var(--text-pri);
+      font-family: var(--font-b);
+      font-size: 1rem;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--text-gold); text-decoration: none; }
+
+    /* ── Fake site nav ── */
+    .fake-nav {
+      height: 64px; background: rgba(10,10,15,0.98);
+      border-bottom: 1px solid var(--border-dim);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem;
+    }
+    .fake-nav-logo {
+      font-family: var(--font-d); font-size: 1.1rem; font-weight: 700;
+      letter-spacing: 0.2em; color: var(--gold); text-transform: uppercase;
+    }
+    .fake-nav-links { display: flex; gap: 2rem; align-items: center; }
+    .fake-nav-link {
+      font-family: var(--font-d); font-size: 0.62rem;
+      letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-sec);
+    }
+    .fake-nav-btn {
+      font-family: var(--font-d); font-size: 0.62rem; letter-spacing: 0.12em;
+      text-transform: uppercase; background: transparent;
+      border: 1px solid var(--border-sub); color: var(--text-pri);
+      padding: 0.4rem 1rem; cursor: pointer;
+    }
+
+    /* ── Fake campaign sub-nav ── */
+    .fake-subnav {
+      height: 44px; background: rgba(10,10,15,0.6);
+      border-bottom: 1px solid var(--border-dim);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem;
+    }
+    .fake-subnav-name {
+      font-family: var(--font-d); font-size: 0.6rem;
+      letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold);
+    }
+    .fake-subnav-links { display: flex; gap: 1.5rem; align-items: center; }
+    .fake-subnav-link {
+      font-family: var(--font-d); font-size: 0.56rem;
+      letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted);
+    }
+    .fake-log-btn {
+      font-family: var(--font-d); font-size: 0.52rem; letter-spacing: 0.12em;
+      text-transform: uppercase; background: rgba(183,140,64,0.12);
+      border: 1px solid rgba(183,140,64,0.4); color: var(--gold);
+      padding: 0.28rem 0.8rem; cursor: pointer;
+    }
+
+    /* ── Page container ── */
+    .page { max-width: 1100px; margin: 0 auto; padding: 2.5rem 2rem; }
+
+    /* ── Campaign header ── */
+    .camp-header { margin-bottom: 1.75rem; }
+    .camp-setting {
+      font-family: var(--font-d); font-size: 0.62rem; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 0.5rem;
+    }
+    .camp-title-row {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+    }
+    .camp-title {
+      font-family: var(--font-d); font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .camp-btns { display: flex; gap: 0.75rem; align-items: center; }
+    .camp-btn {
+      font-family: var(--font-d); font-size: 0.58rem; letter-spacing: 0.12em;
+      text-transform: uppercase; background: transparent;
+      border: 1px solid var(--border-sub); color: var(--text-pri);
+      padding: 0.45rem 1.1rem; cursor: pointer;
+    }
+
+    /* ── Section label ── */
+    .section-label {
+      font-family: var(--font-d); font-size: 0.48rem; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.6rem;
+    }
+
+    /* ══════════════════════════════════════
+       HERO ROW — Bulletin + Map side by side
+    ══════════════════════════════════════ */
+    .hero-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border: 1px solid var(--border-gold);
+      height: 390px;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── BULLETIN (left half) ── */
+    .bulletin-panel {
+      display: flex; flex-direction: column;
+      border-right: 1px solid var(--border-gold);
+      background: linear-gradient(135deg, rgba(183,140,64,0.05) 0%, transparent 60%);
+      overflow: hidden;
+      position: relative;
+    }
+    .bulletin-top {
+      padding: 1.1rem 1.5rem 0.75rem;
+      border-bottom: 1px solid rgba(183,140,64,0.15);
+      flex-shrink: 0;
+    }
+    .bulletin-act {
+      font-family: var(--font-d); font-size: 0.46rem; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 0.3rem;
+    }
+    .bulletin-title {
+      font-family: var(--font-d); font-size: 0.82rem; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-pri);
+    }
+    .bulletin-scroll {
+      flex: 1; overflow: hidden; position: relative;
+      padding: 1rem 1.5rem 0;
+    }
+    .bulletin-text {
+      font-size: 0.9rem; line-height: 1.8; color: var(--text-pri);
+    }
+    .bulletin-text p { margin-bottom: 0.85rem; }
+    .bulletin-text em { color: var(--text-sec); font-style: italic; }
+    /* Gradient fade at bottom of bulletin */
+    .bulletin-fade {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
+      background: linear-gradient(to bottom, transparent, rgba(13,13,19,0.97));
+      pointer-events: none;
+    }
+    .bulletin-read-more {
+      flex-shrink: 0;
+      padding: 0.6rem 1.5rem 0.9rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .read-more-btn {
+      font-family: var(--font-d); font-size: 0.5rem; letter-spacing: 0.14em;
+      text-transform: uppercase; background: transparent;
+      border: 1px solid rgba(183,140,64,0.35); color: var(--gold);
+      padding: 0.35rem 0.9rem; cursor: pointer; transition: all 0.2s;
+    }
+    .read-more-btn:hover {
+      background: rgba(183,140,64,0.08); border-color: var(--gold);
+    }
+    .bulletin-meta-small {
+      font-family: var(--font-d); font-size: 0.42rem; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+
+    /* Territory & faction links */
+    .territory-link {
+      font-family: var(--font-d); font-size: 0.88em; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--gold);
+      text-decoration: underline; text-underline-offset: 3px;
+      text-decoration-color: rgba(183,140,64,0.4); transition: all 0.15s;
+    }
+    .territory-link:hover { color: var(--gold-bright); text-decoration-color: var(--gold-bright); }
+    .faction-link {
+      font-style: italic; color: var(--text-pri);
+      border-bottom: 1px solid rgba(183,140,64,0.3); transition: all 0.15s;
+    }
+    .faction-link:hover { color: var(--gold-bright); border-bottom-color: var(--gold-bright); }
+
+    /* ── MAP (right half) ── */
+    .map-panel {
+      background: var(--bg-surface);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .map-panel::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 40% 50%, rgba(183,140,64,0.07) 0%, transparent 65%);
+    }
+    /* Fake territory blobs to suggest a map */
+    .map-blob {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(183,140,64,0.25);
+    }
+    .map-node {
+      position: absolute;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: rgba(183,140,64,0.5);
+      box-shadow: 0 0 8px rgba(183,140,64,0.4);
+    }
+    .map-node-label {
+      position: absolute;
+      font-family: var(--font-d); font-size: 0.36rem; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--text-sec);
+      white-space: nowrap;
+    }
+    .map-line {
+      position: absolute;
+      height: 1px; background: rgba(183,140,64,0.15);
+      transform-origin: left center;
+    }
+    .map-label {
+      font-family: var(--font-d); font-size: 0.5rem; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--text-muted); z-index: 1;
+    }
+    /* Faction color blobs */
+    .faction-blob {
+      position: absolute; border-radius: 40%;
+      opacity: 0.12;
+    }
+
+    /* ══════════════════════════════════════
+       EVENTS STRIP
+    ══════════════════════════════════════ */
+    .events-section { margin-bottom: 1.5rem; }
+    .events-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      border: 1px solid rgba(183,140,64,0.2);
+    }
+    .event-card {
+      padding: 1rem 1.25rem;
+      border-right: 1px solid rgba(183,140,64,0.1);
+      background: rgba(183,140,64,0.02);
+    }
+    .event-card:last-child { border-right: none; }
+    .event-status {
+      display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.5rem;
+    }
+    .event-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #7ecb7e; flex-shrink: 0;
+      box-shadow: 0 0 6px rgba(126,203,126,0.5);
+    }
+    .event-dot.pending { background: var(--gold); box-shadow: 0 0 6px rgba(183,140,64,0.4); }
+    .event-status-label {
+      font-family: var(--font-d); font-size: 0.42rem;
+      letter-spacing: 0.14em; text-transform: uppercase; color: #7ecb7e;
+    }
+    .event-status-label.pending { color: var(--gold); }
+    .event-title {
+      font-family: var(--font-d); font-size: 0.65rem; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      color: var(--text-pri); margin-bottom: 0.35rem;
+    }
+    .event-desc { font-size: 0.82rem; color: var(--text-sec); line-height: 1.6; margin-bottom: 0.6rem; }
+    .event-meta {
+      font-family: var(--font-d); font-size: 0.42rem;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted);
+      display: flex; gap: 1rem; flex-wrap: wrap;
+    }
+
+    /* ══════════════════════════════════════
+       STATS BAR
+    ══════════════════════════════════════ */
+    .stats-bar {
+      display: flex; border: 1px solid var(--border-dim);
+      margin-bottom: 1.5rem;
+    }
+    .stat-cell {
+      flex: 1; padding: 0.9rem 1rem; text-align: center;
+      border-right: 1px solid var(--border-dim);
+      cursor: pointer; transition: background 0.15s; text-decoration: none;
+    }
+    .stat-cell:hover { background: rgba(183,140,64,0.04); }
+    .stat-cell:last-child { border-right: none; }
+    .stat-num {
+      font-family: var(--font-d); font-size: 1.5rem; font-weight: 700;
+      color: var(--gold); line-height: 1; margin-bottom: 0.25rem;
+    }
+    .stat-label {
+      font-family: var(--font-d); font-size: 0.4rem; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--text-muted);
+    }
+
+    /* ══════════════════════════════════════
+       STANDINGS + CHRONICLE ROW
+    ══════════════════════════════════════ */
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0;
+      border: 1px solid var(--border-dim);
+    }
+    .standings-col {
+      border-right: 1px solid var(--border-dim);
+      padding-bottom: 1rem;
+    }
+    .standings-col:last-child { border-right: none; }
+    .col-header {
+      font-family: var(--font-d); font-size: 0.46rem; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--text-muted);
+      padding: 0.75rem 1.25rem 0.6rem;
+      border-bottom: 1px solid var(--border-dim);
+    }
+    .standing-row {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.55rem 1.25rem;
+      border-bottom: 1px solid var(--border-dim);
+      cursor: pointer; transition: background 0.15s;
+    }
+    .standing-row:last-child { border-bottom: none; }
+    .standing-row:hover { background: rgba(183,140,64,0.03); }
+    .standing-rank {
+      font-family: var(--font-d); font-size: 0.52rem; letter-spacing: 0.1em;
+      color: var(--text-muted); width: 1.2rem; text-align: right; flex-shrink: 0;
+    }
+    .standing-color {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .standing-name {
+      font-family: var(--font-d); font-size: 0.56rem; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-pri); flex: 1;
+    }
+    .standing-score {
+      font-family: var(--font-d); font-size: 0.56rem; color: var(--gold);
+    }
+    .chronicle-entry {
+      padding: 0.65rem 1.25rem;
+      border-bottom: 1px solid var(--border-dim);
+      cursor: pointer; transition: background 0.15s;
+    }
+    .chronicle-entry:hover { background: rgba(183,140,64,0.03); }
+    .chronicle-entry:last-child { border-bottom: none; }
+    .chronicle-date {
+      font-family: var(--font-d); font-size: 0.4rem; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.2rem;
+    }
+    .chronicle-text {
+      font-size: 0.82rem; color: var(--text-sec); line-height: 1.55;
+    }
+
+    /* ══════════════════════════════════════
+       FULL-BULLETIN DRAWER
+    ══════════════════════════════════════ */
+    .drawer-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(2px);
+    }
+    .drawer-overlay.open { display: block; }
+    .drawer {
+      position: fixed; top: 0; right: 0; bottom: 0;
+      width: min(680px, 92vw);
+      background: var(--bg-deep);
+      border-left: 1px solid var(--border-gold);
+      overflow-y: auto;
+      transform: translateX(100%);
+      transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: 600;
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer-head {
+      position: sticky; top: 0;
+      background: var(--bg-deep);
+      border-bottom: 1px solid var(--border-gold);
+      padding: 1.25rem 2rem;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+    }
+    .drawer-act {
+      font-family: var(--font-d); font-size: 0.48rem; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 0.3rem;
+    }
+    .drawer-title {
+      font-family: var(--font-d); font-size: 0.92rem; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-pri);
+    }
+    .drawer-close {
+      font-family: var(--font-d); font-size: 0.52rem; letter-spacing: 0.1em;
+      text-transform: uppercase; background: transparent; border: none;
+      color: var(--text-muted); cursor: pointer; padding: 0.25rem 0;
+      flex-shrink: 0; transition: color 0.15s;
+    }
+    .drawer-close:hover { color: var(--text-sec); }
+    .drawer-body {
+      padding: 2rem;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;
+    }
+    .drawer-text {
+      font-size: 0.95rem; line-height: 1.85; color: var(--text-pri);
+    }
+    .drawer-text p { margin-bottom: 0.9rem; }
+    .drawer-text em { color: var(--text-sec); font-style: italic; }
+    .drawer-col + .drawer-col {
+      padding-left: 2rem;
+      border-left: 1px solid rgba(183,140,64,0.1);
+    }
+    .drawer-footer {
+      margin: 0 2rem;
+      padding: 1rem 0;
+      border-top: 1px solid var(--border-dim);
+      font-family: var(--font-d); font-size: 0.44rem;
+      letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted);
+    }
+
+    /* Previous dispatches inside drawer */
+    .prev-bulletins { margin: 0 2rem 2rem; }
+    .prev-label {
+      font-family: var(--font-d); font-size: 0.44rem; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--text-muted);
+      padding: 0.6rem 0 0.4rem;
+      border-top: 1px solid var(--border-dim);
+      margin-bottom: 0;
+    }
+    .prev-item { border-top: 1px solid var(--border-dim); cursor: pointer; }
+    .prev-item-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.6rem 0; transition: color 0.15s;
+    }
+    .prev-item-header:hover .prev-item-title { color: var(--text-pri); }
+    .prev-item-title {
+      font-family: var(--font-d); font-size: 0.56rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-sec); transition: color 0.15s;
+    }
+    .prev-item-date {
+      font-family: var(--font-d); font-size: 0.42rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-muted);
+      display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;
+    }
+    .prev-chevron { transition: transform 0.2s; font-size: 0.65rem; }
+    .prev-chevron.open { transform: rotate(180deg); }
+    .prev-body {
+      display: none; padding: 0.75rem 0 1rem;
+      font-size: 0.86rem; color: var(--text-sec); line-height: 1.7;
+      border-top: 1px solid var(--border-dim);
+    }
+    .prev-body.open { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- ── Fake site nav ─────────────────────────────────── -->
+<div class="fake-nav">
+  <div class="fake-nav-logo">BattleSphere</div>
+  <div class="fake-nav-links">
+    <span class="fake-nav-link">Campaigns</span>
+    <span class="fake-nav-link">How it Works</span>
+    <button class="fake-nav-btn">Sign In</button>
+  </div>
+</div>
+
+<!-- ── Fake campaign sub-nav ────────────────────────── -->
+<div class="fake-subnav">
+  <span class="fake-subnav-name">Austriacus Subsector</span>
+  <div class="fake-subnav-links">
+    <span class="fake-subnav-link">Map</span>
+    <span class="fake-subnav-link">Factions</span>
+    <span class="fake-subnav-link">Players</span>
+    <span class="fake-subnav-link">Battles</span>
+    <span class="fake-subnav-link">Events</span>
+    <span class="fake-subnav-link">Chronicle</span>
+    <span class="fake-subnav-link">Achievements</span>
+    <button class="fake-log-btn">+ Log Battle</button>
+  </div>
+</div>
+
+<!-- ── Page ──────────────────────────────────────────── -->
+<div class="page">
+
+  <!-- Campaign header -->
+  <div class="camp-header">
+    <div class="camp-setting">Warhammer 40,000 · Narrative Campaign</div>
+    <div class="camp-title-row">
+      <div class="camp-title">Austriacus Subsector</div>
+      <div class="camp-btns">
+        <button class="camp-btn">Share Public Page</button>
+        <button class="camp-btn">Admin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ HERO ROW — Bulletin + Map ══════════════════════ -->
+  <div class="hero-row">
+
+    <!-- LEFT: Bulletin panel -->
+    <div class="bulletin-panel">
+      <div class="bulletin-top">
+        <div class="bulletin-act">Act II — The Fractured Subsector · Dispatch No. 7</div>
+        <div class="bulletin-title">The Tide Turns at Stiria</div>
+      </div>
+
+      <div class="bulletin-scroll" id="bulletinScroll">
+        <div class="bulletin-text">
+          <p>
+            The war for the Austriacus Subsector enters its third and bloodiest week. Across the void, fleet engagements have reduced the once-proud orbital platforms of
+            <a href="#" class="territory-link">Stiria</a> to drifting wreckage, while on the surface, a dozen factions contest every hab-block and promethium line.
+          </p>
+          <p>
+            The fall of the relay station at <a href="#" class="territory-link">Salis</a> has severed vox-contact between the eastern and western theatres. Each commander now fights blind, trusting only the soldiers at their side and whatever intelligence their scouts can wrest from the enemy dead.
+          </p>
+          <p>
+            In the ruins of <a href="#" class="territory-link">Liberta Judex</a>, the <a href="#" class="faction-link">Genestealer Cult of the Ascending Dawn</a> has surfaced openly for the first time. Their numbers, long cultivated in the underhive, proved enough to overwhelm two Imperial outposts in a single night — and the horror of their revelation has sent tremors of dread through every loyalist position.
+          </p>
+          <p>
+            Further west, <a href="#" class="faction-link">Traitor Astartes</a> warband elements have pushed hard against the mountain passes above <a href="#" class="territory-link">Anterior Mons</a>. Loyalist defenders held the first assault, but at severe cost. The passes remain contested.
+          </p>
+          <p>
+            Stranger still are the reports from the deep desert. Patrol units speak of <a href="#" class="faction-link">Xenos</a> forces long dormant now stirring beneath the sands — ancient war-machines of unknown provenance reactivating without warning, their purpose inscrutable.
+          </p>
+          <p>
+            Meanwhile, <a href="#" class="faction-link">the governor's Strategi</a> convenes in emergency session. Whispers of treachery at the highest levels of command have reached even the soldiers in the field. No-one knows whom to trust.
+          </p>
+        </div>
+        <div class="bulletin-fade"></div>
+      </div>
+
+      <div class="bulletin-read-more">
+        <button class="read-more-btn" onclick="openDrawer()">Read full dispatch →</button>
+        <span class="bulletin-meta-small">Campaign Week 3 &nbsp;·&nbsp; 09 Apr 2026</span>
+      </div>
+    </div>
+
+    <!-- RIGHT: Map panel -->
+    <div class="map-panel">
+      <!-- Faction territory blobs -->
+      <div class="faction-blob" style="width:180px;height:160px;background:#4a90d9;top:30px;left:60px;transform:rotate(-15deg)"></div>
+      <div class="faction-blob" style="width:150px;height:130px;background:#c0392b;top:60px;right:50px;transform:rotate(10deg)"></div>
+      <div class="faction-blob" style="width:130px;height:120px;background:#b78c40;bottom:40px;left:80px;transform:rotate(5deg)"></div>
+      <div class="faction-blob" style="width:110px;height:100px;background:#7ecb7e;bottom:60px;right:80px;transform:rotate(-8deg)"></div>
+      <!-- Connection lines -->
+      <div class="map-line" style="width:130px;top:145px;left:155px;transform:rotate(22deg)"></div>
+      <div class="map-line" style="width:90px;top:210px;left:175px;transform:rotate(-30deg)"></div>
+      <div class="map-line" style="width:110px;top:175px;right:120px;transform:rotate(15deg)"></div>
+      <!-- Territory nodes -->
+      <div class="map-node" style="top:118px;left:148px"></div>
+      <div class="map-node-label" style="top:107px;left:162px">Stiria</div>
+      <div class="map-node" style="top:148px;right:138px"></div>
+      <div class="map-node-label" style="top:138px;right:88px">Salis</div>
+      <div class="map-node" style="bottom:108px;left:168px"></div>
+      <div class="map-node-label" style="bottom:118px;left:182px">Liberta Judex</div>
+      <div class="map-node" style="top:208px;right:158px"></div>
+      <div class="map-node-label" style="top:198px;right:100px">Ant. Mons</div>
+      <div class="map-node" style="top:178px;left:228px;background:rgba(183,140,64,0.25)"></div>
+    </div>
+
+  </div><!-- /.hero-row -->
+
+  <!-- ══ ACTIVE EVENTS ══════════════════════════════════ -->
+  <div class="events-section">
+    <div class="section-label">Active Events</div>
+    <div class="events-grid">
+      <div class="event-card">
+        <div class="event-status">
+          <div class="event-dot"></div>
+          <span class="event-status-label">Active</span>
+        </div>
+        <div class="event-title">The Siege of Anterior Mons</div>
+        <div class="event-desc">Traitor warband holds the mountain passes. Loyalist factions must contest all adjacent territories this week or lose the industrial heartland.</div>
+        <div class="event-meta"><span>Ends Week 4</span><span>5 Battles</span><span>2 Factions</span></div>
+      </div>
+      <div class="event-card">
+        <div class="event-status">
+          <div class="event-dot"></div>
+          <span class="event-status-label">Active</span>
+        </div>
+        <div class="event-title">The Rising Cult</div>
+        <div class="event-desc">Genestealer forces emerging across Liberta Judex. Any faction controlling adjacent territories may declare a Hunt action — special rules apply.</div>
+        <div class="event-meta"><span>Ends Week 4</span><span>3 Battles</span><span>Ongoing</span></div>
+      </div>
+      <div class="event-card">
+        <div class="event-status">
+          <div class="event-dot pending"></div>
+          <span class="event-status-label pending">Upcoming</span>
+        </div>
+        <div class="event-title">The Governor's Conclave</div>
+        <div class="event-desc">All Imperial-aligned factions summoned to a secret conclave. Attendance determines influence over the governor's war councils in Act III.</div>
+        <div class="event-meta"><span>Begins Week 4</span><span>Narrative</span><span>Imperium Only</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ STATS BAR ══════════════════════════════════════ -->
+  <div class="stats-bar" style="margin-bottom:1.5rem">
+    <a class="stat-cell" href="#">
+      <div class="stat-num">6</div>
+      <div class="stat-label">Factions</div>
+    </a>
+    <a class="stat-cell" href="#">
+      <div class="stat-num">14</div>
+      <div class="stat-label">Players</div>
+    </a>
+    <a class="stat-cell" href="#">
+      <div class="stat-num">42</div>
+      <div class="stat-label">Battles</div>
+    </a>
+    <a class="stat-cell" href="#">
+      <div class="stat-num">18</div>
+      <div class="stat-label">Territories</div>
+    </a>
+    <a class="stat-cell" href="#">
+      <div class="stat-num">3</div>
+      <div class="stat-label">Active Events</div>
+    </a>
+    <a class="stat-cell" href="#">
+      <div class="stat-num">II</div>
+      <div class="stat-label">Current Act</div>
+    </a>
+  </div>
+
+  <!-- ══ STANDINGS + CHRONICLE ══════════════════════════ -->
+  <div class="section-label">Standings &amp; Chronicle</div>
+  <div class="bottom-row">
+
+    <!-- Faction standings -->
+    <div class="standings-col">
+      <div class="col-header">Faction Standings</div>
+      <div class="standing-row">
+        <span class="standing-rank">1</span>
+        <div class="standing-color" style="background:#4a90d9"></div>
+        <span class="standing-name">Imperium</span>
+        <span class="standing-score">340 VP</span>
+      </div>
+      <div class="standing-row">
+        <span class="standing-rank">2</span>
+        <div class="standing-color" style="background:#c0392b"></div>
+        <span class="standing-name">Chaos</span>
+        <span class="standing-score">290 VP</span>
+      </div>
+      <div class="standing-row">
+        <span class="standing-rank">3</span>
+        <div class="standing-color" style="background:#b78c40"></div>
+        <span class="standing-name">Forces of the Hive Mind</span>
+        <span class="standing-score">215 VP</span>
+      </div>
+      <div class="standing-row">
+        <span class="standing-rank">4</span>
+        <div class="standing-color" style="background:#7ecb7e"></div>
+        <span class="standing-name">Xenos &amp; Raiders</span>
+        <span class="standing-score">180 VP</span>
+      </div>
+    </div>
+
+    <!-- Player standings -->
+    <div class="standings-col">
+      <div class="col-header">Player Standings</div>
+      <div class="standing-row">
+        <span class="standing-rank">1</span>
+        <div class="standing-color" style="background:#4a90d9"></div>
+        <span class="standing-name">Commander Vael</span>
+        <span class="standing-score">7W · 1L</span>
+      </div>
+      <div class="standing-row">
+        <span class="standing-rank">2</span>
+        <div class="standing-color" style="background:#c0392b"></div>
+        <span class="standing-name">Warlord Kresh</span>
+        <span class="standing-score">6W · 2L</span>
+      </div>
+      <div class="standing-row">
+        <span class="standing-rank">3</span>
+        <div class="standing-color" style="background:#b78c40"></div>
+        <span class="standing-name">Magus Drel</span>
+        <span class="standing-score">5W · 2L</span>
+      </div>
+      <div class="standing-row">
+        <span class="standing-rank">4</span>
+        <div class="standing-color" style="background:#7ecb7e"></div>
+        <span class="standing-name">Inquisitor Sorn</span>
+        <span class="standing-score">4W · 4L</span>
+      </div>
+    </div>
+
+    <!-- Chronicle -->
+    <div class="standings-col">
+      <div class="col-header">Latest Chronicle Entries</div>
+      <div class="chronicle-entry">
+        <div class="chronicle-date">Week 3 · Anterior Mons</div>
+        <div class="chronicle-text">Warlord Kresh's warband breached the eastern gate before dawn. The loyalist rearguard held the inner walls by a thread — and the cost was devastating.</div>
+      </div>
+      <div class="chronicle-entry">
+        <div class="chronicle-date">Week 3 · Liberta Judex</div>
+        <div class="chronicle-text">The cult emerged from the underhive without warning. Two Astra Militarum platoons were overrun before the alarm was raised. The subsector command is in shock.</div>
+      </div>
+      <div class="chronicle-entry">
+        <div class="chronicle-date">Week 2 · Salis</div>
+        <div class="chronicle-text">A rogue escort squadron silenced the Salis relay in a single strike. Across the eastern theatre, vox-nets went dark. The war entered a new, blinder phase.</div>
+      </div>
+    </div>
+
+  </div><!-- /.bottom-row -->
+
+</div><!-- /.page -->
+
+
+<!-- ══ FULL BULLETIN DRAWER ═══════════════════════════ -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="bulletinDrawer">
+
+  <div class="drawer-head">
+    <div>
+      <div class="drawer-act">Act II — The Fractured Subsector · Dispatch No. 7</div>
+      <div class="drawer-title">The Tide Turns at Stiria</div>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">✕ Close</button>
+  </div>
+
+  <div class="drawer-body">
+    <div class="drawer-col">
+      <div class="drawer-text">
+        <p>
+          The war for the Austriacus Subsector enters its third and bloodiest week. Across the void, fleet engagements have reduced the once-proud orbital platforms of
+          <a href="#" class="territory-link">Stiria</a> to drifting wreckage, while on the surface, a dozen factions contest every hab-block and promethium line.
+        </p>
+        <p>
+          The fall of the relay station at <a href="#" class="territory-link">Salis</a> has severed vox-contact between the eastern and western theatres. Each commander now fights blind, trusting only the soldiers at their side and whatever intelligence their scouts can wrest from the enemy dead.
+        </p>
+        <p>
+          In the ruins of <a href="#" class="territory-link">Liberta Judex</a>, the <a href="#" class="faction-link">Genestealer Cult of the Ascending Dawn</a> has surfaced openly for the first time. Their numbers, long cultivated in the underhive, proved enough to overwhelm two Imperial outposts in a single night — and the horror of their revelation has sent tremors of dread through every loyalist position.
+        </p>
+      </div>
+    </div>
+    <div class="drawer-col">
+      <div class="drawer-text">
+        <p>
+          Further west, <a href="#" class="faction-link">Traitor Astartes</a> warband elements have pushed hard against the mountain passes above <a href="#" class="territory-link">Anterior Mons</a>. Loyalist defenders held the first assault, but at severe cost. The passes remain contested — and should they fall, the industrial heartland of the subsector lies open.
+        </p>
+        <p>
+          Stranger still are the reports from the deep desert. Patrol units speak of <a href="#" class="faction-link">Xenos</a> forces long dormant now stirring beneath the sands — ancient war-machines of unknown provenance reactivating without warning, their purpose inscrutable, their patience finally exhausted.
+        </p>
+        <p>
+          Meanwhile, <a href="#" class="faction-link">the governor's Strategi</a> convenes in emergency session. Whispers of treachery at the highest levels of command have reached even the soldiers in the field. No-one knows whom to trust. The subsector holds its breath — and waits for the next blow to fall.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="drawer-footer">
+    Issued by the Chronicler &nbsp;·&nbsp; Campaign Week 3 &nbsp;·&nbsp; 09 Apr 2026
+  </div>
+
+  <!-- Previous dispatches -->
+  <div class="prev-bulletins">
+    <div class="prev-label">Previous Dispatches</div>
+
+    <div class="prev-item">
+      <div class="prev-item-header" onclick="togglePrev(this)">
+        <span class="prev-item-title">Dispatch No. 6 — The Siege of Anterior Mons</span>
+        <span class="prev-item-date">Week 3 <span class="prev-chevron">▾</span></span>
+      </div>
+      <div class="prev-body">
+        Traitor forces massed in the mountain passes and launched a three-pronged assault on Anterior Mons. Loyalist defenders repelled two of the three columns, but the third punched through the eastern gate before being halted by a last-ditch counterattack.
+      </div>
+    </div>
+
+    <div class="prev-item">
+      <div class="prev-item-header" onclick="togglePrev(this)">
+        <span class="prev-item-title">Dispatch No. 5 — Void War Above Salis</span>
+        <span class="prev-item-date">Week 2 <span class="prev-chevron">▾</span></span>
+      </div>
+      <div class="prev-body">
+        A surprise strike on the Salis relay station by a rogue escort squadron silenced all vox-communication across the eastern theatre. The station's crew fought back heroically, but the relays were destroyed before relief could arrive.
+      </div>
+    </div>
+
+    <div class="prev-item">
+      <div class="prev-item-header" onclick="togglePrev(this)">
+        <span class="prev-item-title">Dispatch No. 4 — First Blood at Stiria</span>
+        <span class="prev-item-date">Week 2 <span class="prev-chevron">▾</span></span>
+      </div>
+      <div class="prev-body">
+        The first major ground engagement of the campaign saw three factions clash on the orbital platforms above Stiria. No clear victor emerged, but the infrastructure damage will hinder every faction's supply lines for weeks to come.
+      </div>
+    </div>
+
+  </div><!-- /.prev-bulletins -->
+</div><!-- /.drawer -->
+
+<script>
+  function openDrawer() {
+    document.getElementById('drawerOverlay').classList.add('open');
+    document.getElementById('bulletinDrawer').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeDrawer() {
+    document.getElementById('drawerOverlay').classList.remove('open');
+    document.getElementById('bulletinDrawer').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function togglePrev(header) {
+    const body = header.nextElementSibling;
+    const chevron = header.querySelector('.prev-chevron');
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    chevron.classList.toggle('open', !isOpen);
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+</script>
+</body>
+</html>

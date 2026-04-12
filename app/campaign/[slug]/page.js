@@ -1,8 +1,11 @@
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
+import { notFound }    from 'next/navigation';
+import Link             from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import CampaignMap from '@/app/components/CampaignMap';
-import JoinRequestButton from './JoinRequestButton';
+import CampaignMap      from '@/app/components/CampaignMap';
+import BulletinPanel    from '@/app/components/BulletinPanel';
+import EventCardBody    from '@/app/components/EventCardBody';
+import PublicAccessCTA  from './PublicAccessCTA';
+import { calcPlayerXP, getXPRank } from '@/app/lib/xp';
 
 const SETTING_LABELS = {
   'Gothic Sci-Fi': 'Gothic Sci-Fi',
@@ -12,334 +15,204 @@ const SETTING_LABELS = {
   'Custom':        'Custom Setting',
 };
 
-function formatDate(isoString) {
-  return new Date(isoString).toLocaleDateString('en-GB', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  });
-}
-
-// ── Chronicle entry renderers (non-clickable, public-safe) ────────────────────
-
-function PublicBattleEntry({ battle, factionMap }) {
-  const attacker  = factionMap[battle.attacker_faction_id];
-  const defender  = factionMap[battle.defender_faction_id];
-  const winner    = factionMap[battle.winner_faction_id];
-  const isDraw    = !battle.winner_faction_id;
-  const attackerWon = battle.winner_faction_id === battle.attacker_faction_id;
-  const resultLabel = isDraw
-    ? 'Draw'
-    : attackerWon
-      ? `${attacker?.name ?? '?'} Victory`
-      : `${defender?.name ?? '?'} Victory`;
-  const resultColour = isDraw ? 'var(--text-muted)' : (winner?.colour ?? 'var(--text-gold)');
-
-  return (
-    <div style={{
-      display: 'flex',
-      gap: '1.25rem',
-      alignItems: 'flex-start',
-      padding: '1.25rem 1.5rem',
-      background: 'var(--bg-raised)',
-      border: '1px solid var(--border-dim)',
-      borderLeft: `3px solid ${resultColour}`,
-    }}>
-      <div style={{ flexShrink: 0, paddingTop: '0.3rem' }}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M8 2L14 8L8 14L2 8Z" fill={resultColour} opacity="0.8"/>
-        </svg>
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontFamily: 'var(--font-display)', fontSize: '0.52rem',
-          letterSpacing: '0.14em', textTransform: 'uppercase',
-          color: 'var(--text-muted)', marginBottom: '0.3rem',
-        }}>
-          Battle
-        </div>
-        <div style={{ fontSize: '1rem', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.35rem' }}>
-          {attacker?.name ?? '?'}
-          <span style={{ color: 'var(--text-muted)', fontWeight: '400', margin: '0 0.5rem' }}>vs</span>
-          {defender?.name ?? '?'}
-        </div>
-        <span style={{
-          fontFamily: 'var(--font-display)', fontSize: '0.55rem',
-          letterSpacing: '0.1em', textTransform: 'uppercase', color: resultColour,
-        }}>
-          {resultLabel}
-        </span>
-        {battle.chronicle && (
-          <p style={{
-            color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic',
-            marginTop: '0.6rem', lineHeight: 1.55,
-            overflow: 'hidden', display: '-webkit-box',
-            WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-          }}>
-            {battle.chronicle}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function PublicEventEntry({ ev }) {
-  const statusColour = ev.status === 'active' ? '#b78c40' : ev.status === 'upcoming' ? '#6a8fc7' : '#5a5445';
-  return (
-    <div style={{
-      display: 'flex',
-      gap: '1.25rem',
-      alignItems: 'flex-start',
-      padding: '1.25rem 1.5rem',
-      background: 'rgba(183,140,64,0.04)',
-      border: '1px solid var(--border-dim)',
-      borderLeft: `3px solid ${statusColour}`,
-    }}>
-      <div style={{ flexShrink: 0, paddingTop: '0.2rem' }}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <rect x="2" y="2" width="12" height="12" rx="1" fill={statusColour} opacity="0.7"/>
-          <path d="M5 8H11M8 5V11" stroke="var(--bg-void)" strokeWidth="1.5" strokeLinecap="round"/>
-        </svg>
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontFamily: 'var(--font-display)', fontSize: '0.52rem',
-          letterSpacing: '0.14em', textTransform: 'uppercase',
-          color: 'var(--text-muted)', marginBottom: '0.3rem',
-        }}>
-          Campaign Event
-        </div>
-        <div style={{ fontSize: '1rem', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.35rem' }}>
-          {ev.title}
-        </div>
-        {ev.body && (
-          <p style={{
-            color: 'var(--text-secondary)', fontSize: '0.85rem', fontStyle: 'italic',
-            lineHeight: 1.55, overflow: 'hidden', display: '-webkit-box',
-            WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-          }}>
-            {ev.body}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function PublicAchievementEntry({ achievement, factionMap, profileMap }) {
-  let recipientName = '?';
-  if (achievement.awarded_to_type === 'player') {
-    recipientName = profileMap[achievement.awarded_to_player_id]?.display_name
-      || profileMap[achievement.awarded_to_player_id]?.username
-      || '?';
-  } else if (achievement.awarded_to_type === 'faction') {
-    recipientName = factionMap[achievement.awarded_to_faction_id]?.name ?? '?';
-  }
-
-  return (
-    <div style={{
-      display: 'flex',
-      gap: '1.25rem',
-      alignItems: 'flex-start',
-      padding: '1.25rem 1.5rem',
-      background: 'rgba(183,140,64,0.06)',
-      border: '1px solid var(--border-dim)',
-      borderLeft: '3px solid var(--text-gold)',
-    }}>
-      <div style={{ flexShrink: 0, fontSize: '1.1rem', lineHeight: 1, paddingTop: '0.1rem' }}>
-        {achievement.icon}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontFamily: 'var(--font-display)', fontSize: '0.52rem',
-          letterSpacing: '0.14em', textTransform: 'uppercase',
-          color: 'var(--text-muted)', marginBottom: '0.3rem',
-        }}>
-          Achievement
-        </div>
-        <div style={{ fontSize: '1rem', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.35rem' }}>
-          {achievement.title}
-        </div>
-        <span style={{
-          fontFamily: 'var(--font-display)', fontSize: '0.55rem',
-          letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-gold)',
-        }}>
-          Awarded to {recipientName}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ── Page ───────────────────────────────────────────────────────────────────────
+const STATUS_COLOURS = {
+  upcoming: '#6a8fc7',
+  active:   '#b78c40',
+  resolved: '#5a5445',
+};
 
 export default async function PublicCampaignPage({ params }) {
   const { slug } = await params;
   const supabase = await createClient();
 
-  // Fetch campaign — no auth check; relies on public RLS policy
+  // ── Campaign (public RLS) ────────────────────────────────────────────────────
   const { data: campaign } = await supabase
-    .from('campaigns')
-    .select('*')
-    .eq('slug', slug)
-    .single();
+    .from('campaigns').select('*').eq('slug', slug).single();
 
   if (!campaign) notFound();
 
-  // Check current user (may be null for unauthenticated visitors)
+  // ── Current user (may be null) ───────────────────────────────────────────────
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Parallel data fetches
+  // ── Parallel data fetches ────────────────────────────────────────────────────
   const [
     { data: factions },
     { data: territories },
     { data: influenceData },
+    { data: warpRoutes },
     { data: allBattles },
+    { data: activeEvents },
     { data: recentBattles },
     { data: recentEvents },
     { data: recentAchievements },
     { count: memberCount },
     { count: battleCount },
+    { count: activeEventCount },
   ] = await Promise.all([
     supabase.from('factions').select('*').eq('campaign_id', campaign.id).order('created_at'),
-    supabase.from('territories').select('*').eq('campaign_id', campaign.id),
+    supabase.from('territories').select('*').eq('campaign_id', campaign.id).order('depth').order('created_at'),
     supabase.from('territory_influence').select('*').eq('campaign_id', campaign.id),
+    supabase.from('warp_routes').select('*').eq('campaign_id', campaign.id),
     supabase.from('battles')
-      .select('attacker_faction_id, defender_faction_id, winner_faction_id')
+      .select('attacker_player_id, defender_player_id, attacker_faction_id, defender_faction_id, winner_faction_id')
       .eq('campaign_id', campaign.id),
-    supabase.from('battles').select('*').eq('campaign_id', campaign.id)
-      .order('created_at', { ascending: false }).limit(8),
-    supabase.from('campaign_events').select('*').eq('campaign_id', campaign.id)
-      .order('created_at', { ascending: false }).limit(8),
-    supabase.from('achievements').select('*').eq('campaign_id', campaign.id)
-      .order('created_at', { ascending: false }).limit(8),
+    supabase.from('campaign_events').select('*')
+      .eq('campaign_id', campaign.id).in('status', ['active', 'upcoming'])
+      .order('created_at', { ascending: false }).limit(6),
+    supabase.from('battles')
+      .select('id, attacker_faction_id, defender_faction_id, winner_faction_id, created_at')
+      .eq('campaign_id', campaign.id).order('created_at', { ascending: false }).limit(5),
+    supabase.from('campaign_events')
+      .select('id, title, status, created_at')
+      .eq('campaign_id', campaign.id).order('created_at', { ascending: false }).limit(5),
+    supabase.from('achievements').select('*')
+      .eq('campaign_id', campaign.id).order('created_at', { ascending: false }).limit(5),
     supabase.from('campaign_members')
       .select('*', { count: 'exact', head: true }).eq('campaign_id', campaign.id),
     supabase.from('battles')
       .select('*', { count: 'exact', head: true }).eq('campaign_id', campaign.id),
+    supabase.from('campaign_events')
+      .select('*', { count: 'exact', head: true }).eq('campaign_id', campaign.id).eq('status', 'active'),
   ]);
 
-  // Fetch profiles for achievement player recipients
+  // ── Player standings (top 6 by XP) ──────────────────────────────────────────
+  const { data: allMembers } = await supabase
+    .from('campaign_members').select('user_id, faction_id').eq('campaign_id', campaign.id);
+
+  const allMemberIds = (allMembers || []).map(m => m.user_id);
+  const { data: allProfiles } = allMemberIds.length > 0
+    ? await supabase.from('profiles').select('id, username').in('id', allMemberIds)
+    : { data: [] };
+
+  const factionMap  = Object.fromEntries((factions   || []).map(f => [f.id, f]));
+  const profileMap  = Object.fromEntries((allProfiles || []).map(p => [p.id, p]));
+
+  const playerStandings = (allMembers || [])
+    .map(m => ({
+      userId:   m.user_id,
+      username: profileMap[m.user_id]?.username ?? 'Unknown',
+      colour:   factionMap[m.faction_id]?.colour ?? 'var(--border-dim)',
+      xp:       calcPlayerXP(allBattles, m.user_id),
+    }))
+    .sort((a, b) => b.xp - a.xp)
+    .slice(0, 6);
+
+  // ── Achievement profile map (for chronicle) ──────────────────────────────────
   const achievementPlayerIds = [...new Set(
     (recentAchievements || [])
       .filter(a => a.awarded_to_type === 'player' && a.awarded_to_player_id)
       .map(a => a.awarded_to_player_id)
   )];
   const { data: achievementProfiles } = achievementPlayerIds.length > 0
-    ? await supabase.from('profiles').select('id, display_name, username').in('id', achievementPlayerIds)
+    ? await supabase.from('profiles').select('id, username').in('id', achievementPlayerIds)
     : { data: [] };
+  const achievementProfileMap = Object.fromEntries(
+    (achievementProfiles || []).map(p => [p.id, p])
+  );
 
-  // Check membership + join request status for current user
+  // ── Chronicle ────────────────────────────────────────────────────────────────
+  const chronicleEntries = [
+    ...(recentBattles      || []).map(b => ({ type: 'battle',      created_at: b.created_at, data: b })),
+    ...(recentEvents       || []).map(e => ({ type: 'event',       created_at: e.created_at, data: e })),
+    ...(recentAchievements || []).map(a => ({ type: 'achievement', created_at: a.created_at, data: a })),
+  ]
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 5);
+
+  // ── Membership / join request status ────────────────────────────────────────
   let isMember = false;
   let existingRequest = null;
 
   if (user) {
     const { data: membership } = await supabase
-      .from('campaign_members')
-      .select('user_id')
-      .eq('campaign_id', campaign.id)
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    isMember = !!membership;
+      .from('campaign_members').select('user_id')
+      .eq('campaign_id', campaign.id).eq('user_id', user.id)
+      .limit(1);
+    isMember = !!(membership?.[0]);
 
     if (!isMember) {
       const { data: reqData } = await supabase
-        .from('join_requests')
-        .select('status')
-        .eq('campaign_id', campaign.id)
-        .eq('user_id', user.id)
-        .maybeSingle();
-      existingRequest = reqData || null;
+        .from('join_requests').select('status')
+        .eq('campaign_id', campaign.id).eq('user_id', user.id)
+        .limit(1);
+      existingRequest = reqData?.[0] ?? null;
     }
   }
 
-  // ── Compute faction standings ──────────────────────────────────────────────
-  const factionMap   = Object.fromEntries((factions || []).map(f => [f.id, f]));
-  const profileMap   = Object.fromEntries((achievementProfiles || []).map(p => [p.id, p]));
-
-  const factionsWithStats = (factions || []).map(f => {
-    const battles    = allBattles || [];
-    const participated = battles.filter(b =>
-      b.attacker_faction_id === f.id || b.defender_faction_id === f.id
-    );
-    const wins       = participated.filter(b => b.winner_faction_id === f.id).length;
-    const draws      = participated.filter(b => b.winner_faction_id === null).length;
-    const losses     = participated.filter(b =>
-      b.winner_faction_id !== null && b.winner_faction_id !== f.id
-    ).length;
-    const controlled = (territories || []).filter(t =>
-      t.controlling_faction_id === f.id && !t.parent_id
-    ).length;
-    return { ...f, stats: { wins, draws, losses, played: wins + draws + losses, controlled } };
-  }).sort((a, b) => b.stats.wins - a.stats.wins);
-
-  // ── Build chronicle timeline ───────────────────────────────────────────────
-  const chronicle = [
-    ...(recentBattles     || []).map(b => ({ type: 'battle',      sortKey: b.created_at, data: b })),
-    ...(recentEvents      || []).map(e => ({ type: 'event',       sortKey: e.created_at, data: e })),
-    ...(recentAchievements|| []).map(a => ({ type: 'achievement', sortKey: a.created_at, data: a })),
-  ]
-    .sort((a, b) => new Date(b.sortKey) - new Date(a.sortKey))
-    .slice(0, 10);
+  // ── Current act label (stats bar) ───────────────────────────────────────────
+  const { data: currentBulletinRows } = await supabase
+    .from('bulletin_dispatches').select('act_label')
+    .eq('campaign_id', campaign.id).eq('is_current', true)
+    .limit(1);
+  const currentBulletin = currentBulletinRows?.[0] ?? null;
 
   const topLevelTerritoryCount = (territories || []).filter(t => !t.parent_id).length;
 
+  // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-void)' }}>
 
-      {/* ── Public banner ─────────────────────────────────────────────────── */}
+      {/* ── Public banner ───────────────────────────────────────────────────── */}
       <div style={{
-        background: 'rgba(183,140,64,0.06)',
-        borderBottom: '1px solid rgba(183,140,64,0.18)',
-        padding: '0.6rem 2rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '0.5rem',
+        background:    'rgba(183,140,64,0.05)',
+        borderBottom:  '1px solid rgba(183,140,64,0.15)',
+        padding:       '0.45rem 2rem',
+        display:       'flex',
+        alignItems:    'center',
+        justifyContent:'space-between',
       }}>
         <span style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: '0.55rem',
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: 'var(--text-gold)',
-          opacity: 0.7,
+          fontFamily: 'var(--font-display)', fontSize: '0.5rem',
+          letterSpacing: '0.14em', textTransform: 'uppercase',
+          color: 'var(--text-gold)', opacity: 0.6,
         }}>
           ◆ Public Campaign Page
         </span>
         {isMember && (
-          <Link href={`/c/${slug}`} style={{ textDecoration: 'none' }}>
-            <span style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '0.55rem',
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              color: 'var(--text-gold)',
-            }}>
-              Go to Campaign Dashboard →
-            </span>
+          <Link href={`/c/${slug}`} style={{
+            fontFamily: 'var(--font-display)', fontSize: '0.5rem',
+            letterSpacing: '0.12em', textTransform: 'uppercase',
+            color: 'var(--text-gold)', textDecoration: 'none',
+          }}>
+            Go to Campaign Dashboard →
           </Link>
         )}
       </div>
 
-      {/* ── Campaign header + Stats (constrained width) ──────────────────────── */}
-      <div style={{ padding: '4rem 2rem', maxWidth: '1100px', margin: '0 auto' }}>
+      {/* ── Main content ────────────────────────────────────────────────────── */}
+      <div style={{ padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
 
-        {/* ── Campaign header ───────────────────────────────────────────────── */}
-        <div style={{ marginBottom: '3rem' }}>
+        {/* ── Campaign header ─────────────────────────────────────────────── */}
+        <div style={{ marginBottom: '2rem' }}>
           <p style={{
-            fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.2em',
-            textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.75rem',
+            fontFamily: 'var(--font-display)', fontSize: '0.65rem',
+            letterSpacing: '0.2em', textTransform: 'uppercase',
+            color: 'var(--text-gold)', marginBottom: '0.75rem',
           }}>
             {SETTING_LABELS[campaign.setting] || campaign.setting}
           </p>
-          <h1 style={{
-            fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: '900',
-            letterSpacing: '0.08em', textTransform: 'uppercase',
+          <div style={{
+            display: 'flex', alignItems: 'flex-start',
+            justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem',
           }}>
-            {campaign.name}
-          </h1>
+            <h1 style={{
+              fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: '900',
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+            }}>
+              {campaign.name}
+            </h1>
+            {/* Request Access CTA — top-right of header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+              <PublicAccessCTA
+                userId={user?.id ?? null}
+                isMember={isMember}
+                campaignId={campaign.id}
+                campaignSlug={slug}
+                campaignName={campaign.name}
+                existingRequest={existingRequest}
+              />
+            </div>
+          </div>
           {campaign.description && (
             <p style={{
               color: 'var(--text-secondary)', fontStyle: 'italic',
@@ -350,211 +223,267 @@ export default async function PublicCampaignPage({ params }) {
           )}
         </div>
 
-        {/* ── Stats strip ───────────────────────────────────────────────────── */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-          borderTop: '1px solid var(--border-dim)',
-          borderBottom: '1px solid var(--border-dim)',
-        }}>
+        {/* ════════════════════════════════════════════════════════
+            HERO ROW — Bulletin (left) + Map (right)
+            ════════════════════════════════════════════════════════ */}
+        <div className="hero-row">
+
+          {/* Bulletin Panel — shows dispatch if public RLS is enabled */}
+          <BulletinPanel
+            campaignId={campaign.id}
+            campaignSlug={slug}
+            isOrganiser={false}
+            factions={factions || []}
+            territories={territories || []}
+          />
+
+          <div className="hero-map-wrap">
+            {territories && territories.length > 0 ? (
+              <CampaignMap
+                territories={territories}
+                factions={factions || []}
+                influenceData={influenceData || []}
+                warpRoutes={warpRoutes || []}
+                campaignSlug={slug}
+                setting={campaign.setting}
+                readOnly={true}
+              />
+            ) : (
+              <div style={{
+                height: '100%', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', color: 'var(--text-muted)',
+                fontStyle: 'italic', fontSize: '0.9rem',
+              }}>
+                No territories mapped yet.
+              </div>
+            )}
+            <Link
+              href={`/c/${slug}/map`}
+              style={{
+                position: 'absolute', bottom: '1rem', right: '1rem',
+                background: 'rgba(8,8,12,0.82)',
+                border: '1px solid rgba(183,140,64,0.3)',
+                padding: '0.35rem 0.85rem',
+                fontFamily: 'var(--font-display)', fontSize: '0.52rem',
+                letterSpacing: '0.14em', textTransform: 'uppercase',
+                color: 'var(--text-gold)', textDecoration: 'none',
+                backdropFilter: 'blur(4px)',
+              }}
+            >
+              Full Map →
+            </Link>
+          </div>
+        </div>
+
+        {/* ════════════════════════════════════════════════════════
+            EVENTS STRIP
+            ════════════════════════════════════════════════════════ */}
+        {activeEvents && activeEvents.length > 0 && (
+          <div className="events-strip">
+            <div style={{
+              display: 'flex', justifyContent: 'space-between',
+              alignItems: 'baseline', padding: '1rem 1.5rem 0.75rem',
+            }}>
+              <h2 className="strip-label">Active Events</h2>
+            </div>
+            <div className="events-grid">
+              {activeEvents.map(ev => {
+                const isActive      = ev.status === 'active';
+                const statusColour  = isActive ? '#4caf75' : STATUS_COLOURS.upcoming;
+                const endWeek       = ev.end_week ?? ev.week_end ?? null;
+                return (
+                  <div key={ev.id} className="event-card">
+                    <div className="event-card-status">
+                      <span className="event-dot" style={{ background: statusColour }} />
+                      <span style={{ color: statusColour }}>{isActive ? 'Active' : 'Upcoming'}</span>
+                    </div>
+                    <p className="event-card-title">{ev.title}</p>
+                    {ev.body && <EventCardBody body={ev.body} />}
+                    <div className="event-card-meta">
+                      {endWeek && <span>Ends Week {endWeek}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════
+            STATS BAR
+            ════════════════════════════════════════════════════════ */}
+        <div className="stats-bar">
           {[
-            { label: 'Factions',    value: factions?.length ?? 0 },
-            { label: 'Players',     value: memberCount ?? 0 },
-            { label: 'Territories', value: topLevelTerritoryCount },
-            { label: 'Battles',     value: battleCount ?? 0 },
+            { label: 'Factions',      value: factions?.length ?? 0,    href: null },
+            { label: 'Players',       value: memberCount ?? 0,          href: null },
+            { label: 'Battles',       value: battleCount ?? 0,          href: null },
+            { label: 'Territories',   value: topLevelTerritoryCount,    href: null },
+            { label: 'Active Events', value: activeEventCount ?? 0,     href: null },
+            ...(currentBulletin?.act_label
+              ? [{ label: 'Current Act', value: currentBulletin.act_label, href: null }]
+              : []),
           ].map((stat, i, arr) => (
-            <div key={stat.label} style={{
-              padding: '1.5rem 1rem', textAlign: 'center',
+            <div key={stat.label} className="stat-cell" style={{
+              flex: 1,
               borderRight: i < arr.length - 1 ? '1px solid var(--border-dim)' : 'none',
             }}>
-              <div style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+              <div className="stat-value" style={
+                stat.label === 'Current Act'
+                  ? { fontSize: '0.75rem', letterSpacing: '0.05em' }
+                  : {}
+              }>
                 {stat.value}
               </div>
-              <div style={{
-                fontFamily: 'var(--font-display)', fontSize: '0.58rem',
-                letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)',
-              }}>
-                {stat.label}
-              </div>
+              <div className="stat-label">{stat.label}</div>
             </div>
           ))}
         </div>
-      </div>
 
-      {/* ── Full-width Map ────────────────────────────────────────────────────── */}
-      <div style={{
-        borderTop: '1px solid var(--border-dim)',
-        borderBottom: '1px solid var(--border-dim)',
-        marginBottom: '3rem',
-      }}>
-        <div style={{
-          padding: '0.75rem 2rem',
-          borderBottom: '1px solid var(--border-dim)',
-          fontFamily: 'var(--font-display)', fontSize: '0.65rem',
-          letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)',
-        }}>
-          Territory Map
-        </div>
-        <div style={{ height: '65vh', minHeight: '420px', maxHeight: '760px', position: 'relative' }}>
-          {territories && territories.length > 0 ? (
-            <CampaignMap
-              territories={territories}
-              factions={factions || []}
-              influenceData={influenceData || []}
-              campaignSlug={slug}
-              setting={campaign.setting}
-              readOnly={true}
-            />
-          ) : (
-            <div style={{
-              height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem',
-            }}>
-              No territories mapped yet.
+        {/* ════════════════════════════════════════════════════════
+            BOTTOM ROW — Faction Standings | Player Standings | Chronicle
+            ════════════════════════════════════════════════════════ */}
+        <div className="bottom-row">
+
+          {/* ── Faction Standings ──────────────────────────────────────────── */}
+          <div className="standings-col">
+            <div className="standings-col-header">
+              <h2 className="standings-col-title">Faction Standings</h2>
             </div>
-          )}
-        </div>
-      </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {factions && factions.length > 0
+                ? [...factions]
+                    .map(f => ({ ...f, wins: (allBattles || []).filter(b => b.winner_faction_id === f.id).length }))
+                    .sort((a, b) => b.wins - a.wins)
+                    .map((f, i) => (
+                      <Link key={f.id} href={`/c/${slug}/faction/${f.id}`} style={{ textDecoration: 'none' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.2rem 0' }}>
+                          <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.48rem', color: 'var(--text-muted)', width: '12px', textAlign: 'right', flexShrink: 0 }}>{i + 1}</span>
+                          <div style={{ width: '8px', height: '8px', background: f.colour, flexShrink: 0 }} />
+                          <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem', flex: 1 }}>{f.name}</span>
+                          <span style={{ color: f.wins > 0 ? f.colour : 'var(--text-muted)', fontSize: '0.78rem', fontWeight: f.wins > 0 ? '700' : '400' }}>
+                            {f.wins} VP
+                          </span>
+                        </div>
+                      </Link>
+                    ))
+                : <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No factions yet.</p>
+              }
+            </div>
+          </div>
 
-      {/* ── Standings + Chronicle + CTA (constrained width) ─────────────────── */}
-      <div style={{ padding: '0 2rem', maxWidth: '1100px', margin: '0 auto' }}>
+          {/* ── Player Standings ───────────────────────────────────────────── */}
+          <div className="standings-col" style={{ borderLeft: '1px solid var(--border-dim)' }}>
+            <div className="standings-col-header">
+              <h2 className="standings-col-title">Player Standings</h2>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {playerStandings.length > 0
+                ? playerStandings.map((p, i) => (
+                    <div key={p.userId} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.15rem 0' }}>
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.48rem', color: 'var(--text-muted)', width: '12px', textAlign: 'right', flexShrink: 0 }}>{i + 1}</span>
+                      <div style={{ width: '24px', height: '24px', background: 'var(--bg-raised)', border: `1px solid ${p.colour}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', color: p.colour, fontWeight: '700', flexShrink: 0 }}>
+                        {p.username.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.username}</div>
+                        <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.44rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: '0.1rem' }}>{getXPRank(p.xp)}</div>
+                      </div>
+                      <span style={{ fontSize: '0.82rem', fontWeight: '700', color: p.xp > 0 ? 'var(--text-gold)' : 'var(--text-muted)', flexShrink: 0 }}>
+                        {p.xp}<span style={{ fontSize: '0.58rem', fontWeight: '400', marginLeft: '0.15rem', opacity: 0.7 }}>xp</span>
+                      </span>
+                    </div>
+                  ))
+                : <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No battles recorded yet.</p>
+              }
+            </div>
+          </div>
 
-        {/* Faction Standings */}
-        <div style={{ border: '1px solid var(--border-dim)', marginBottom: '3rem' }}>
-            <div style={{
-              padding: '1rem 1.5rem',
-              borderBottom: '1px solid var(--border-dim)',
-              fontFamily: 'var(--font-display)', fontSize: '0.65rem',
-              letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)',
-            }}>
-              Faction Standings
+          {/* ── Latest Chronicle ───────────────────────────────────────────── */}
+          <div className="standings-col" style={{ borderLeft: '1px solid var(--border-dim)' }}>
+            <div className="standings-col-header">
+              <h2 className="standings-col-title">Latest Chronicle</h2>
             </div>
 
-            {factionsWithStats.length === 0 ? (
-              <div style={{ padding: '3rem 1.5rem', textAlign: 'center' }}>
-                <p style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No factions yet.</p>
+            {chronicleEntries.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {chronicleEntries.map((entry, idx) => {
+                  const isLast  = idx === chronicleEntries.length - 1;
+                  const date    = new Date(entry.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                  const rowStyle = {
+                    display: 'flex', alignItems: 'flex-start', gap: '0.65rem',
+                    paddingBottom: isLast ? 0 : '0.75rem',
+                    borderBottom:  isLast ? 'none' : '1px solid var(--border-dim)',
+                  };
+
+                  if (entry.type === 'battle') {
+                    const b            = entry.data;
+                    const attacker     = factions?.find(f => f.id === b.attacker_faction_id);
+                    const defender     = factions?.find(f => f.id === b.defender_faction_id);
+                    const winner       = factions?.find(f => f.id === b.winner_faction_id);
+                    const isDraw       = !b.winner_faction_id;
+                    const atkWon       = b.winner_faction_id === b.attacker_faction_id;
+                    const resultLabel  = isDraw ? 'Draw' : atkWon ? `${attacker?.name ?? '?'} Victory` : `${defender?.name ?? '?'} Victory`;
+                    const resultColour = isDraw ? 'var(--text-muted)' : (winner?.colour ?? 'var(--text-gold)');
+                    return (
+                      <Link key={`b-${b.id}`} href={`/c/${slug}/battle/${b.id}`} style={{ textDecoration: 'none' }}>
+                        <div style={rowStyle}>
+                          <div style={{ width: '5px', height: '5px', background: resultColour, transform: 'rotate(45deg)', flexShrink: 0, marginTop: '0.5rem' }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {attacker?.name ?? '?'} <span style={{ color: 'var(--text-muted)' }}>vs</span> {defender?.name ?? '?'}
+                            </div>
+                            <div style={{ fontSize: '0.66rem', color: resultColour, fontFamily: 'var(--font-display)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: '0.1rem' }}>
+                              {resultLabel}
+                            </div>
+                          </div>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', flexShrink: 0 }}>{date}</span>
+                        </div>
+                      </Link>
+                    );
+                  }
+
+                  if (entry.type === 'event') {
+                    const ev = entry.data;
+                    const sc = STATUS_COLOURS[ev.status] ?? 'var(--text-muted)';
+                    return (
+                      <div key={`e-${ev.id}`} style={rowStyle}>
+                        <div style={{ width: '5px', height: '5px', background: sc, borderRadius: '1px', flexShrink: 0, marginTop: '0.5rem' }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.title}</div>
+                          <div style={{ fontSize: '0.66rem', color: sc, fontFamily: 'var(--font-display)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: '0.1rem' }}>Event · {ev.status}</div>
+                        </div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', flexShrink: 0 }}>{date}</span>
+                      </div>
+                    );
+                  }
+
+                  if (entry.type === 'achievement') {
+                    const a             = entry.data;
+                    const recipientName = a.awarded_to_type === 'faction'
+                      ? (factions?.find(f => f.id === a.awarded_to_faction_id)?.name ?? '?')
+                      : (achievementProfileMap[a.awarded_to_player_id]?.username ?? '?');
+                    return (
+                      <div key={`a-${a.id}`} style={rowStyle}>
+                        <span style={{ fontSize: '0.9rem', flexShrink: 0, lineHeight: 1, marginTop: '0.1rem' }}>{a.icon}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.title}</div>
+                          <div style={{ fontSize: '0.66rem', color: 'var(--text-gold)', fontFamily: 'var(--font-display)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: '0.1rem' }}>Awarded to {recipientName}</div>
+                        </div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', flexShrink: 0 }}>{date}</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
               </div>
             ) : (
-              <div>
-                {/* Header row */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 50px 50px 50px 50px 70px',
-                  gap: '0.5rem',
-                  padding: '0.6rem 1.25rem',
-                  borderBottom: '1px solid var(--border-dim)',
-                }}>
-                  {['Faction', 'W', 'D', 'L', 'Played', 'Territories'].map(h => (
-                    <span key={h} style={{
-                      fontFamily: 'var(--font-display)', fontSize: '0.52rem',
-                      letterSpacing: '0.12em', textTransform: 'uppercase',
-                      color: 'var(--text-muted)', textAlign: h === 'Faction' ? 'left' : 'center',
-                    }}>
-                      {h}
-                    </span>
-                  ))}
-                </div>
-                {factionsWithStats.map((f, index) => (
-                  <div key={f.id} style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 50px 50px 50px 50px 70px',
-                    gap: '0.5rem',
-                    padding: '1rem 1.25rem',
-                    borderBottom: '1px solid var(--border-dim)',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      {index === 0 && f.stats.wins > 0 && (
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.5rem', color: 'var(--text-gold)' }}>◆</span>
-                      )}
-                      <div style={{ width: '12px', height: '12px', background: f.colour, transform: 'rotate(45deg)', flexShrink: 0 }} />
-                      <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--text-primary)' }}>{f.name}</span>
-                    </div>
-                    {[f.stats.wins, f.stats.draws, f.stats.losses, f.stats.played, f.stats.controlled].map((val, j) => (
-                      <span key={j} style={{
-                        textAlign: 'center', fontSize: '0.95rem',
-                        color: j === 0 && val > 0 ? f.colour
-                          : j === 2 && val > 0 ? '#e05a5a'
-                          : 'var(--text-secondary)',
-                        fontWeight: j === 0 ? '700' : '400',
-                      }}>
-                        {val}
-                      </span>
-                    ))}
-                  </div>
-                ))}
-              </div>
+              <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>Nothing in the chronicle yet.</p>
             )}
           </div>
 
-        {/* ── Recent Chronicle ──────────────────────────────────────────────── */}
-        <div style={{ marginBottom: '3rem' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-            <h2 style={{
-              fontFamily: 'var(--font-display)', fontSize: '0.7rem',
-              letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)',
-            }}>
-              Recent Chronicle
-            </h2>
-          </div>
+        </div>{/* end bottom-row */}
 
-          {chronicle.length === 0 ? (
-            <div style={{
-              border: '1px solid var(--border-dim)', padding: '4rem 2rem',
-              textAlign: 'center',
-            }}>
-              <p style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                No entries yet. Join to be part of the story.
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {chronicle.map((entry, i) => (
-                <div key={i}>
-                  {entry.type === 'battle' && PublicBattleEntry({ battle: entry.data, factionMap })}
-                  {entry.type === 'event'  && PublicEventEntry({ ev: entry.data })}
-                  {entry.type === 'achievement' && PublicAchievementEntry({
-                    achievement: entry.data, factionMap, profileMap,
-                  })}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* ── Join CTA ──────────────────────────────────────────────────────── */}
-        <div style={{
-          border: '1px solid rgba(183,140,64,0.25)',
-          background: 'rgba(183,140,64,0.04)',
-          padding: '2.5rem',
-          textAlign: 'center',
-        }}>
-          <div style={{
-            width: '10px', height: '10px', background: 'var(--text-gold)',
-            transform: 'rotate(45deg)', margin: '0 auto 1.5rem',
-            opacity: 0.5,
-          }} />
-          <h2 style={{
-            fontSize: 'clamp(1.1rem, 2.5vw, 1.6rem)', fontWeight: '900',
-            letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '0.75rem',
-          }}>
-            Join the Campaign
-          </h2>
-          <p style={{
-            color: 'var(--text-secondary)', fontStyle: 'italic',
-            maxWidth: '480px', margin: '0 auto 2rem', lineHeight: 1.6,
-          }}>
-            Request access to take part in {campaign.name}. The organiser will review your request.
-          </p>
-          <JoinRequestButton
-            campaignId={campaign.id}
-            campaignSlug={slug}
-            userId={user?.id ?? null}
-            isMember={isMember}
-            existingRequest={existingRequest}
-          />
-        </div>
-
-      </div>
+      </div>{/* end main content */}
     </div>
   );
 }
