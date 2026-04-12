@@ -229,7 +229,6 @@ export default async function PublicCampaignPage({ params }) {
                 warpRoutes={warpRoutes || []}
                 campaignSlug={slug}
                 setting={campaign.setting}
-                readOnly={true}
               />
             ) : (
               <div style={{
