@@ -162,6 +162,9 @@ export async function GET(request) {
         continue;
       }
 
+      // Rate-limit guard: Resend free tier caps at ~2 emails/sec
+      await new Promise(r => setTimeout(r, 600));
+
       // Update last_digest_sent_at
       await supabase
         .from('profiles')
