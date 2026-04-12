@@ -58,6 +58,14 @@ export async function GET(request) {
 
   for (const profile of eligible) {
     try {
+      // Fetch email from auth.users via admin API (not stored in profiles table)
+      const { data: authData } = await supabase.auth.admin.getUserById(profile.id);
+      const userEmail = authData?.user?.email;
+      if (!userEmail) {
+        errors.push({ userId: profile.id, error: 'No email found in auth.users' });
+        continue;
+      }
+
       const cutoff = profile.last_digest_sent_at
         ? new Date(profile.last_digest_sent_at)
         : new Date(0);
@@ -144,7 +152,7 @@ export async function GET(request) {
 
       const { error: emailErr } = await resend.emails.send({
         from:    fromAddr,
-        to:      profile.email,  // profiles.email must be available; see note below
+        to:      userEmail,
         subject: buildSubject(campaignSections, platformItems),
         html,
       });
