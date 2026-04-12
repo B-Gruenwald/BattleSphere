@@ -22,10 +22,10 @@ export async function POST(request) {
   }
 
   const body        = await request.json();
-  const { testEmail, sendToAll } = body;
+  const { testEmail, sendToAll, emails } = body;
 
-  if (!testEmail && !sendToAll) {
-    return Response.json({ error: 'Provide testEmail or sendToAll: true.' }, { status: 400 });
+  if (!testEmail && !sendToAll && !emails?.length) {
+    return Response.json({ error: 'Provide testEmail, emails: [], or sendToAll: true.' }, { status: 400 });
   }
 
   const resend    = new Resend(process.env.RESEND_API_KEY);
@@ -37,6 +37,18 @@ export async function POST(request) {
 
   if (testEmail) {
     recipients = [{ email: testEmail, username: 'Commander' }];
+  } else if (emails?.length) {
+    // Targeted resend to specific addresses — look up usernames from profiles
+    const { data: authUsers } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+    const matchedUsers = (authUsers?.users || []).filter(u => emails.includes(u.email));
+    const ids = matchedUsers.map(u => u.id);
+    const { data: profiles } = ids.length
+      ? await adminClient.from('profiles').select('*').in('id', ids)
+      : { data: [] };
+    const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
+    for (const u of matchedUsers) {
+      recipients.push({ email: u.email, username: profileMap[u.id]?.username || 'Commander' });
+    }
   } else {
     // Fetch all auth users via admin API (paginated)
     let page = 1;
@@ -88,6 +100,8 @@ export async function POST(request) {
     } catch (err) {
       errors.push({ email, error: err.message });
     }
+    // Stay within Resend's rate limit (2 emails/sec on free tier)
+    await new Promise(resolve => setTimeout(resolve, 600));
   }
 
   return Response.json({ sent, total: recipients.length, errors });
