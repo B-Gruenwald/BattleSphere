@@ -88,18 +88,23 @@ export default function NewsletterOptinModal() {
 
   useEffect(() => {
     async function check() {
+      console.log('[NewsletterModal] checking...');
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: authErr } = await supabase.auth.getUser();
+      console.log('[NewsletterModal] user:', user?.id ?? null, 'authErr:', authErr);
       if (!user) return;
 
-      const { data: rows } = await supabase
+      const { data: rows, error: profileErr } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .limit(1);
 
+      console.log('[NewsletterModal] rows:', rows, 'profileErr:', profileErr);
       const profile = rows?.[0] ?? null;
       if (!profile) return;
+
+      console.log('[NewsletterModal] optin_platform_news:', profile.optin_platform_news, 'optin_campaign_digests:', profile.optin_campaign_digests);
 
       // Only show if either optin has never been answered (null or undefined)
       if (profile.optin_platform_news == null || profile.optin_campaign_digests == null) {
