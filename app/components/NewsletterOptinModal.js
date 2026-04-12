@@ -101,12 +101,12 @@ export default function NewsletterOptinModal() {
       const profile = rows?.[0] ?? null;
       if (!profile) return;
 
-      // Only show if either optin has never been answered
-      if (profile.optin_platform_news === null || profile.optin_campaign_digests === null) {
+      // Only show if either optin has never been answered (null or undefined)
+      if (profile.optin_platform_news == null || profile.optin_campaign_digests == null) {
         setUserId(user.id);
         // Pre-fill from any existing partial answers
-        if (profile.optin_campaign_digests !== null) setOptinCampaigns(profile.optin_campaign_digests);
-        if (profile.optin_platform_news !== null) setOptinPlatform(profile.optin_platform_news);
+        if (profile.optin_campaign_digests != null) setOptinCampaigns(profile.optin_campaign_digests);
+        if (profile.optin_platform_news != null) setOptinPlatform(profile.optin_platform_news);
         if (profile.digest_frequency) setFrequency(profile.digest_frequency);
         setShow(true);
       }
