@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import LogoutButton from './LogoutButton';
 import FeedbackButton from './FeedbackButton';
+import PublicCampaignNavCTA from './PublicCampaignNavCTA';
 
 const navLinkStyle = {
   fontFamily: 'var(--font-display)',
@@ -20,22 +21,31 @@ export default function NavBar({ user, isAdmin, username }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  // Extract campaign slug if the user is anywhere inside /c/[slug]/...
+  // Extract member-area slug (/c/[slug]/...) for the Log a Battle button
   const campaignSlugMatch = pathname?.match(/^\/c\/([^/]+)/);
   const campaignSlug = campaignSlugMatch ? campaignSlugMatch[1] : null;
+
+  // Extract public campaign slug (/campaign/[slug]/...) for the Request Access CTA
+  const publicSlugMatch = pathname?.match(/^\/campaign\/([^/]+)/);
+  const publicCampaignSlug = publicSlugMatch ? publicSlugMatch[1] : null;
 
   return (
     <>
       <nav className="site-nav">
-        {/* Left side: wordmark + always-visible Log a Battle button */}
+        {/* Left side: wordmark + context-aware action button (always visible) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
           <Link href="/" className="site-nav__logo">
             BattleSphere
           </Link>
+          {/* Member area: Log a Battle */}
           {user && campaignSlug && (
             <Link href={`/c/${campaignSlug}/battle/new`}>
               <button className="btn-primary nav-log-battle">+ Log a Battle</button>
             </Link>
+          )}
+          {/* Public campaign page: Request Access CTA */}
+          {publicCampaignSlug && (
+            <PublicCampaignNavCTA slug={publicCampaignSlug} />
           )}
         </div>
 

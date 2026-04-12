@@ -1,10 +1,9 @@
 import { notFound }    from 'next/navigation';
 import Link             from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import CampaignMap      from '@/app/components/CampaignMap';
-import BulletinPanel    from '@/app/components/BulletinPanel';
-import EventCardBody    from '@/app/components/EventCardBody';
-import PublicAccessCTA  from './PublicAccessCTA';
+import CampaignMap   from '@/app/components/CampaignMap';
+import BulletinPanel from '@/app/components/BulletinPanel';
+import EventCardBody from '@/app/components/EventCardBody';
 import { calcPlayerXP, getXPRank } from '@/app/lib/xp';
 
 const SETTING_LABELS = {
@@ -191,28 +190,12 @@ export default async function PublicCampaignPage({ params }) {
           }}>
             {SETTING_LABELS[campaign.setting] || campaign.setting}
           </p>
-          <div style={{
-            display: 'flex', alignItems: 'flex-start',
-            justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem',
+          <h1 style={{
+            fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: '900',
+            letterSpacing: '0.08em', textTransform: 'uppercase',
           }}>
-            <h1 style={{
-              fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: '900',
-              letterSpacing: '0.08em', textTransform: 'uppercase',
-            }}>
-              {campaign.name}
-            </h1>
-            {/* Request Access CTA — top-right of header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-              <PublicAccessCTA
-                userId={user?.id ?? null}
-                isMember={isMember}
-                campaignId={campaign.id}
-                campaignSlug={slug}
-                campaignName={campaign.name}
-                existingRequest={existingRequest}
-              />
-            </div>
-          </div>
+            {campaign.name}
+          </h1>
           {campaign.description && (
             <p style={{
               color: 'var(--text-secondary)', fontStyle: 'italic',
