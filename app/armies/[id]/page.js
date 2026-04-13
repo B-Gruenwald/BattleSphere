@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import PhotoGallery from '@/app/components/PhotoGallery';
+import ReorderableRoster from '@/app/components/ReorderableRoster';
 
 export default async function ArmyPage({ params }) {
   const { id } = await params;
@@ -146,43 +146,13 @@ export default async function ArmyPage({ params }) {
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.6rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.75rem' }}>
             Roster — {units.length} {units.length === 1 ? 'unit' : 'units'}
           </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {units.map(unit => {
-              const unitPhotos = photosByUnit[unit.id] || [];
-              return (
-                <div key={unit.id} style={{ border: '1px solid var(--border-dim)', padding: '1rem 1.25rem' }}>
-                  {/* Unit header */}
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem', flexWrap: 'wrap', marginBottom: unit.description || unitPhotos.length > 0 ? '0.5rem' : 0 }}>
-                    <h3 style={{ fontSize: '0.95rem', fontWeight: '700', letterSpacing: '0.04em', color: 'var(--text-primary)' }}>
-                      {unit.name}
-                    </h3>
-                    {unit.unit_type && (
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                        {unit.unit_type}
-                      </span>
-                    )}
-                  </div>
-                  {unit.description && (
-                    <p style={{ marginBottom: unitPhotos.length > 0 ? '0.75rem' : 0, color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
-                      {unit.description}
-                    </p>
-                  )}
-
-                  {/* Unit photos */}
-                  {unitPhotos.length > 0 && (
-                    <PhotoGallery
-                      photos={unitPhotos}
-                      entityType="army-unit"
-                      entityId={unit.id}
-                      userId={user?.id ?? null}
-                      canUpload={false}
-                      canManage={false}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <ReorderableRoster
+            initialUnits={units}
+            armyId={army.id}
+            isOwner={isOwner}
+            photosByUnit={photosByUnit}
+            userId={user?.id ?? null}
+          />
         </div>
       ) : (
         <div style={{ border: '1px solid var(--border-dim)', padding: '2rem', textAlign: 'center', marginBottom: '1.25rem' }}>
