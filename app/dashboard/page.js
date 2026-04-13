@@ -78,7 +78,7 @@ export default async function DashboardPage() {
         {/* ── My Armies ── */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', margin: 0 }}>
               My Armies
             </h2>
             <Link href="/armies/new" style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
@@ -107,7 +107,7 @@ export default async function DashboardPage() {
 
         {/* ── My Campaigns ── */}
         <div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '1.5rem' }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', margin: '0 0 1.5rem 0' }}>
             My Campaigns
           </h2>
 
@@ -133,7 +133,7 @@ export default async function DashboardPage() {
 
         {/* ── Recent Battles ── */}
         <div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '1.5rem' }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', margin: '0 0 1.5rem 0' }}>
             Recent Battles
           </h2>
           <div style={{ border: '1px solid var(--border-dim)', padding: '1.25rem 1.5rem' }}>
