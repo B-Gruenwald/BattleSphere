@@ -71,10 +71,61 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Three-column layout: Campaigns | My Armies | Recent Battles */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px 280px', gap: '2.5rem', alignItems: 'start', marginBottom: '3rem' }}>
+      {/* Three-column layout: My Armies | My Campaigns | Recent Battles */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 280px', gap: '2.5rem', alignItems: 'start', marginBottom: '3rem' }}>
 
-        {/* Campaigns */}
+        {/* ── My Armies ── */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+              My Armies
+            </h2>
+            <Link href="/armies/new" style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
+              + New Army
+            </Link>
+          </div>
+
+          {myArmies && myArmies.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {myArmies.map(army => (
+                <Link key={army.id} href={`/armies/${army.id}`} style={{ textDecoration: 'none' }}>
+                  <div style={{ border: '1px solid var(--border-dim)', overflow: 'hidden' }}>
+                    {army.cover_image_url && (
+                      <div style={{ width: '100%', aspectRatio: '16/7', overflow: 'hidden' }}>
+                        <img src={army.cover_image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                    )}
+                    <div style={{ padding: '0.9rem 1rem' }}>
+                      <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {army.name}
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.5rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+                        {[army.game_system, army.faction_name].filter(Boolean).join(' · ') || '—'}
+                      </div>
+                      {army.tagline && (
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '0.35rem', fontStyle: 'italic', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                          {army.tagline}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div style={{ border: '1px solid var(--border-dim)', padding: '4rem 2rem', textAlign: 'center', background: 'rgba(255,255,255,0.01)' }}>
+              <div style={{ width: '8px', height: '8px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1.5rem', opacity: 0.4 }} />
+              <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                No armies yet.
+              </p>
+              <Link href="/armies/new">
+                <button className="btn-primary">+ New Army</button>
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* ── My Campaigns ── */}
         <div>
           <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '1.5rem' }}>
             My Campaigns
@@ -94,105 +145,57 @@ export default async function DashboardPage() {
               </Link>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {campaigns.map(c => <CampaignCard key={c.id} campaign={c} />)}
             </div>
           )}
         </div>
 
-        {/* My Armies */}
-        <div style={{ border: '1px solid var(--border-dim)', padding: '1.75rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.25rem' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
-              My Armies
-            </h2>
-            <Link href="/armies/new" style={{ color: 'var(--text-muted)', fontSize: '0.72rem', textDecoration: 'none' }}>
-              + New
-            </Link>
-          </div>
-
-          {myArmies && myArmies.length > 0 ? (
-            <div>
-              {myArmies.map(army => (
-                <Link key={army.id} href={`/armies/${army.id}`} style={{ textDecoration: 'none' }}>
-                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', padding: '0.65rem 0', borderBottom: '1px solid var(--border-dim)' }}>
-                    {/* Mini thumbnail */}
-                    <div style={{ width: '40px', height: '40px', flexShrink: 0, background: 'var(--surface-2)', overflow: 'hidden', border: '1px solid var(--border-dim)' }}>
-                      {army.cover_image_url
-                        ? <img src={army.cover_image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <div style={{ width: '7px', height: '7px', background: 'var(--border-dim)', transform: 'rotate(45deg)' }} />
-                          </div>
-                      }
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: '0.88rem', fontWeight: '600', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {army.name}
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.48rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-gold)', marginTop: '0.15rem' }}>
-                        {[army.game_system, army.faction_name].filter(Boolean).join(' · ') || '—'}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-              <div style={{ width: '6px', height: '6px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1rem', opacity: 0.4 }} />
-              <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.82rem', marginBottom: '1rem' }}>
-                No armies yet.
-              </p>
-              <Link href="/armies/new">
-                <button className="btn-primary" style={{ fontSize: '0.8rem' }}>+ New Army</button>
-              </Link>
-            </div>
-          )}
-        </div>
-
-        {/* Recent campaign battles sidebar */}
-        <div style={{ border: '1px solid var(--border-dim)', padding: '1.75rem' }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '1.25rem' }}>
+        {/* ── Recent Battles ── */}
+        <div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '1.5rem' }}>
             Recent Battles
           </h2>
-          {recentBattles && recentBattles.length > 0 ? (
-            <div>
-              {recentBattles.map(battle => {
-                const campaign     = campaignMap[battle.campaign_id];
-                const attacker     = factionMap[battle.attacker_faction_id];
-                const defender     = factionMap[battle.defender_faction_id];
-                const winner       = factionMap[battle.winner_faction_id];
-                const isDraw       = !battle.winner_faction_id;
-                const attackerWon  = battle.winner_faction_id === battle.attacker_faction_id;
-                const resultColour = isDraw ? 'var(--text-muted)' : (winner?.colour ?? 'var(--text-gold)');
-                const date         = new Date(battle.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-                return (
-                  <Link key={battle.id} href={`/c/${campaign?.slug}/battle/${battle.id}`} style={{ textDecoration: 'none' }}>
-                    <div style={{ padding: '0.75rem 0', borderBottom: '1px solid var(--border-dim)', cursor: 'pointer' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem' }}>
-                        <div style={{ width: '5px', height: '5px', background: resultColour, transform: 'rotate(45deg)', flexShrink: 0 }} />
-                        <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {attacker?.name ?? '?'} <span style={{ color: 'var(--text-muted)' }}>vs</span> {defender?.name ?? '?'}
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>{date}</span>
+          <div style={{ border: '1px solid var(--border-dim)', padding: '1.25rem 1.5rem' }}>
+            {recentBattles && recentBattles.length > 0 ? (
+              <div>
+                {recentBattles.map(battle => {
+                  const campaign     = campaignMap[battle.campaign_id];
+                  const attacker     = factionMap[battle.attacker_faction_id];
+                  const defender     = factionMap[battle.defender_faction_id];
+                  const winner       = factionMap[battle.winner_faction_id];
+                  const isDraw       = !battle.winner_faction_id;
+                  const attackerWon  = battle.winner_faction_id === battle.attacker_faction_id;
+                  const resultColour = isDraw ? 'var(--text-muted)' : (winner?.colour ?? 'var(--text-gold)');
+                  const date         = new Date(battle.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                  return (
+                    <Link key={battle.id} href={`/c/${campaign?.slug}/battle/${battle.id}`} style={{ textDecoration: 'none' }}>
+                      <div style={{ padding: '0.75rem 0', borderBottom: '1px solid var(--border-dim)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem' }}>
+                          <div style={{ width: '5px', height: '5px', background: resultColour, transform: 'rotate(45deg)', flexShrink: 0 }} />
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {attacker?.name ?? '?'} <span style={{ color: 'var(--text-muted)' }}>vs</span> {defender?.name ?? '?'}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>{date}</span>
+                        </div>
+                        <div style={{ paddingLeft: '1.1rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                          <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: resultColour }}>
+                            {isDraw ? 'Draw' : attackerWon ? `${attacker?.name ?? '?'} Victory` : `${defender?.name ?? '?'} Victory`}
+                          </span>
+                          {campaign && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>{campaign.name}</span>}
+                        </div>
                       </div>
-                      <div style={{ paddingLeft: '1.1rem', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: resultColour }}>
-                          {isDraw ? 'Draw' : attackerWon ? `${attacker?.name ?? '?'} Victory` : `${defender?.name ?? '?'} Victory`}
-                        </span>
-                        {campaign && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>{campaign.name}</span>}
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-              <div style={{ width: '6px', height: '6px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1rem', opacity: 0.4 }} />
-              <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>No battles logged yet.</p>
-            </div>
-          )}
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+                <div style={{ width: '6px', height: '6px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1rem', opacity: 0.4 }} />
+                <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>No battles logged yet.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
