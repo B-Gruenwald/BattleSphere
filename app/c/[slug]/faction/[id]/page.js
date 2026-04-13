@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { calcPlayerXP, getXPRank } from '@/app/lib/xp';
+import PhotoGallery from '@/app/components/PhotoGallery';
 
 export default async function FactionDetailPage({ params }) {
   const { slug, id } = await params;
@@ -101,6 +102,17 @@ export default async function FactionDetailPage({ params }) {
     ? await supabase.from('profiles').select('id, username').in('id', battlePlayerIds)
     : { data: [] };
   const profileMap = Object.fromEntries((battleProfiles || []).map(p => [p.id, p]));
+
+  // Faction photos
+  const { data: factionPhotos } = await supabase
+    .from('faction_photos')
+    .select('*')
+    .eq('faction_id', id)
+    .order('created_at', { ascending: true });
+
+  // Photo upload permissions: organiser or any faction member can upload
+  const isFactionMember = user ? memberIds.includes(user.id) : false;
+  const canManagePhotos = user ? (isOrganiser || isFactionMember) : false;
 
   const DEPTH_LABELS = { 1: 'Region', 2: 'Sector', 3: 'Location' };
 
@@ -309,6 +321,15 @@ export default async function FactionDetailPage({ params }) {
           </div>
         )}
       </div>
+
+      {/* Photos */}
+      <PhotoGallery
+        photos={factionPhotos || []}
+        entityType="faction"
+        entityId={id}
+        userId={user?.id ?? null}
+        canManage={canManagePhotos}
+      />
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>

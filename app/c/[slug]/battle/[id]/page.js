@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import PhotoGallery from '@/app/components/PhotoGallery';
 
 // Render **bold** and *italic* markdown-style markup
 function RichText({ text }) {
@@ -83,6 +84,13 @@ export default async function BattleDetailPage({ params }) {
   const date = new Date(battle.created_at).toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
+
+  // Photos
+  const { data: battlePhotos } = await supabase
+    .from('battle_photos')
+    .select('*')
+    .eq('battle_id', id)
+    .order('created_at', { ascending: true });
 
   return (
     <div style={{ padding: '3rem 2rem', maxWidth: '860px', margin: '0 auto' }}>
@@ -320,6 +328,15 @@ export default async function BattleDetailPage({ params }) {
           </div>
         </div>
       )}
+
+      {/* Photos */}
+      <PhotoGallery
+        photos={battlePhotos || []}
+        entityType="battle"
+        entityId={id}
+        userId={user.id}
+        canManage={canEdit}
+      />
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
