@@ -328,6 +328,7 @@ export default async function FactionDetailPage({ params }) {
         entityType="faction"
         entityId={id}
         userId={user?.id ?? null}
+        canUpload={canManagePhotos}
         canManage={canManagePhotos}
       />
 

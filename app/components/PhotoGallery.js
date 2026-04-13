@@ -9,18 +9,19 @@ const MAX_SIZE_MB = 10;
 // entityId:   the battle.id or faction.id
 // photos:     initial array from server (each has { id, url, uploader_id, created_at })
 // userId:     current user's id (null if not logged in)
+// canUpload:  true if this user is allowed to add photos (battle participant / faction member)
 // canManage:  true if the user has edit rights beyond just being uploader
 //             (e.g. campaign organiser, battle logger, faction member)
-export default function PhotoGallery({ photos: initialPhotos, entityType, entityId, userId, canManage }) {
+export default function PhotoGallery({ photos: initialPhotos, entityType, entityId, userId, canUpload: canUploadProp, canManage }) {
   const [photos, setPhotos]           = useState(initialPhotos || []);
-  const [uploading, setUploading]     = useState(false);  // number of files still in flight
+  const [uploading, setUploading]     = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
   const [uploadError, setUploadError] = useState(null);
   const [lightbox, setLightbox]       = useState(null); // url string or null
   const [deleting, setDeleting]       = useState(null); // photo id or null
 
   const cloudName    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  const canUpload    = !!userId && !!cloudName;
+  const canUpload    = !!canUploadProp && !!userId && !!cloudName;
   const hasPhotos    = photos.length > 0;
 
   // Nothing to show if Cloudinary isn't configured yet and there are no photos

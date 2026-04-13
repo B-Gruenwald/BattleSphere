@@ -335,6 +335,7 @@ export default async function BattleDetailPage({ params }) {
         entityType="battle"
         entityId={id}
         userId={user.id}
+        canUpload={canEdit}
         canManage={canEdit}
       />
 
