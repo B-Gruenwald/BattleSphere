@@ -273,7 +273,7 @@ export default async function PlayerProfilePage({ params }) {
                         {[army.game_system, army.faction_name].filter(Boolean).join(' · ') || 'Portfolio'}
                       </div>
                       {isOwnProfile && (
-                        <Link href={`/armies/${army.id}/edit`} onClick={e => e.stopPropagation()} style={{ display: 'block', marginTop: '0.5rem', color: 'var(--text-muted)', fontSize: '0.72rem', textDecoration: 'none' }}>
+                        <Link href={`/armies/${army.id}/edit`} style={{ display: 'block', marginTop: '0.5rem', color: 'var(--text-muted)', fontSize: '0.72rem', textDecoration: 'none' }}>
                           Edit →
                         </Link>
                       )}

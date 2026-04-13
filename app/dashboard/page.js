@@ -163,10 +163,7 @@ export default async function DashboardPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
             {myArmies.map(army => (
               <Link key={army.id} href={`/armies/${army.id}`} style={{ textDecoration: 'none' }}>
-                <div style={{ border: '1px solid var(--border-dim)', overflow: 'hidden', cursor: 'pointer', transition: 'border-color 0.15s' }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--gold)'}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-dim)'}
-                >
+                <div style={{ border: '1px solid var(--border-dim)', overflow: 'hidden', cursor: 'pointer' }}>
                   {/* Cover thumbnail */}
                   <div style={{ width: '100%', aspectRatio: '16/9', background: 'var(--surface-2)', overflow: 'hidden' }}>
                     {army.cover_image_url
