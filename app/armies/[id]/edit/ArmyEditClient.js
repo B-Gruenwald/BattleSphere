@@ -33,7 +33,7 @@ const sectionHeadingStyle = {
 };
 
 // ── Unit card ────────────────────────────────────────────────
-function UnitCard({ unit: initialUnit, userId, onDelete }) {
+function UnitCard({ unit: initialUnit, userId, onDelete, onMoveUp, onMoveDown, isReordering }) {
   const [unit,       setUnit]       = useState(initialUnit);
   const [dirty,      setDirty]      = useState(false);
   const [saving,     setSaving]     = useState(false);
@@ -87,6 +87,50 @@ function UnitCard({ unit: initialUnit, userId, onDelete }) {
 
   return (
     <div style={{ border: '1px solid var(--border-dim)', padding: '1rem 1.1rem', opacity: deleting ? 0.4 : 1 }}>
+
+      {/* Reorder + unit label row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+          {unit.name || 'Unit'}
+        </span>
+        <div style={{ display: 'flex', gap: '0.25rem' }}>
+          <button
+            onClick={onMoveUp}
+            disabled={!onMoveUp || saving || deleting || isReordering}
+            title="Move up"
+            style={{
+              background: 'none',
+              border: '1px solid var(--border-dim)',
+              color: onMoveUp ? 'var(--text-secondary)' : 'var(--border-dim)',
+              cursor: onMoveUp ? 'pointer' : 'default',
+              padding: '0.15rem 0.45rem',
+              fontSize: '0.75rem',
+              fontFamily: 'inherit',
+              lineHeight: 1,
+              opacity: (!onMoveUp || isReordering) ? 0.35 : 1,
+              transition: 'opacity 0.15s',
+            }}
+          >↑</button>
+          <button
+            onClick={onMoveDown}
+            disabled={!onMoveDown || saving || deleting || isReordering}
+            title="Move down"
+            style={{
+              background: 'none',
+              border: '1px solid var(--border-dim)',
+              color: onMoveDown ? 'var(--text-secondary)' : 'var(--border-dim)',
+              cursor: onMoveDown ? 'pointer' : 'default',
+              padding: '0.15rem 0.45rem',
+              fontSize: '0.75rem',
+              fontFamily: 'inherit',
+              lineHeight: 1,
+              opacity: (!onMoveDown || isReordering) ? 0.35 : 1,
+              transition: 'opacity 0.15s',
+            }}
+          >↓</button>
+        </div>
+      </div>
+
       {/* Unit meta fields */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
         <div>
@@ -329,6 +373,7 @@ export default function ArmyEditClient({ army: initialArmy, initialUnits, userId
 
   const [units,        setUnits]        = useState(initialUnits || []);
   const [showAddUnit,  setShowAddUnit]  = useState(false);
+  const [reordering,   setReordering]   = useState(false);
 
   function handleFormChange(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -388,6 +433,28 @@ export default function ArmyEditClient({ army: initialArmy, initialUnits, userId
 
   function handleUnitDeleted(unitId) {
     setUnits(prev => prev.filter(u => u.id !== unitId));
+  }
+
+  async function moveUnit(index, dir) {
+    const swap = dir === 'up' ? index - 1 : index + 1;
+    if (swap < 0 || swap >= units.length) return;
+
+    // Optimistic reorder
+    const next = [...units];
+    [next[index], next[swap]] = [next[swap], next[index]];
+    setUnits(next);
+
+    // Persist to DB
+    setReordering(true);
+    try {
+      await fetch('/api/army-units/reorder', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ armyId: initialArmy.id, ids: next.map(u => u.id) }),
+      });
+    } finally {
+      setReordering(false);
+    }
   }
 
   return (
@@ -544,12 +611,15 @@ export default function ArmyEditClient({ army: initialArmy, initialUnits, userId
         {/* Existing units */}
         {units.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {units.map(unit => (
+            {units.map((unit, idx) => (
               <UnitCard
                 key={unit.id}
                 unit={unit}
                 userId={userId}
                 onDelete={handleUnitDeleted}
+                onMoveUp={idx > 0 ? () => moveUnit(idx, 'up') : null}
+                onMoveDown={idx < units.length - 1 ? () => moveUnit(idx, 'down') : null}
+                isReordering={reordering}
               />
             ))}
           </div>
