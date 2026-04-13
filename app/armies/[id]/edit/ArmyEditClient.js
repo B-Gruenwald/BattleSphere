@@ -24,12 +24,12 @@ const labelStyle = {
   color: 'var(--text-gold)', marginBottom: '0.5rem',
 };
 const sectionStyle = {
-  border: '1px solid var(--border-dim)', padding: '1.75rem', marginBottom: '2rem',
+  border: '1px solid var(--border-dim)', padding: '1.1rem 1.25rem', marginBottom: '1rem',
 };
 const sectionHeadingStyle = {
-  fontFamily: 'var(--font-display)', fontSize: '0.65rem',
+  fontFamily: 'var(--font-display)', fontSize: '0.6rem',
   letterSpacing: '0.14em', textTransform: 'uppercase',
-  color: 'var(--text-gold)', marginBottom: '1.5rem',
+  color: 'var(--text-gold)', marginBottom: '1rem',
 };
 
 // ── Unit card ────────────────────────────────────────────────
@@ -86,9 +86,9 @@ function UnitCard({ unit: initialUnit, userId, onDelete }) {
   }
 
   return (
-    <div style={{ border: '1px solid var(--border-dim)', padding: '1.5rem', opacity: deleting ? 0.4 : 1 }}>
+    <div style={{ border: '1px solid var(--border-dim)', padding: '1rem 1.1rem', opacity: deleting ? 0.4 : 1 }}>
       {/* Unit meta fields */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
         <div>
           <label style={labelStyle}>Unit Name</label>
           <input
@@ -113,24 +113,24 @@ function UnitCard({ unit: initialUnit, userId, onDelete }) {
         </div>
       </div>
 
-      <div style={{ marginBottom: '1rem' }}>
+      <div style={{ marginBottom: '0.75rem' }}>
         <label style={labelStyle}>Description / Fluff</label>
         <textarea
           name="description"
           value={unit.description || ''}
           onChange={handleChange}
-          style={{ ...textareaStyle, minHeight: '80px' }}
+          style={{ ...textareaStyle, minHeight: '60px' }}
           disabled={saving || deleting}
           placeholder="Background, distinguishing features, battle history…"
         />
       </div>
 
       {error && (
-        <p style={{ color: '#e05a5a', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{error}</p>
+        <p style={{ color: '#e05a5a', fontSize: '0.82rem', marginBottom: '0.5rem' }}>{error}</p>
       )}
 
       {/* Save / Delete row */}
-      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1rem' }}>
         {dirty && (
           <button
             className="btn-primary"
@@ -199,8 +199,8 @@ function AddUnitForm({ armyId, onAdd, onCancel }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ border: '1px solid rgba(183,140,64,0.3)', padding: '1.5rem', background: 'rgba(183,140,64,0.02)' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+    <form onSubmit={handleSubmit} style={{ border: '1px solid rgba(183,140,64,0.3)', padding: '1rem 1.1rem', background: 'rgba(183,140,64,0.02)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
         <div>
           <label style={labelStyle}>Unit Name *</label>
           <input
@@ -225,23 +225,23 @@ function AddUnitForm({ armyId, onAdd, onCancel }) {
           />
         </div>
       </div>
-      <div style={{ marginBottom: '1rem' }}>
+      <div style={{ marginBottom: '0.75rem' }}>
         <label style={labelStyle}>Description</label>
         <textarea
           name="description"
           value={form.description}
           onChange={handleChange}
-          style={{ ...textareaStyle, minHeight: '70px' }}
+          style={{ ...textareaStyle, minHeight: '55px' }}
           disabled={saving}
           placeholder="Optional background or fluff…"
         />
       </div>
-      {error && <p style={{ color: '#e05a5a', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{error}</p>}
+      {error && <p style={{ color: '#e05a5a', fontSize: '0.82rem', marginBottom: '0.5rem' }}>{error}</p>}
       <div style={{ display: 'flex', gap: '0.75rem' }}>
-        <button type="submit" className="btn-primary" disabled={saving} style={{ fontSize: '0.82rem' }}>
+        <button type="submit" className="btn-primary" disabled={saving} style={{ fontSize: '0.8rem' }}>
           {saving ? 'Adding…' : 'Add Unit'}
         </button>
-        <button type="button" className="btn-secondary" onClick={onCancel} disabled={saving} style={{ fontSize: '0.82rem' }}>
+        <button type="button" className="btn-secondary" onClick={onCancel} disabled={saving} style={{ fontSize: '0.8rem' }}>
           Cancel
         </button>
       </div>
@@ -391,22 +391,22 @@ export default function ArmyEditClient({ army: initialArmy, initialUnits, userId
   }
 
   return (
-    <div style={{ padding: '3rem 2rem', maxWidth: '860px', margin: '0 auto' }}>
+    <div style={{ padding: '1.5rem', maxWidth: '860px', margin: '0 auto' }}>
 
       {/* Breadcrumb */}
-      <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2.5rem', flexWrap: 'wrap' }}>
-        <Link href="/dashboard" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '0.8rem' }}>Dashboard</Link>
-        <span style={{ color: 'var(--border-dim)', fontSize: '0.8rem' }}>›</span>
-        <Link href={`/armies/${initialArmy.id}`} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '0.8rem' }}>{initialArmy.name}</Link>
-        <span style={{ color: 'var(--border-dim)', fontSize: '0.8rem' }}>›</span>
-        <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Edit</span>
+      <nav style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+        <Link href="/dashboard" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '0.75rem' }}>Dashboard</Link>
+        <span style={{ color: 'var(--border-dim)', fontSize: '0.75rem' }}>›</span>
+        <Link href={`/armies/${initialArmy.id}`} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '0.75rem' }}>{initialArmy.name}</Link>
+        <span style={{ color: 'var(--border-dim)', fontSize: '0.75rem' }}>›</span>
+        <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Edit</span>
       </nav>
 
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '2.5rem' }}>
-        <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: '900', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.25rem' }}>
+        <h1 style={{ fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', fontWeight: '900', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           Edit Army
         </h1>
-        <Link href={`/armies/${initialArmy.id}`} style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textDecoration: 'none' }}>
+        <Link href={`/armies/${initialArmy.id}`} style={{ color: 'var(--text-muted)', fontSize: '0.78rem', textDecoration: 'none' }}>
           View public page →
         </Link>
       </div>
@@ -427,7 +427,7 @@ export default function ArmyEditClient({ army: initialArmy, initialUnits, userId
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
 
             <div>
               <label style={labelStyle}>Army Name *</label>
@@ -501,7 +501,7 @@ export default function ArmyEditClient({ army: initialArmy, initialUnits, userId
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '1.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1rem' }}>
             <button
               type="submit"
               className="btn-primary"
@@ -532,7 +532,7 @@ export default function ArmyEditClient({ army: initialArmy, initialUnits, userId
 
         {/* Add unit form */}
         {showAddUnit && (
-          <div style={{ marginBottom: '1.5rem' }}>
+          <div style={{ marginBottom: '0.75rem' }}>
             <AddUnitForm
               armyId={initialArmy.id}
               onAdd={handleUnitAdded}
@@ -543,7 +543,7 @@ export default function ArmyEditClient({ army: initialArmy, initialUnits, userId
 
         {/* Existing units */}
         {units.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {units.map(unit => (
               <UnitCard
                 key={unit.id}
@@ -555,7 +555,7 @@ export default function ArmyEditClient({ army: initialArmy, initialUnits, userId
           </div>
         ) : (
           !showAddUnit && (
-            <div style={{ textAlign: 'center', padding: '2rem 0', borderTop: '1px solid var(--border-dim)' }}>
+            <div style={{ textAlign: 'center', padding: '1.25rem 0', borderTop: '1px solid var(--border-dim)' }}>
               <div style={{ width: '6px', height: '6px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1rem', opacity: 0.4 }} />
               <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
                 No units yet — click "+ Add Unit" to start building your roster.
@@ -566,9 +566,9 @@ export default function ArmyEditClient({ army: initialArmy, initialUnits, userId
       </div>
 
       {/* ── Danger zone ──────────────────────────────────────── */}
-      <div style={{ border: '1px solid rgba(224,90,90,0.2)', padding: '1.5rem' }}>
-        <h2 style={{ ...sectionHeadingStyle, color: '#e05a5a', marginBottom: '0.75rem' }}>Danger Zone</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1rem' }}>
+      <div style={{ border: '1px solid rgba(224,90,90,0.2)', padding: '1rem 1.25rem' }}>
+        <h2 style={{ ...sectionHeadingStyle, color: '#e05a5a', marginBottom: '0.5rem' }}>Danger Zone</h2>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.75rem' }}>
           Deleting this army will permanently remove all units and photos. This cannot be undone.
         </p>
         <button
