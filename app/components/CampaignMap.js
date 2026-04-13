@@ -210,7 +210,11 @@ export default function CampaignMap({ territories, factions, influenceData = [],
         .filter(([a, b]) => a && b)
     : buildConnections(topLevel).map(([a, b]) => [topLevel[a], topLevel[b]]);
 
-  const theme = SETTING_BG[setting] || SETTING_BG['Custom'];
+  const theme     = SETTING_BG[setting] || SETTING_BG['Custom'];
+  const isFantasy = setting === 'High Fantasy';
+
+  // Fantasy palette overrides
+  const FANTASY_NEUTRAL_HEX = '#8ab4d0';
 
   const factionColour = Object.fromEntries((factions || []).map(f => [f.id, f.colour]));
 
@@ -435,27 +439,61 @@ export default function CampaignMap({ territories, factions, influenceData = [],
       style={{ background: theme.bg, display: 'block', cursor: 'default', touchAction: 'manipulation' }}
       onMouseLeave={() => { setHoveredId(null); setTooltip(null); }}
     >
-      {/* ── Gradient definitions ──────────────────────────────────────────── */}
+      {/* ── Gradient + filter definitions ────────────────────────────────── */}
       <defs>
         <linearGradient id="tooltipImgFade" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="rgba(8,8,12,0)" />
           <stop offset="100%" stopColor="rgba(8,8,12,0.97)" />
         </linearGradient>
+        {/* Fantasy glow filter — applied to node circles */}
+        <filter id="fantasy-node-glow" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
+          <feFlood floodColor="rgba(140,190,255,0.9)" result="color"/>
+          <feComposite in="color" in2="blur" operator="in" result="shadow"/>
+          <feMerge>
+            <feMergeNode in="shadow"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        {/* Fantasy glow filter — applied to warp route lines */}
+        <filter id="fantasy-route-glow" x="-300%" y="-300%" width="700%" height="700%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="0.7" result="blur"/>
+          <feFlood floodColor="rgba(180,215,255,0.85)" result="color"/>
+          <feComposite in="color" in2="blur" operator="in" result="shadow"/>
+          <feMerge>
+            <feMergeNode in="shadow"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
       </defs>
 
       {/* ── Background image ──────────────────────────────────────────────── */}
       <image
-        href="/map-background.jpg"
+        href={isFantasy ? '/map-background-fantasy.jpg' : '/map-background.jpg'}
         x="0" y="0"
         width="100%" height="100%"
         preserveAspectRatio="xMidYMid slice"
       />
-      <rect x="0" y="0" width="100%" height="100%" fill="rgba(5,5,10,0.58)" />
+      {/* Fantasy uses a lighter overlay so the vibrant background shows through */}
+      <rect x="0" y="0" width="100%" height="100%" fill={isFantasy ? 'rgba(5,5,10,0.38)' : 'rgba(5,5,10,0.58)'} />
 
       {/* ── Warp route connections ────────────────────────────────────────── */}
       {connections.map(([ta, tb], i) => {
         if (!ta || !tb) return null;
         const isHovered = hoveredId === ta.id || hoveredId === tb.id;
+        if (isFantasy) {
+          return (
+            <line
+              key={i}
+              x1={`${ta.x_pos}%`} y1={`${ta.y_pos}%`}
+              x2={`${tb.x_pos}%`} y2={`${tb.y_pos}%`}
+              stroke={isHovered ? 'rgba(210,230,255,0.85)' : 'rgba(180,210,255,0.28)'}
+              strokeWidth={isHovered ? '0.5' : '0.3'}
+              filter="url(#fantasy-route-glow)"
+              style={{ transition: 'stroke 0.2s, stroke-width 0.2s' }}
+            />
+          );
+        }
         return (
           <line
             key={i}
@@ -533,10 +571,13 @@ export default function CampaignMap({ territories, factions, influenceData = [],
                 x={`${sub.x_pos}%`}
                 y={`${sub.y_pos + 2.2}%`}
                 textAnchor="middle"
-                fill="rgba(220,200,160,0.75)"
+                fill={isFantasy ? 'rgba(200,225,255,0.9)' : 'rgba(220,200,160,0.75)'}
                 fontSize="1.6"
                 fontFamily="var(--font-display, sans-serif)"
                 letterSpacing="0.06em"
+                stroke={isFantasy ? 'rgba(0,0,0,0.85)' : 'none'}
+                strokeWidth={isFantasy ? '0.4' : '0'}
+                paintOrder="stroke"
                 style={{ userSelect: 'none', textTransform: 'uppercase' }}
               >
                 {sub.name.length > 14 ? sub.name.slice(0, 12) + '…' : sub.name}
@@ -556,12 +597,13 @@ export default function CampaignMap({ territories, factions, influenceData = [],
         const { dx: ldx, dy: ldy } = getLabelOffset(t, normalizedTerritories);
 
         const domId = dominantFactionId(t);
+        const neutralHex = isFantasy ? FANTASY_NEUTRAL_HEX : GOLD_NEUTRAL_HEX;
         const baseColour = domId
-          ? (factionColour[domId] || GOLD_HEX)
-          : GOLD_NEUTRAL_HEX;
+          ? (factionColour[domId] || (isFantasy ? FANTASY_NEUTRAL_HEX : GOLD_HEX))
+          : neutralHex;
 
-        const dimColour  = domId ? `${baseColour}88` : `${GOLD_NEUTRAL_HEX}cc`;
-        const ringColour = isHov ? baseColour : domId ? `${baseColour}88` : `${GOLD_NEUTRAL_HEX}cc`;
+        const dimColour  = domId ? `${baseColour}88` : `${neutralHex}cc`;
+        const ringColour = isHov ? baseColour : domId ? `${baseColour}88` : `${neutralHex}cc`;
 
         return (
           <g
@@ -574,6 +616,15 @@ export default function CampaignMap({ territories, factions, influenceData = [],
           >
             {/* Invisible larger touch target for mobile */}
             <circle cx={cx} cy={cy} r="5.5%" fill="transparent" stroke="none" />
+            {/* Fantasy glow halo — rendered behind everything else */}
+            {isFantasy && (
+              <circle cx={cx} cy={cy} r="3.6%"
+                fill={isHov ? `${baseColour}60` : `${baseColour}35`}
+                stroke="none"
+                filter="url(#fantasy-node-glow)"
+                style={{ transition: 'fill 0.2s' }}
+              />
+            )}
             {isHov && (
               <circle cx={cx} cy={cy} r="4.5%"
                 fill={`${baseColour}18`} stroke={`${baseColour}40`} strokeWidth="0.3"
@@ -603,10 +654,13 @@ export default function CampaignMap({ territories, factions, influenceData = [],
             <text
               x={`${cxN + ldx}%`} y={`${cyN + ldy}%`}
               textAnchor="middle"
-              fill={isHov ? '#e8d5a0' : 'rgba(220,200,160,0.7)'}
+              fill={isHov ? (isFantasy ? '#ddeeff' : '#e8d5a0') : (isFantasy ? 'rgba(200,225,255,0.85)' : 'rgba(220,200,160,0.7)')}
               fontSize="2"
               fontFamily="var(--font-display, sans-serif)"
               letterSpacing="0.08em"
+              stroke={isFantasy ? 'rgba(0,0,0,0.9)' : 'none'}
+              strokeWidth={isFantasy ? '0.45' : '0'}
+              paintOrder="stroke"
               style={{ transition: 'fill 0.15s', userSelect: 'none', textTransform: 'uppercase' }}
             >
               {t.name.length > 16 ? t.name.slice(0, 14) + '…' : t.name}

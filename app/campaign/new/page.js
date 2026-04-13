@@ -9,21 +9,21 @@ import { createClient } from '@/lib/supabase/client';
 const SYSTEM_NAMES = {
   'Gothic Sci-Fi': ['Gorond System','Noralus System','Vespator System','Hykos System','Mordain System','Terrath System','Pylox System','Crethus System','Volkan System','Ashenveil System','Grimholt System','Solvaine System','Krendar System','Malthos System','Darkspire System','Ironveil System','Sundrath System','Coldmere System','Ashfall System','Brennar System'],
   'Space Opera':   ['Aurora System','Nexus System','Helios System','Cygnus System','Lyra System','Orion System','Vega System','Atlas System','Nova System','Solaris System','Rigel System','Altair System','Sirius System','Procyon System','Arcturus System','Spica System','Pollux System','Regulus System','Castor System','Fomalhaut System'],
-  'High Fantasy':  ['Ashenmoor','Ironpeak','Stormveil','Thornwald','Crystalfen','Duskfall','Embervast','Frostmere','Grimstone','Hollowdale','Mistwood','Ruinwatch','Shadowfen','Steelhorn','Sunbreak','Thornkeep','Twilight March','Winterhold','Wraithwood','Yewdale'],
+  'High Fantasy':  ['Emberveil Gate','Verdant Arch','Duskwatch Gate','Brightspire Gate','Shadowmere Gate','Ironpass Gate','Wildmere Gate','Stormveil Gate','Frostgate','Pale Crossing','Crimson Arch','Cobalt Gate','Thornreach Gate','Ashenveil Gate','Pearlgate','Gloomveil Gate','Stoneheart Gate','Tidewatch Gate','Cindergate','Starborn Gate'],
   'Historical':    ['Northern Province','Southern Coast','Eastern Highlands','Western Plains','Central Reaches','The River Marches','The Uplands','The Border Territories','The Lowlands','The Disputed Lands','The Old Kingdom','The Free Cities','The Mountain Passes','The Coastal Settlements','The Great Plains','The Heartlands','The Far Reaches','The Frontier','The Ancient Roads','The Crossroads'],
   'Custom':        ['Zone Alpha','Zone Beta','Zone Gamma','Zone Delta','Zone Epsilon','Zone Zeta','Zone Eta','Zone Theta','Zone Iota','Zone Kappa','Zone Lambda','Zone Mu','Zone Nu','Zone Xi','Zone Omicron','Zone Pi','Zone Rho','Zone Sigma','Zone Tau','Zone Upsilon'],
 };
 const SUB_TYPES = {
   'Gothic Sci-Fi': ['Hive World','Forge World','Death World','Shrine World','Space Port','Mining Colony','Agri World','Void Station'],
   'Space Opera':   ['Colony World','Gas Giant','Ice Moon','Desert Planet','Ocean World','Asteroid Station','Space Platform','Research Colony'],
-  'High Fantasy':  ['Forest','Mountain','Plains','River Crossing','Ruined City','Fortress','Sacred Grove','Ancient Ruins'],
+  'High Fantasy':  ['Ruined Citadel','Enchanted Forest','Cursed Dungeon','Ancient Shrine','Forsaken Town','Spectral Marshes','Dragon Ridge','Forgotten Hold'],
   'Historical':    ['Town','Fortress','Village','River Crossing','Mountain Pass','Coastal Port','Ancient Ruins','Border Outpost'],
   'Custom':        ['Area A','Area B','Area C','Area D','Area E','Area F','Area G','Area H'],
 };
 const LANDMARK_TYPES = {
   'Gothic Sci-Fi': ['Manufactorum','Fortress of Redemption','Relay Station','Promethium Field','Hab District','Plasma Conduit','Shrine','Servitor Bay'],
   'Space Opera':   ['Space Station','Mining Platform','Research Outpost','Comms Relay','Fuel Depot','Shipyard','Hidden Base','Sensor Array'],
-  'High Fantasy':  ['Ancient Tower','Dragon Lair','Hidden Cave','Sacred Altar','Cursed Ground','Wizard Tower','Dungeon Entrance','Standing Stones'],
+  'High Fantasy':  ['Arcane Obelisk','Dragon\'s Hollow','Whispering Stones','Forsaken Watch','Cursed Altar','Hidden Grotto','Blighted Grove','Shattered Keep'],
   'Historical':    ['Guard Post','Supply Depot','Watchtower','Bridge','Mill','Inn','Church','Market Square'],
   'Custom':        ['Point A','Point B','Point C','Point D','Point E','Point F','Point G','Point H'],
 };
@@ -293,6 +293,19 @@ export default function CreateCampaignPage() {
             onBlur={e => e.target.style.borderColor = 'var(--border-dim)'} />
         </div>
         <div>
+          <label style={labelStyle}>Genre Setting</label>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            {['Gothic Sci-Fi', 'High Fantasy'].map(s => (
+              <button key={s} type="button" onClick={() => set('setting', s)} style={{ ...selBtn(form.setting === s), flex: 1 }}>{s}</button>
+            ))}
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic', marginTop: '0.5rem' }}>
+            {form.setting === 'Gothic Sci-Fi'
+              ? 'Dark gothic science fiction. Territories represent star systems, forge worlds, and hive cities.'
+              : 'Epic high fantasy. Territories are mystical gates to different planar realms, surrounded by dungeons, shrines, and cursed lands.'}
+          </p>
+        </div>
+        <div>
           <label style={labelStyle}>Description <span style={{ opacity: 0.5 }}>(optional)</span></label>
           <textarea value={form.description} onChange={e => set('description', e.target.value)}
             placeholder="Describe your campaign's premise..." rows={3}
@@ -398,6 +411,7 @@ export default function CreateCampaignPage() {
         </p>
         {[
           { label: 'Campaign Name', value: form.name },
+          { label: 'Genre Setting', value: form.setting },
           { label: 'Visibility', value: form.visibility },
           { label: 'Description', value: form.description || '—' },
           { label: 'Map Scale', value: `${form.scale} · ${form.territoryCount} territories · Depth ${form.depth}` },
