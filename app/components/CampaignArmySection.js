@@ -19,7 +19,8 @@ export default function CampaignArmySection({
   playerArmies,   // all armies belonging to this player
   existingRecord, // campaign_army_records row (may be null)
   linkedArmy,     // armies row for the linked army (may be null)
-  isOwnProfile,
+  isOwnProfile,   // true only for the player themselves (controls linking)
+  canEdit,        // true for player OR campaign organiser (controls stat editing)
 }) {
   const router = useRouter();
 
@@ -155,7 +156,7 @@ export default function CampaignArmySection({
   // VIEW: no army linked yet
   // ────────────────────────────────────────────────────────────────
   if (!record) {
-    if (!isOwnProfile) return null; // nothing to show for other viewers
+    if (!isOwnProfile) return null; // only the player can link an army
 
     const available = playerArmies ?? [];
     return (
@@ -213,7 +214,7 @@ export default function CampaignArmySection({
       {/* Section header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <h2 style={{ ...labelStyle, marginBottom: 0 }}>Campaign Army</h2>
-        {isOwnProfile && !editing && (
+        {canEdit && !editing && (
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <button
               onClick={() => setEditing(true)}
@@ -221,13 +222,15 @@ export default function CampaignArmySection({
             >
               Edit Stats →
             </button>
-            <button
-              onClick={handleUnlink}
-              disabled={unlinking}
-              style={{ background: 'none', border: 'none', color: '#e05a5a', fontSize: '0.72rem', cursor: 'pointer', padding: 0, opacity: 0.7 }}
-            >
-              {unlinking ? 'Removing…' : 'Unlink'}
-            </button>
+            {isOwnProfile && (
+              <button
+                onClick={handleUnlink}
+                disabled={unlinking}
+                style={{ background: 'none', border: 'none', color: '#e05a5a', fontSize: '0.72rem', cursor: 'pointer', padding: 0, opacity: 0.7 }}
+              >
+                {unlinking ? 'Removing…' : 'Unlink'}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -261,7 +264,7 @@ export default function CampaignArmySection({
       </div>
 
       {/* ── EDIT MODE ─────────────────────────────────────────── */}
-      {editing && isOwnProfile && (
+      {editing && canEdit && (
         <div>
           {/* Numeric stats grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
@@ -355,8 +358,8 @@ export default function CampaignArmySection({
             </div>
           )}
 
-          {/* Empty state for own profile */}
-          {isOwnProfile && !record.scars_and_upgrades && !record.campaign_notes && (
+          {/* Empty state hint for editors */}
+          {canEdit && !record.scars_and_upgrades && !record.campaign_notes && (
             <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>
               No notes yet — click Edit Stats to add Crusade data.
             </p>

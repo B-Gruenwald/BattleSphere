@@ -1,4 +1,4 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -11,43 +11,47 @@ export default async function PlayerProfilePage({ params }) {
   const supabase = await createClient();
   const admin    = createAdminClient();
 
+  // Public page — user may be null (unauthenticated visitor)
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
 
-  const { data: campaign } = await supabase
+  // Use admin client for all data so unauthenticated visitors can read
+  const { data: campaign } = await admin
     .from('campaigns')
     .select('*')
     .eq('slug', slug)
-    .single();
+    .limit(1)
+    .then(r => ({ data: r.data?.[0] ?? null }));
 
   if (!campaign) notFound();
 
   // Fetch this player's membership
-  const { data: membership } = await supabase
+  const { data: memberRows } = await admin
     .from('campaign_members')
     .select('user_id, role, faction_id')
     .eq('campaign_id', campaign.id)
     .eq('user_id', userId)
-    .single();
+    .limit(1);
+  const membership = memberRows?.[0] ?? null;
 
   if (!membership) notFound();
 
   // Fetch profile
-  const { data: profile } = await supabase
+  const { data: profileRows } = await admin
     .from('profiles')
     .select('id, username')
     .eq('id', userId)
-    .single();
+    .limit(1);
+  const profile = profileRows?.[0] ?? null;
 
   // Fetch factions
-  const { data: factions } = await supabase
+  const { data: factions } = await admin
     .from('factions')
     .select('*')
     .eq('campaign_id', campaign.id)
     .order('created_at');
 
-  // Fetch battles involving this player (select * covers all fields incl. territory_id for XP)
-  const { data: battles } = await supabase
+  // Fetch battles involving this player
+  const { data: battles } = await admin
     .from('battles')
     .select('*')
     .eq('campaign_id', campaign.id)
@@ -55,7 +59,7 @@ export default async function PlayerProfilePage({ params }) {
     .order('created_at', { ascending: false });
 
   // Fetch achievements for this player
-  const { data: achievements } = await supabase
+  const { data: achievements } = await admin
     .from('achievements')
     .select('*')
     .eq('campaign_id', campaign.id)
@@ -65,15 +69,22 @@ export default async function PlayerProfilePage({ params }) {
 
   const factionMap = Object.fromEntries((factions || []).map(f => [f.id, f]));
   const assignedFaction = membership.faction_id ? factionMap[membership.faction_id] : null;
-  const isOwnProfile = user.id === userId;
-  const { data: myMembership } = await supabase
-    .from('campaign_members')
-    .select('role')
-    .eq('campaign_id', campaign.id)
-    .eq('user_id', user.id)
-    .single();
-  const isOrganiser = campaign.organiser_id === user.id
-    || ['organiser', 'admin'].includes(myMembership?.role);
+  const isOwnProfile = !!user && user.id === userId;
+
+  // Check if the viewer is a campaign organiser (only if logged in)
+  let isOrganiser = false;
+  if (user) {
+    isOrganiser = campaign.organiser_id === user.id;
+    if (!isOrganiser) {
+      const { data: myMemberRows } = await admin
+        .from('campaign_members')
+        .select('role')
+        .eq('campaign_id', campaign.id)
+        .eq('user_id', user.id)
+        .limit(1);
+      isOrganiser = ['organiser', 'admin'].includes(myMemberRows?.[0]?.role);
+    }
+  }
 
   // Compute record
   function calcResult(battle) {
@@ -91,7 +102,7 @@ export default async function PlayerProfilePage({ params }) {
   const rank   = getXPRank(xp);
 
   // Player's army portfolio (public armies only for other viewers; own armies always shown)
-  const armyQuery = supabase.from('armies').select('*').eq('player_id', userId).order('created_at', { ascending: false });
+  const armyQuery = admin.from('armies').select('*').eq('player_id', userId).order('created_at', { ascending: false });
   const { data: playerArmies } = isOwnProfile
     ? await armyQuery
     : await armyQuery.eq('is_public', true);
@@ -122,7 +133,7 @@ export default async function PlayerProfilePage({ params }) {
       .filter(id => id && id !== userId)
   )];
   const { data: opponentProfiles } = opponentIds.length > 0
-    ? await supabase.from('profiles').select('id, username').in('id', opponentIds)
+    ? await admin.from('profiles').select('id, username').in('id', opponentIds)
     : { data: [] };
   const opponentMap = Object.fromEntries((opponentProfiles || []).map(p => [p.id, p]));
 
@@ -262,13 +273,14 @@ export default async function PlayerProfilePage({ params }) {
       </div>
 
       {/* Campaign Army / Crusade Tracker */}
-      {(isOwnProfile || campaignArmyRecord) && (
+      {(isOwnProfile || isOrganiser || campaignArmyRecord) && (
         <CampaignArmySection
           campaignId={campaign.id}
           playerArmies={playerArmies ?? []}
           existingRecord={campaignArmyRecord}
           linkedArmy={campaignLinkedArmy}
           isOwnProfile={isOwnProfile}
+          canEdit={isOwnProfile || isOrganiser}
         />
       )}
 
