@@ -2,8 +2,9 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import SetFactionForm from '@/app/components/SetFactionForm';
 import CampaignArmySection from '@/app/components/CampaignArmySection';
+import FactionChangeInline from '@/app/components/FactionChangeInline';
+import BattleHistoryPanel from '@/app/components/BattleHistoryPanel';
 import { calcPlayerXP, getXPRank } from '@/app/lib/xp';
 
 export default async function PlayerProfilePage({ params }) {
@@ -160,272 +161,196 @@ export default async function PlayerProfilePage({ params }) {
   const initials    = username.slice(0, 2).toUpperCase();
   const avatarColour = assignedFaction?.colour || 'var(--border-dim)';
 
+  // Achievement icons (show first 4, then "+N more")
+  const achList    = achievements ?? [];
+  const achVisible = achList.slice(0, 4);
+  const achExtra   = achList.length - 4;
+
   return (
-    <div style={{ padding: '3rem 2rem', maxWidth: '860px', margin: '0 auto' }}>
+    <div style={{ padding: '1.75rem 1.5rem 3rem', maxWidth: '900px', margin: '0 auto' }}>
 
       {/* Breadcrumb */}
-      <nav style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2.5rem', flexWrap: 'wrap' }}>
-        <Link href={`/c/${slug}`} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '0.8rem' }}>{campaign.name}</Link>
-        <span style={{ color: 'var(--border-dim)', fontSize: '0.8rem' }}>›</span>
-        <Link href={`/c/${slug}/players`} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '0.8rem' }}>Players</Link>
-        <span style={{ color: 'var(--border-dim)', fontSize: '0.8rem' }}>›</span>
-        <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{username}</span>
+      <nav style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+        <Link href={`/c/${slug}`} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '0.75rem' }}>{campaign.name}</Link>
+        <span style={{ color: 'var(--border-dim)', fontSize: '0.75rem' }}>›</span>
+        <Link href={`/c/${slug}/players`} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '0.75rem' }}>Players</Link>
+        <span style={{ color: 'var(--border-dim)', fontSize: '0.75rem' }}>›</span>
+        <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{username}</span>
       </nav>
 
-      {/* Player header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginBottom: '2.5rem', flexWrap: 'wrap' }}>
-        <div style={{
-          width: '64px', height: '64px', flexShrink: 0,
-          background: 'var(--surface-2)',
-          border: `2px solid ${avatarColour}60`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '1.3rem', fontWeight: '700', color: avatarColour,
-        }}>
+      {/* ── HERO ROW ─────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.25rem', border: '1px solid var(--border-dim)', background: 'var(--surface-1)', marginBottom: '1rem', flexWrap: 'wrap' }}>
+
+        {/* Avatar */}
+        <div style={{ width: '48px', height: '48px', flexShrink: 0, background: 'var(--surface-2)', border: `2px solid ${avatarColour}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: '700', color: avatarColour }}>
           {initials}
         </div>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <h1 style={{ fontSize: 'clamp(1.4rem, 4vw, 2rem)', fontWeight: '900', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+
+        {/* Identity */}
+        <div style={{ flex: 1, minWidth: '140px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <h1 style={{ fontSize: 'clamp(1.1rem, 3vw, 1.4rem)', fontWeight: '900', letterSpacing: '0.08em', textTransform: 'uppercase', lineHeight: 1.1 }}>
               {username}
             </h1>
             {isOwnProfile && (
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.5rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)', border: '1px solid var(--gold)', padding: '0.2rem 0.5rem' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.44rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', border: '1px solid var(--gold)', padding: '0.15rem 0.4rem' }}>
                 You
               </span>
             )}
           </div>
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.58rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
-            {membership.role} · {campaign.name}
-          </p>
-        </div>
-      </div>
-
-      {/* Record strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', borderTop: '1px solid var(--border-dim)', borderBottom: '1px solid var(--border-dim)', marginBottom: '2.5rem' }}>
-        {[
-          { label: 'Victories', value: wins,                   colour: wins > 0 ? avatarColour : 'var(--text-secondary)' },
-          { label: 'Draws',     value: draws,                  colour: 'var(--text-secondary)' },
-          { label: 'Defeats',   value: losses,                 colour: losses > 0 ? '#e05a5a' : 'var(--text-secondary)' },
-          { label: 'Battles',   value: (battles || []).length, colour: 'var(--text-primary)' },
-          { label: rank,        value: xp,                     colour: xp > 0 ? 'var(--text-gold)' : 'var(--text-secondary)', isXP: true },
-        ].map((stat, i, arr) => (
-          <div key={stat.label} style={{ padding: '1.25rem 0.75rem', textAlign: 'center', borderRight: i < arr.length - 1 ? '1px solid var(--border-dim)' : 'none' }}>
-            <div style={{ fontSize: '1.75rem', fontWeight: '700', color: stat.colour, marginBottom: '0.25rem' }}>
-              {stat.value}{stat.isXP && <span style={{ fontSize: '0.8rem', fontWeight: '400', marginLeft: '0.2rem', opacity: 0.7 }}>xp</span>}
-            </div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>{stat.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Achievements */}
-      {(achievements && achievements.length > 0) && (
-        <div style={{ border: '1px solid rgba(183,140,64,0.25)', padding: '1.75rem', marginBottom: '1.5rem', background: 'rgba(183,140,64,0.02)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.25rem' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
-              Achievements
-            </h2>
-            <Link href={`/c/${slug}/achievements`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
-              Hall of Honours →
-            </Link>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
-            {achievements.map(a => (
-              <div
-                key={a.id}
-                title={a.description || a.title}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.4rem 0.8rem',
-                  background: 'var(--bg-raised)',
-                  border: '1px solid rgba(183,140,64,0.3)',
-                }}
-              >
-                <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>{a.icon}</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-primary)' }}>{a.title}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Award achievement shortcut (organiser only, not on own profile to keep it clean) */}
-      {isOrganiser && !isOwnProfile && (
-        <div style={{ marginBottom: '1.5rem', textAlign: 'right' }}>
-          <Link href={`/c/${slug}/achievements/new`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
-            + Award achievement to {username} →
-          </Link>
-        </div>
-      )}
-
-      {/* Faction assignment */}
-      <div style={{ border: '1px solid var(--border-dim)', padding: '1.75rem', marginBottom: '1.5rem' }}>
-        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '1.25rem' }}>
-          Faction
-        </h2>
-        {assignedFaction ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: isOwnProfile ? '1.25rem' : '0' }}>
-            <div style={{ width: '12px', height: '12px', background: assignedFaction.colour, transform: 'rotate(45deg)', flexShrink: 0 }} />
-            <Link href={`/c/${slug}/faction/${assignedFaction.id}`} style={{ textDecoration: 'none' }}>
-              <span style={{ fontSize: '1rem', fontWeight: '600', color: assignedFaction.colour }}>{assignedFaction.name}</span>
-            </Link>
-          </div>
-        ) : (
-          <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem', marginBottom: isOwnProfile ? '1.25rem' : '0' }}>
-            No faction assigned yet.
-          </p>
-        )}
-        {isOwnProfile && (
-          <>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-              Your default faction is pre-selected when you log a battle.
-            </p>
-            <SetFactionForm
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.5rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+              {membership.role}
+            </span>
+            <span style={{ color: 'var(--border-mid)', fontSize: '0.75rem' }}>·</span>
+            {/* Faction inline with change toggle */}
+            <FactionChangeInline
+              assignedFaction={assignedFaction}
+              slug={slug}
               campaignId={campaign.id}
               currentFactionId={membership.faction_id || ''}
               factions={factions || []}
+              isOwnProfile={isOwnProfile}
             />
-          </>
-        )}
-      </div>
+          </div>
+        </div>
 
-      {/* Campaign Army / Crusade Tracker */}
-      {(isOwnProfile || isOrganiser || campaignArmyRecord) && (
-        <CampaignArmySection
-          campaignId={campaign.id}
-          playerArmies={playerArmies ?? []}
-          existingRecord={campaignArmyRecord}
-          linkedArmy={campaignLinkedArmy}
-          isOwnProfile={isOwnProfile}
-          canEdit={isOwnProfile || isOrganiser}
-          armyUnits={campaignArmyUnits}
-          crusadeUnits={crusadeUnitRecords}
-        />
-      )}
+        {/* W / D / L + Rank — compact stat cells */}
+        <div style={{ display: 'flex', borderLeft: '1px solid var(--border-dim)', flexShrink: 0 }}>
+          {[
+            { label: 'Won',  value: wins,   colour: wins > 0 ? (assignedFaction?.colour || 'var(--text-gold)') : 'var(--text-muted)' },
+            { label: 'Draw', value: draws,  colour: 'var(--text-muted)' },
+            { label: 'Lost', value: losses, colour: losses > 0 ? '#e05a5a' : 'var(--text-muted)' },
+          ].map((s, i, arr) => (
+            <div key={s.label} style={{ padding: '0.4rem 0.85rem', textAlign: 'center', borderRight: '1px solid var(--border-dim)' }}>
+              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: s.colour, lineHeight: 1.1, marginBottom: '0.15rem' }}>{s.value}</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.42rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>{s.label}</div>
+            </div>
+          ))}
+          {/* XP Rank */}
+          <div style={{ padding: '0.4rem 0.85rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.88rem', fontWeight: '700', color: xp > 0 ? 'var(--text-gold)' : 'var(--text-muted)', lineHeight: 1.15, marginBottom: '0.1rem' }}>{rank}</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.42rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>{xp} XP</div>
+          </div>
+        </div>
 
-      {/* Army Portfolio */}
-      {((playerArmies && playerArmies.length > 0) || isOwnProfile) && (
-        <div style={{ border: '1px solid var(--border-dim)', padding: '1.75rem', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.25rem' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
-              Army Portfolio
-            </h2>
-            {isOwnProfile && (
-              <Link href="/armies/new" style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
-                + New Army
+        {/* Achievement icons */}
+        {achList.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', borderLeft: '1px solid var(--border-dim)', paddingLeft: '0.85rem', flexShrink: 0 }}>
+            {achVisible.map(a => (
+              <span key={a.id} title={a.title} style={{ fontSize: '1rem', lineHeight: 1, cursor: 'default' }}>{a.icon}</span>
+            ))}
+            {achExtra > 0 && (
+              <Link href={`/c/${slug}/achievements`} style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                +{achExtra}
               </Link>
             )}
           </div>
+        )}
 
-          {playerArmies && playerArmies.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
-              {playerArmies.map(army => (
-                <Link key={army.id} href={`/armies/${army.id}`} style={{ textDecoration: 'none' }}>
-                  <div style={{ border: '1px solid var(--border-dim)', overflow: 'hidden' }}>
-                    <div style={{ width: '100%', aspectRatio: '16/9', background: 'var(--surface-2)', overflow: 'hidden' }}>
-                      {army.cover_image_url
-                        ? <img src={army.cover_image_url} alt={army.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <div style={{ width: '8px', height: '8px', background: 'var(--border-dim)', transform: 'rotate(45deg)' }} />
+      </div>{/* /.hero */}
+
+      {/* ── TWO-COLUMN MAIN CONTENT ────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 290px', gap: '1rem', alignItems: 'start' }}>
+
+        {/* LEFT: Campaign Army + Crusade Roster */}
+        <div>
+          {(isOwnProfile || isOrganiser || campaignArmyRecord) && (
+            <CampaignArmySection
+              campaignId={campaign.id}
+              playerArmies={playerArmies ?? []}
+              existingRecord={campaignArmyRecord}
+              linkedArmy={campaignLinkedArmy}
+              isOwnProfile={isOwnProfile}
+              canEdit={isOwnProfile || isOrganiser}
+              armyUnits={campaignArmyUnits}
+              crusadeUnits={crusadeUnitRecords}
+            />
+          )}
+        </div>
+
+        {/* RIGHT: Recent Battles + Army Portfolio */}
+        <div>
+
+          {/* Battle History Panel — shows 5, expandable */}
+          <BattleHistoryPanel
+            battles={battles ?? []}
+            factionMap={factionMap}
+            opponentMap={opponentMap}
+            userId={userId}
+            slug={slug}
+            isOwnProfile={isOwnProfile}
+          />
+
+          {/* Army Portfolio — compact list */}
+          {((playerArmies && playerArmies.length > 0) || isOwnProfile) && (
+            <div style={{ border: '1px solid var(--border-dim)', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0.65rem 1rem', borderBottom: '1px solid var(--border-dim)', background: 'var(--surface-1)' }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+                  Army Portfolio
+                </span>
+                {isOwnProfile && (
+                  <Link href="/armies/new" style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textDecoration: 'none' }}>
+                    + New Army
+                  </Link>
+                )}
+              </div>
+
+              {playerArmies && playerArmies.length > 0 ? (
+                <div style={{ padding: '0.25rem 1rem' }}>
+                  {playerArmies.map(army => (
+                    <Link key={army.id} href={`/armies/${army.id}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.65rem', padding: '0.55rem 0', borderBottom: '1px solid var(--border-dim)' }}>
+                      {/* Tiny thumb */}
+                      <div style={{ width: '38px', height: '26px', flexShrink: 0, background: 'var(--surface-2)', border: '1px solid var(--border-dim)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', color: 'var(--border-mid)' }}>
+                        {army.cover_image_url
+                          ? <img src={army.cover_image_url} alt={army.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : (army.game_system?.toLowerCase().includes('40') ? '☩' : army.game_system?.toLowerCase().includes('sigmar') ? '⚔' : '◆')
+                        }
+                      </div>
+                      {/* Name + system */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: '600', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {army.name}
+                        </div>
+                        {(army.game_system || army.faction_name) && (
+                          <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.42rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+                            {[army.game_system, army.faction_name].filter(Boolean).join(' · ')}
                           </div>
-                      }
-                    </div>
-                    <div style={{ padding: '0.75rem' }}>
-                      <div style={{ fontWeight: '700', fontSize: '0.88rem', color: 'var(--text-primary)', marginBottom: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {army.name}
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.48rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
-                        {[army.game_system, army.faction_name].filter(Boolean).join(' · ') || 'Portfolio'}
-                      </div>
-                      {isOwnProfile && (
-                        <Link href={`/armies/${army.id}/edit`} style={{ display: 'block', marginTop: '0.5rem', color: 'var(--text-muted)', fontSize: '0.72rem', textDecoration: 'none' }}>
-                          Edit →
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            isOwnProfile && (
-              <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.88rem' }}>
-                You haven't added any armies yet. <Link href="/armies/new" style={{ color: 'var(--text-gold)', textDecoration: 'none' }}>Create your first army →</Link>
-              </p>
-            )
-          )}
-        </div>
-      )}
-
-      {/* Battle history */}
-      <div style={{ border: '1px solid var(--border-dim)', padding: '1.75rem', marginBottom: '2.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.25rem' }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
-            Battle History
-          </h2>
-          {isOwnProfile && (
-            <Link href={`/c/${slug}/battle/new`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
-              Log battle →
-            </Link>
-          )}
-        </div>
-
-        {battles && battles.length > 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {battles.map(battle => {
-              const isAttacker   = battle.attacker_player_id === userId;
-              const myFactionId  = isAttacker ? battle.attacker_faction_id : battle.defender_faction_id;
-              const oppFactionId = isAttacker ? battle.defender_faction_id : battle.attacker_faction_id;
-              const oppPlayerId  = isAttacker ? battle.defender_player_id : battle.attacker_player_id;
-              const myFaction    = factionMap[myFactionId];
-              const oppFaction   = factionMap[oppFactionId];
-              const oppPlayer    = opponentMap[oppPlayerId];
-              const result       = calcResult(battle);
-              const resultLabel  = result === 'win' ? 'Victory' : result === 'draw' ? 'Draw' : 'Defeat';
-              const resultColour = result === 'win' ? (myFaction?.colour || 'var(--text-gold)') : result === 'draw' ? 'var(--text-muted)' : '#e05a5a';
-              const myScore      = isAttacker ? battle.attacker_score : battle.defender_score;
-              const theirScore   = isAttacker ? battle.defender_score : battle.attacker_score;
-              const hasScores    = battle.attacker_score > 0 || battle.defender_score > 0;
-              const date         = new Date(battle.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-
-              return (
-                <Link key={battle.id} href={`/c/${slug}/battle/${battle.id}`} style={{ textDecoration: 'none' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.85rem 0', borderBottom: '1px solid var(--border-dim)', cursor: 'pointer' }}>
-                    <div style={{ width: '6px', height: '6px', background: resultColour, transform: 'rotate(45deg)', flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-                        <span style={{ color: myFaction?.colour || 'var(--text-secondary)' }}>{myFaction?.name ?? '?'}</span>
-                        <span style={{ color: 'var(--text-muted)' }}> vs </span>
-                        <span style={{ color: oppFaction?.colour || 'var(--text-secondary)' }}>{oppFaction?.name ?? '?'}</span>
-                        {oppPlayer && <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}> · {oppPlayer.username}</span>}
-                      </div>
-                      <div style={{ display: 'flex', gap: '1rem', marginTop: '0.2rem', alignItems: 'center' }}>
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: resultColour }}>
-                          {resultLabel}
-                        </span>
-                        {hasScores && (
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{myScore}–{theirScore}</span>
                         )}
                       </div>
-                    </div>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', flexShrink: 0 }}>{date} →</span>
+                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', flexShrink: 0 }}>
+                        {campaignArmyRecord?.army_id === army.id ? 'Active →' : (isOwnProfile ? 'Edit →' : 'View →')}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                isOwnProfile && (
+                  <div style={{ padding: '1rem' }}>
+                    <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.82rem' }}>
+                      No armies yet.{' '}
+                      <Link href="/armies/new" style={{ color: 'var(--text-gold)', textDecoration: 'none' }}>Create one →</Link>
+                    </p>
                   </div>
-                </Link>
-              );
-            })}
-          </div>
-        ) : (
-          <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-            <div style={{ width: '6px', height: '6px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1rem', opacity: 0.4 }} />
-            <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No battles recorded yet.</p>
-          </div>
-        )}
-      </div>
+                )
+              )}
+            </div>
+          )}
+
+          {/* Organiser action */}
+          {isOrganiser && !isOwnProfile && (
+            <div style={{ textAlign: 'right' }}>
+              <Link href={`/c/${slug}/achievements/new`} style={{ color: 'var(--text-muted)', fontSize: '0.72rem', textDecoration: 'none' }}>
+                + Award achievement to {username} →
+              </Link>
+            </div>
+          )}
+
+        </div>{/* /right col */}
+      </div>{/* /.main-grid */}
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-dim)' }}>
         <Link href={`/c/${slug}/players`}>
           <button className="btn-secondary">← All Players</button>
         </Link>
@@ -435,6 +360,7 @@ export default async function PlayerProfilePage({ params }) {
           </Link>
         )}
       </div>
+
     </div>
   );
 }
