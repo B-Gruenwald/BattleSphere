@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import NavBar from './components/NavBar';
 import NewsletterOptinModal from './components/NewsletterOptinModal';
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata = {
   title: 'BattleSphere',
@@ -37,6 +38,7 @@ export default function RootLayout({ children }) {
         <main style={{ paddingTop: '64px' }}>
           {children}
         </main>
+        <Analytics />
         <footer style={{
           borderTop: '1px solid var(--border-dim)',
           padding: '2rem',
