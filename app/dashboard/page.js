@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import CampaignCard from '@/app/components/CampaignCard';
+import ArmyCard from '@/app/components/ArmyCard';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -88,28 +89,7 @@ export default async function DashboardPage() {
           {myArmies && myArmies.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {myArmies.map(army => (
-                <Link key={army.id} href={`/armies/${army.id}`} style={{ textDecoration: 'none' }}>
-                  <div style={{ border: '1px solid var(--border-dim)', overflow: 'hidden' }}>
-                    {army.cover_image_url && (
-                      <div style={{ width: '100%', aspectRatio: '16/7', overflow: 'hidden' }}>
-                        <img src={army.cover_image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      </div>
-                    )}
-                    <div style={{ padding: '0.9rem 1rem' }}>
-                      <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {army.name}
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.5rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
-                        {[army.game_system, army.faction_name].filter(Boolean).join(' · ') || '—'}
-                      </div>
-                      {army.tagline && (
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '0.35rem', fontStyle: 'italic', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                          {army.tagline}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </Link>
+                <ArmyCard key={army.id} army={army} />
               ))}
             </div>
           ) : (
