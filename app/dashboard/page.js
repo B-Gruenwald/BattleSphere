@@ -77,12 +77,12 @@ export default async function DashboardPage() {
 
         {/* ── My Armies ── */}
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', margin: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', margin: 0, lineHeight: 1 }}>
               My Armies
             </h2>
-            <Link href="/armies/new" style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
-              + New Army
+            <Link href="/armies/new" style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontFamily: 'var(--font-display)', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', lineHeight: 1 }}>
+              + New
             </Link>
           </div>
 
@@ -107,9 +107,11 @@ export default async function DashboardPage() {
 
         {/* ── My Campaigns ── */}
         <div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', margin: '0 0 1.5rem 0' }}>
-            My Campaigns
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', margin: 0, lineHeight: 1 }}>
+              My Campaigns
+            </h2>
+          </div>
 
           {campaigns.length === 0 ? (
             <div style={{ border: '1px solid var(--border-dim)', padding: '4rem 2rem', textAlign: 'center', background: 'rgba(255,255,255,0.01)' }}>
@@ -133,9 +135,11 @@ export default async function DashboardPage() {
 
         {/* ── Recent Battles ── */}
         <div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', margin: '0 0 1.5rem 0' }}>
-            Recent Battles
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', margin: 0, lineHeight: 1 }}>
+              Recent Battles
+            </h2>
+          </div>
           <div style={{ border: '1px solid var(--border-dim)', padding: '1.25rem 1.5rem' }}>
             {recentBattles && recentBattles.length > 0 ? (
               <div>
