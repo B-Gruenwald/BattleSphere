@@ -1,12 +1,15 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import SetFactionForm from '@/app/components/SetFactionForm';
+import CampaignArmySection from '@/app/components/CampaignArmySection';
 import { calcPlayerXP, getXPRank } from '@/app/lib/xp';
 
 export default async function PlayerProfilePage({ params }) {
   const { slug, userId } = await params;
   const supabase = await createClient();
+  const admin    = createAdminClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
@@ -92,6 +95,26 @@ export default async function PlayerProfilePage({ params }) {
   const { data: playerArmies } = isOwnProfile
     ? await armyQuery
     : await armyQuery.eq('is_public', true);
+
+  // Campaign army record for this player in this campaign
+  const { data: carRows } = await admin
+    .from('campaign_army_records')
+    .select('*')
+    .eq('campaign_id', campaign.id)
+    .eq('player_id', userId)
+    .limit(1);
+  const campaignArmyRecord = carRows?.[0] ?? null;
+
+  // Fetch the linked army details (if any)
+  let campaignLinkedArmy = null;
+  if (campaignArmyRecord) {
+    const { data: laRows } = await admin
+      .from('armies')
+      .select('*')
+      .eq('id', campaignArmyRecord.army_id)
+      .limit(1);
+    campaignLinkedArmy = laRows?.[0] ?? null;
+  }
 
   // Fetch opponent player profiles for battle display
   const opponentIds = [...new Set(
@@ -237,6 +260,17 @@ export default async function PlayerProfilePage({ params }) {
           </>
         )}
       </div>
+
+      {/* Campaign Army / Crusade Tracker */}
+      {(isOwnProfile || campaignArmyRecord) && (
+        <CampaignArmySection
+          campaignId={campaign.id}
+          playerArmies={playerArmies ?? []}
+          existingRecord={campaignArmyRecord}
+          linkedArmy={campaignLinkedArmy}
+          isOwnProfile={isOwnProfile}
+        />
+      )}
 
       {/* Army Portfolio */}
       {((playerArmies && playerArmies.length > 0) || isOwnProfile) && (
