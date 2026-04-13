@@ -12,11 +12,12 @@ const MAX_SIZE_MB = 10;
 // canManage:  true if the user has edit rights beyond just being uploader
 //             (e.g. campaign organiser, battle logger, faction member)
 export default function PhotoGallery({ photos: initialPhotos, entityType, entityId, userId, canManage }) {
-  const [photos, setPhotos]       = useState(initialPhotos || []);
-  const [uploading, setUploading] = useState(false);
+  const [photos, setPhotos]           = useState(initialPhotos || []);
+  const [uploading, setUploading]     = useState(false);  // number of files still in flight
+  const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
   const [uploadError, setUploadError] = useState(null);
-  const [lightbox, setLightbox]   = useState(null); // url string or null
-  const [deleting, setDeleting]   = useState(null); // photo id or null
+  const [lightbox, setLightbox]       = useState(null); // url string or null
+  const [deleting, setDeleting]       = useState(null); // photo id or null
 
   const cloudName    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   const canUpload    = !!userId && !!cloudName;
@@ -25,56 +26,72 @@ export default function PhotoGallery({ photos: initialPhotos, entityType, entity
   // Nothing to show if Cloudinary isn't configured yet and there are no photos
   if (!canUpload && !hasPhotos) return null;
 
+  async function uploadOne(file) {
+    // ── 1. Upload directly to Cloudinary (unsigned preset) ────────────────────
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', 'battlesphere_unsigned');
+
+    const cloudRes = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      { method: 'POST', body: formData }
+    );
+    const cloudData = await cloudRes.json();
+    if (!cloudData.secure_url) {
+      throw new Error(cloudData.error?.message || 'Cloudinary upload failed');
+    }
+
+    // ── 2. Save the URL to Supabase via our API route ─────────────────────────
+    const body = entityType === 'battle'
+      ? { battleId: entityId, url: cloudData.secure_url }
+      : { factionId: entityId, url: cloudData.secure_url };
+
+    const saveRes = await fetch(`/api/photos/${entityType}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const saveData = await saveRes.json();
+    if (!saveRes.ok) throw new Error(saveData.error || 'Failed to save photo');
+
+    return saveData.photo;
+  }
+
   async function handleFileChange(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = ''; // reset so the same file can be re-selected
+    const files = Array.from(e.target.files || []);
+    e.target.value = ''; // reset so the same files can be re-selected
+    if (!files.length) return;
     setUploadError(null);
 
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      setUploadError('Please upload a JPG, PNG, WebP, or GIF image.');
-      return;
-    }
-    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-      setUploadError(`Image must be under ${MAX_SIZE_MB} MB.`);
-      return;
+    // Validate all files first
+    for (const file of files) {
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        setUploadError(`"${file.name}" is not a supported image type (JPG, PNG, WebP, GIF).`);
+        return;
+      }
+      if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+        setUploadError(`"${file.name}" exceeds the ${MAX_SIZE_MB} MB limit.`);
+        return;
+      }
     }
 
     setUploading(true);
-    try {
-      // ── 1. Upload directly to Cloudinary (unsigned preset) ──────────────────
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', 'battlesphere_unsigned');
+    setUploadProgress({ done: 0, total: files.length });
 
-      const cloudRes = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-        { method: 'POST', body: formData }
-      );
-      const cloudData = await cloudRes.json();
-      if (!cloudData.secure_url) {
-        throw new Error(cloudData.error?.message || 'Cloudinary upload failed');
+    const errors = [];
+    for (const file of files) {
+      try {
+        const photo = await uploadOne(file);
+        setPhotos(prev => [...prev, photo]);
+        setUploadProgress(prev => ({ ...prev, done: prev.done + 1 }));
+      } catch (err) {
+        errors.push(`${file.name}: ${err.message}`);
       }
-
-      // ── 2. Save the URL to Supabase via our API route ───────────────────────
-      const body = entityType === 'battle'
-        ? { battleId: entityId, url: cloudData.secure_url }
-        : { factionId: entityId, url: cloudData.secure_url };
-
-      const saveRes = await fetch(`/api/photos/${entityType}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const saveData = await saveRes.json();
-      if (!saveRes.ok) throw new Error(saveData.error || 'Failed to save photo');
-
-      setPhotos(prev => [...prev, saveData.photo]);
-    } catch (err) {
-      setUploadError(err.message);
-    } finally {
-      setUploading(false);
     }
+
+    setUploading(false);
+    setUploadProgress({ done: 0, total: 0 });
+    if (errors.length) setUploadError(errors.join(' · '));
   }
 
   async function handleDelete(photo) {
@@ -111,6 +128,7 @@ export default function PhotoGallery({ photos: initialPhotos, entityType, entity
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp,image/gif"
+              multiple
               style={{ display: 'none' }}
               onChange={handleFileChange}
               disabled={uploading}
@@ -121,7 +139,11 @@ export default function PhotoGallery({ photos: initialPhotos, entityType, entity
               color: uploading ? 'var(--text-muted)' : 'var(--text-gold)',
               cursor: 'inherit',
             }}>
-              {uploading ? 'Uploading…' : '+ Add Photo'}
+              {uploading
+                ? uploadProgress.total > 1
+                  ? `Uploading ${uploadProgress.done + 1} / ${uploadProgress.total}…`
+                  : 'Uploading…'
+                : '+ Add Photos'}
             </span>
           </label>
         )}
