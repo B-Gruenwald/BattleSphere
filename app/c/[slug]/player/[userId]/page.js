@@ -118,6 +118,8 @@ export default async function PlayerProfilePage({ params }) {
 
   // Fetch the linked army details (if any)
   let campaignLinkedArmy = null;
+  let campaignArmyUnits  = [];
+  let crusadeUnitRecords  = [];
   if (campaignArmyRecord) {
     const { data: laRows } = await admin
       .from('armies')
@@ -125,6 +127,23 @@ export default async function PlayerProfilePage({ params }) {
       .eq('id', campaignArmyRecord.army_id)
       .limit(1);
     campaignLinkedArmy = laRows?.[0] ?? null;
+
+    // All units in this army (for the enlist dropdown)
+    const { data: unitRows } = await admin
+      .from('army_units')
+      .select('*')
+      .eq('army_id', campaignArmyRecord.army_id)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true });
+    campaignArmyUnits = unitRows ?? [];
+
+    // Crusade unit records for this campaign army
+    const { data: curRows } = await admin
+      .from('crusade_unit_records')
+      .select('*')
+      .eq('campaign_army_record_id', campaignArmyRecord.id)
+      .order('created_at', { ascending: true });
+    crusadeUnitRecords = curRows ?? [];
   }
 
   // Fetch opponent player profiles for battle display
@@ -281,6 +300,8 @@ export default async function PlayerProfilePage({ params }) {
           linkedArmy={campaignLinkedArmy}
           isOwnProfile={isOwnProfile}
           canEdit={isOwnProfile || isOrganiser}
+          armyUnits={campaignArmyUnits}
+          crusadeUnits={crusadeUnitRecords}
         />
       )}
 

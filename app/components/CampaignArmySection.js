@@ -3,48 +3,48 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import CrusadeRoster from './CrusadeRoster';
 
-// Stat field definitions for the Crusade tracker
-const STAT_FIELDS = [
-  { key: 'crusade_points',     label: 'Crusade Points',     short: 'CP',       type: 'number', min: 0 },
-  { key: 'requisition_points', label: 'Requisition Points', short: 'RP',       type: 'number', min: 0 },
-  { key: 'supply_limit',       label: 'Supply Limit',       short: 'Limit',    type: 'number', min: 0 },
-  { key: 'supply_used',        label: 'Supply Used',        short: 'Used',     type: 'number', min: 0 },
-  { key: 'battles_played',     label: 'Battles Played',     short: 'Played',   type: 'number', min: 0 },
-  { key: 'battles_won',        label: 'Battles Won',        short: 'Won',      type: 'number', min: 0 },
+// Army-level editable stats (RP + Supply + Battles)
+const ARMY_STAT_FIELDS = [
+  { key: 'requisition_points', label: 'Requisition Points', short: 'RP',     min: 0 },
+  { key: 'supply_limit',       label: 'Supply Limit',       short: 'Limit',  min: 0 },
+  { key: 'supply_used',        label: 'Supply Used',        short: 'Used',   min: 0 },
+  { key: 'battles_played',     label: 'Battles Played',     short: 'Played', min: 0 },
+  { key: 'battles_won',        label: 'Battles Won',        short: 'Won',    min: 0 },
 ];
 
 export default function CampaignArmySection({
   campaignId,
-  playerArmies,   // all armies belonging to this player
-  existingRecord, // campaign_army_records row (may be null)
-  linkedArmy,     // armies row for the linked army (may be null)
-  isOwnProfile,   // true only for the player themselves (controls linking)
-  canEdit,        // true for player OR campaign organiser (controls stat editing)
+  playerArmies,     // all armies belonging to this player
+  existingRecord,   // campaign_army_records row (may be null)
+  linkedArmy,       // armies row for the linked army (may be null)
+  isOwnProfile,     // true only for the player (controls linking/unlinking)
+  canEdit,          // true for player OR campaign organiser (controls stat editing)
+  armyUnits,        // army_units rows for the linked army
+  crusadeUnits,     // crusade_unit_records rows for this campaign army record
 }) {
   const router = useRouter();
 
   // ── Link / Unlink state ───────────────────────────────────────
-  const [record, setRecord]       = useState(existingRecord ?? null);
-  const [army, setArmy]           = useState(linkedArmy ?? null);
+  const [record, setRecord]           = useState(existingRecord ?? null);
+  const [army, setArmy]               = useState(linkedArmy ?? null);
   const [selectedArmyId, setSelectedArmyId] = useState('');
-  const [linking, setLinking]     = useState(false);
-  const [unlinking, setUnlinking] = useState(false);
-  const [linkError, setLinkError] = useState('');
+  const [linking, setLinking]         = useState(false);
+  const [unlinking, setUnlinking]     = useState(false);
+  const [linkError, setLinkError]     = useState('');
 
   // ── Stats editing state ───────────────────────────────────────
-  const [editing, setEditing]     = useState(false);
-  const [saving, setSaving]       = useState(false);
-  const [saveError, setSaveError] = useState('');
-  const [form, setForm]           = useState(() => ({
-    campaign_notes:     existingRecord?.campaign_notes     ?? '',
-    crusade_points:     existingRecord?.crusade_points     ?? 0,
+  const [editing, setEditing]         = useState(false);
+  const [saving, setSaving]           = useState(false);
+  const [saveError, setSaveError]     = useState('');
+  const [form, setForm]               = useState(() => ({
+    requisition_points: existingRecord?.requisition_points ?? 0,
     supply_limit:       existingRecord?.supply_limit       ?? 0,
     supply_used:        existingRecord?.supply_used        ?? 0,
     battles_played:     existingRecord?.battles_played     ?? 0,
     battles_won:        existingRecord?.battles_won        ?? 0,
-    requisition_points: existingRecord?.requisition_points ?? 0,
-    scars_and_upgrades: existingRecord?.scars_and_upgrades ?? '',
+    campaign_notes:     existingRecord?.campaign_notes     ?? '',
   }));
 
   // ── Link an army ──────────────────────────────────────────────
@@ -60,19 +60,16 @@ export default function CampaignArmySection({
       });
       const json = await res.json();
       if (!res.ok) { setLinkError(json.error || 'Failed to link army'); return; }
-
-      const linked = playerArmies.find(a => a.id === selectedArmyId) ?? null;
+      const linked = (playerArmies ?? []).find(a => a.id === selectedArmyId) ?? null;
       setRecord(json.record);
       setArmy(linked);
       setForm({
-        campaign_notes:     '',
-        crusade_points:     0,
+        requisition_points: 0,
         supply_limit:       0,
         supply_used:        0,
         battles_played:     0,
         battles_won:        0,
-        requisition_points: 0,
-        scars_and_upgrades: '',
+        campaign_notes:     '',
       });
       router.refresh();
     } finally {
@@ -83,7 +80,7 @@ export default function CampaignArmySection({
   // ── Unlink an army ────────────────────────────────────────────
   async function handleUnlink() {
     if (!record) return;
-    if (!confirm('Remove this army from the campaign? Crusade data will be lost.')) return;
+    if (!confirm('Remove this army from the campaign? All Crusade data (unit stats, XP, kills) will be lost.')) return;
     setUnlinking(true);
     try {
       const res = await fetch(`/api/campaign-army-records/${record.id}`, { method: 'DELETE' });
@@ -97,7 +94,7 @@ export default function CampaignArmySection({
     }
   }
 
-  // ── Save stats ────────────────────────────────────────────────
+  // ── Save army-level stats ─────────────────────────────────────
   async function handleSave() {
     if (!record) return;
     setSaving(true);
@@ -156,7 +153,7 @@ export default function CampaignArmySection({
   // VIEW: no army linked yet
   // ────────────────────────────────────────────────────────────────
   if (!record) {
-    if (!isOwnProfile) return null; // only the player can link an army
+    if (!isOwnProfile) return null;
 
     const available = playerArmies ?? [];
     return (
@@ -165,7 +162,6 @@ export default function CampaignArmySection({
         <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1rem' }}>
           Link one of your armies to this campaign to track Crusade progress.
         </p>
-
         {available.length === 0 ? (
           <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>
             You have no armies yet.{' '}
@@ -202,16 +198,22 @@ export default function CampaignArmySection({
     );
   }
 
-  // ────────────────────────────────────────────────────────────────
-  // VIEW: army is linked — show stats
-  // ────────────────────────────────────────────────────────────────
+  // ── Compute totals from unit records ──────────────────────────
+  const units = crusadeUnits ?? [];
+  const totalXP    = units.reduce((s, u) => s + (u.experience_points ?? 0), 0);
+  const totalKills = units.reduce((s, u) => s + (u.kills             ?? 0), 0);
+  const totalCP    = units.reduce((s, u) => s + (u.crusade_points    ?? 0), 0);
+
   const gameIcon = army?.game_system?.toLowerCase().includes('40') ? '☩'
     : army?.game_system?.toLowerCase().includes('sigmar') ? '⚔'
     : '◆';
 
+  // ────────────────────────────────────────────────────────────────
+  // VIEW: army linked
+  // ────────────────────────────────────────────────────────────────
   return (
     <div style={sectionStyle}>
-      {/* Section header */}
+      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
         <h2 style={{ ...labelStyle, marginBottom: 0 }}>Campaign Army</h2>
         {canEdit && !editing && (
@@ -220,7 +222,7 @@ export default function CampaignArmySection({
               onClick={() => setEditing(true)}
               style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer', padding: 0 }}
             >
-              Edit Stats →
+              Edit Force Stats →
             </button>
             {isOwnProfile && (
               <button
@@ -237,7 +239,6 @@ export default function CampaignArmySection({
 
       {/* Army identity row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        {/* Cover thumb */}
         <div style={{ width: '72px', height: '48px', flexShrink: 0, background: 'var(--surface-2)', border: '1px solid var(--border-dim)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {army?.cover_image_url
             ? <img src={army.cover_image_url} alt={army.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -256,19 +257,19 @@ export default function CampaignArmySection({
             </div>
           )}
           {army?.tagline && (
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic', marginTop: '0.2rem' }}>
-              "{army.tagline}"
-            </div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic', marginTop: '0.2rem' }}>"{army.tagline}"</div>
           )}
         </div>
       </div>
 
-      {/* ── EDIT MODE ─────────────────────────────────────────── */}
+      {/* ── EDIT MODE (army-level stats only) ─────────────────── */}
       {editing && canEdit && (
-        <div>
-          {/* Numeric stats grid */}
+        <div style={{ border: '1px solid var(--border-dim)', padding: '1.25rem', marginBottom: '1.25rem', background: 'var(--bg-raised)' }}>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.5rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+            Force-level stats — XP, Kills, and CP are tracked per unit below
+          </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
-            {STAT_FIELDS.map(field => (
+            {ARMY_STAT_FIELDS.map(field => (
               <div key={field.key}>
                 <label style={smallLabelStyle}>{field.label}</label>
                 <input
@@ -281,21 +282,7 @@ export default function CampaignArmySection({
               </div>
             ))}
           </div>
-
-          {/* Scars & Upgrades */}
           <div style={{ marginBottom: '1rem' }}>
-            <label style={smallLabelStyle}>Scars &amp; Upgrades</label>
-            <textarea
-              value={form.scars_and_upgrades}
-              onChange={e => setForm(f => ({ ...f, scars_and_upgrades: e.target.value }))}
-              rows={3}
-              placeholder="Battle scars, veteran abilities, relics earned…"
-              style={{ ...inputStyle, resize: 'vertical' }}
-            />
-          </div>
-
-          {/* Campaign notes */}
-          <div style={{ marginBottom: '1.25rem' }}>
             <label style={smallLabelStyle}>Campaign Notes</label>
             <textarea
               value={form.campaign_notes}
@@ -305,11 +292,10 @@ export default function CampaignArmySection({
               style={{ ...inputStyle, resize: 'vertical' }}
             />
           </div>
-
           {saveError && <p style={{ color: '#e05a5a', fontSize: '0.85rem', marginBottom: '0.75rem' }}>{saveError}</p>}
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <button onClick={handleSave} disabled={saving} className="btn-primary" style={{ fontSize: '0.8rem' }}>
-              {saving ? 'Saving…' : 'Save Stats'}
+              {saving ? 'Saving…' : 'Save Force Stats'}
             </button>
             <button onClick={() => setEditing(false)} className="btn-secondary" style={{ fontSize: '0.8rem' }}>
               Cancel
@@ -318,54 +304,72 @@ export default function CampaignArmySection({
         </div>
       )}
 
-      {/* ── DISPLAY MODE ──────────────────────────────────────── */}
+      {/* ── DISPLAY: computed totals from units + army-level fields ── */}
       {!editing && (
         <>
-          {/* Stats bar */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', borderTop: '1px solid var(--border-dim)', borderBottom: '1px solid var(--border-dim)', marginBottom: '1.25rem' }}>
-            {STAT_FIELDS.map((field, i, arr) => (
-              <div
-                key={field.key}
-                style={{ padding: '0.9rem 0.5rem', textAlign: 'center', borderRight: i < arr.length - 1 ? '1px solid var(--border-dim)' : 'none' }}
-              >
-                <div style={{ fontSize: '1.4rem', fontWeight: '700', color: record[field.key] > 0 ? 'var(--text-primary)' : 'var(--text-muted)', marginBottom: '0.2rem' }}>
-                  {record[field.key] ?? 0}
-                </div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.48rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
-                  {field.short}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Scars & Upgrades */}
-          {record.scars_and_upgrades && (
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ ...smallLabelStyle, marginBottom: '0.4rem' }}>Scars &amp; Upgrades</div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                {record.scars_and_upgrades}
-              </p>
+          {/* Stats grid: computed (from units) | army-level */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            {/* Computed from units */}
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.45rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
+              From units
             </div>
-          )}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderTop: '1px solid var(--border-dim)', borderBottom: '1px solid var(--border-dim)', marginBottom: '0.75rem' }}>
+              {[
+                { label: 'Total XP',    value: totalXP    },
+                { label: 'Total Kills', value: totalKills },
+                { label: 'Total CP',    value: totalCP    },
+              ].map((s, i, arr) => (
+                <div key={s.label} style={{ padding: '0.9rem 0.5rem', textAlign: 'center', borderRight: i < arr.length - 1 ? '1px solid var(--border-dim)' : 'none' }}>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '700', color: s.value > 0 ? 'var(--text-primary)' : 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                    {s.value}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.48rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+                    {s.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Army-level */}
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.45rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
+              Force stats
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', borderTop: '1px solid var(--border-dim)', borderBottom: '1px solid var(--border-dim)' }}>
+              {ARMY_STAT_FIELDS.map((f, i, arr) => (
+                <div key={f.key} style={{ padding: '0.9rem 0.5rem', textAlign: 'center', borderRight: i < arr.length - 1 ? '1px solid var(--border-dim)' : 'none' }}>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '700', color: record[f.key] > 0 ? 'var(--text-primary)' : 'var(--text-muted)', marginBottom: '0.2rem' }}>
+                    {record[f.key] ?? 0}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.48rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+                    {f.short}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
           {/* Campaign notes */}
           {record.campaign_notes && (
-            <div>
+            <div style={{ marginBottom: '1rem' }}>
               <div style={{ ...smallLabelStyle, marginBottom: '0.4rem' }}>Campaign Notes</div>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
                 {record.campaign_notes}
               </p>
             </div>
           )}
-
-          {/* Empty state hint for editors */}
-          {canEdit && !record.scars_and_upgrades && !record.campaign_notes && (
-            <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>
-              No notes yet — click Edit Stats to add Crusade data.
-            </p>
-          )}
         </>
       )}
+
+      {/* ── CRUSADE ROSTER ─────────────────────────────────────── */}
+      <div style={{ borderTop: '1px solid var(--border-dim)', paddingTop: '1.25rem', marginTop: editing ? '0' : '0.5rem' }}>
+        <CrusadeRoster
+          campaignArmyRecordId={record.id}
+          initialCrusadeUnits={crusadeUnits ?? []}
+          armyUnits={armyUnits ?? []}
+          canEdit={canEdit}
+          isOwnProfile={isOwnProfile}
+        />
+      </div>
     </div>
   );
 }
