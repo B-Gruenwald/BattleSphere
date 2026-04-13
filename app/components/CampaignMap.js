@@ -469,7 +469,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
 
       {/* ── Background image ──────────────────────────────────────────────── */}
       <image
-        href={isFantasy ? '/map-background-fantasy.jpg' : '/map-background.jpg'}
+        href={isFantasy ? '/map-background-fantasy.png' : '/map-background.jpg'}
         x="0" y="0"
         width="100%" height="100%"
         preserveAspectRatio="xMidYMid slice"
