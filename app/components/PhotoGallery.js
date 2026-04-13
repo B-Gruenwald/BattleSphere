@@ -45,7 +45,9 @@ export default function PhotoGallery({ photos: initialPhotos, entityType, entity
     // ── 2. Save the URL to Supabase via our API route ─────────────────────────
     const body = entityType === 'battle'
       ? { battleId: entityId, url: cloudData.secure_url }
-      : { factionId: entityId, url: cloudData.secure_url };
+      : entityType === 'faction'
+        ? { factionId: entityId, url: cloudData.secure_url }
+        : { unitId: entityId, url: cloudData.secure_url }; // army-unit
 
     const saveRes = await fetch(`/api/photos/${entityType}`, {
       method: 'POST',

@@ -87,6 +87,12 @@ export default async function PlayerProfilePage({ params }) {
   const xp     = calcPlayerXP(battles, userId);
   const rank   = getXPRank(xp);
 
+  // Player's army portfolio (public armies only for other viewers; own armies always shown)
+  const armyQuery = supabase.from('armies').select('*').eq('player_id', userId).order('created_at', { ascending: false });
+  const { data: playerArmies } = isOwnProfile
+    ? await armyQuery
+    : await armyQuery.eq('is_public', true);
+
   // Fetch opponent player profiles for battle display
   const opponentIds = [...new Set(
     (battles || []).flatMap(b => [b.attacker_player_id, b.defender_player_id])
@@ -231,6 +237,60 @@ export default async function PlayerProfilePage({ params }) {
           </>
         )}
       </div>
+
+      {/* Army Portfolio */}
+      {((playerArmies && playerArmies.length > 0) || isOwnProfile) && (
+        <div style={{ border: '1px solid var(--border-dim)', padding: '1.75rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.25rem' }}>
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+              Army Portfolio
+            </h2>
+            {isOwnProfile && (
+              <Link href="/armies/new" style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
+                + New Army
+              </Link>
+            )}
+          </div>
+
+          {playerArmies && playerArmies.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem' }}>
+              {playerArmies.map(army => (
+                <Link key={army.id} href={`/armies/${army.id}`} style={{ textDecoration: 'none' }}>
+                  <div style={{ border: '1px solid var(--border-dim)', overflow: 'hidden' }}>
+                    <div style={{ width: '100%', aspectRatio: '16/9', background: 'var(--surface-2)', overflow: 'hidden' }}>
+                      {army.cover_image_url
+                        ? <img src={army.cover_image_url} alt={army.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: '8px', height: '8px', background: 'var(--border-dim)', transform: 'rotate(45deg)' }} />
+                          </div>
+                      }
+                    </div>
+                    <div style={{ padding: '0.75rem' }}>
+                      <div style={{ fontWeight: '700', fontSize: '0.88rem', color: 'var(--text-primary)', marginBottom: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {army.name}
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.48rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+                        {[army.game_system, army.faction_name].filter(Boolean).join(' · ') || 'Portfolio'}
+                      </div>
+                      {isOwnProfile && (
+                        <Link href={`/armies/${army.id}/edit`} onClick={e => e.stopPropagation()} style={{ display: 'block', marginTop: '0.5rem', color: 'var(--text-muted)', fontSize: '0.72rem', textDecoration: 'none' }}>
+                          Edit →
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            isOwnProfile && (
+              <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.88rem' }}>
+                You haven't added any armies yet. <Link href="/armies/new" style={{ color: 'var(--text-gold)', textDecoration: 'none' }}>Create your first army →</Link>
+              </p>
+            )
+          )}
+        </div>
+      )}
 
       {/* Battle history */}
       <div style={{ border: '1px solid var(--border-dim)', padding: '1.75rem', marginBottom: '2.5rem' }}>

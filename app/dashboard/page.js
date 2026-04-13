@@ -43,6 +43,13 @@ export default async function DashboardPage() {
         .limit(20)
     : { data: [] };
 
+  // My Armies (player-level, not campaign-scoped)
+  const { data: myArmies } = await supabase
+    .from('armies')
+    .select('*')
+    .eq('player_id', user.id)
+    .order('created_at', { ascending: false });
+
   const factionMap  = Object.fromEntries((allFactions || []).map(f => [f.id, f]));
   const campaignMap = Object.fromEntries(campaigns.map(c => [c.id, c]));
 
@@ -137,6 +144,64 @@ export default async function DashboardPage() {
                 <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>No battles logged yet.</p>
               </div>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* ── My Armies ───────────────────────────────────────── */}
+      <div style={{ borderTop: '1px solid var(--border-dim)', paddingTop: '2.5rem', marginBottom: '3rem' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+            My Armies
+          </h2>
+          <Link href="/armies/new" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textDecoration: 'none' }}>
+            + New Army
+          </Link>
+        </div>
+
+        {myArmies && myArmies.length > 0 ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
+            {myArmies.map(army => (
+              <Link key={army.id} href={`/armies/${army.id}`} style={{ textDecoration: 'none' }}>
+                <div style={{ border: '1px solid var(--border-dim)', overflow: 'hidden', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--gold)'}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-dim)'}
+                >
+                  {/* Cover thumbnail */}
+                  <div style={{ width: '100%', aspectRatio: '16/9', background: 'var(--surface-2)', overflow: 'hidden' }}>
+                    {army.cover_image_url
+                      ? <img src={army.cover_image_url} alt={army.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{ width: '10px', height: '10px', background: 'var(--border-dim)', transform: 'rotate(45deg)' }} />
+                        </div>
+                    }
+                  </div>
+                  <div style={{ padding: '1rem' }}>
+                    <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '0.25rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {army.name}
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.5rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+                      {[army.game_system, army.faction_name].filter(Boolean).join(' · ') || 'No system set'}
+                    </div>
+                    {army.tagline && (
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '0.4rem', fontStyle: 'italic', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                        {army.tagline}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div style={{ border: '1px solid var(--border-dim)', padding: '3rem 2rem', textAlign: 'center' }}>
+            <div style={{ width: '8px', height: '8px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1.5rem', opacity: 0.4 }} />
+            <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              No armies yet. Showcase your painted models and build your portfolio.
+            </p>
+            <Link href="/armies/new">
+              <button className="btn-primary">+ New Army</button>
+            </Link>
           </div>
         )}
       </div>
