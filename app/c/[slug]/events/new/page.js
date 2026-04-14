@@ -29,7 +29,8 @@ export default async function NewEventPage({ params }) {
     .from('territories')
     .select('id, name, type, depth')
     .eq('campaign_id', campaign.id)
-    .order('sort_order', { ascending: true });
+    .order('depth')
+    .order('name');
 
   return (
     <div style={{ padding: '4rem 2rem', maxWidth: '900px', margin: '0 auto' }}>
