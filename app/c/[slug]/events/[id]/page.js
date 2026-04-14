@@ -42,6 +42,11 @@ export default async function EventDetailPage({ params }) {
     .select('*')
     .eq('campaign_id', campaign.id);
 
+  const { data: territories } = await supabase
+    .from('territories')
+    .select('id, name')
+    .eq('campaign_id', campaign.id);
+
   const { data: myMembership } = await supabase
     .from('campaign_members')
     .select('role')
@@ -51,13 +56,6 @@ export default async function EventDetailPage({ params }) {
   const isOrganiser = campaign.organiser_id === user.id
     || ['organiser', 'admin'].includes(myMembership?.role);
   const statusColour = STATUS_COLOURS[ev.status] ?? 'var(--text-muted)';
-
-  function factionNames(ids) {
-    if (!ids || ids.length === 0) return null;
-    return ids.map(fid => factions?.find(f => f.id === fid)?.name ?? '?').join(', ');
-  }
-
-  const affectedLabel = factionNames(ev.affected_factions);
 
   const createdDate = new Date(ev.created_at).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'long', year: 'numeric',
@@ -69,6 +67,22 @@ export default async function EventDetailPage({ params }) {
       day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
     });
   }
+
+  // Resolve bonus condition labels
+  const hasBonus = ev.influence_bonus != null;
+
+  function resolveNames(ids, list, key = 'name') {
+    if (!ids || ids.length === 0) return null;
+    return ids.map(i => list?.find(x => x.id === i)?.[key] ?? '?');
+  }
+
+  const bonusTerritoryNames = resolveNames(ev.bonus_territory_ids, territories);
+  const bonusFactionData    = ev.bonus_faction_ids?.length
+    ? ev.bonus_faction_ids.map(fid => factions?.find(f => f.id === fid)).filter(Boolean)
+    : null;
+
+  const metaLabel = { fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.2rem' };
+  const metaValue = { color: 'var(--text-secondary)', fontSize: '0.9rem' };
 
   return (
     <div style={{ padding: '4rem 2rem', maxWidth: '800px', margin: '0 auto' }}>
@@ -96,6 +110,15 @@ export default async function EventDetailPage({ params }) {
         <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
           {TYPE_LABELS[ev.event_type] ?? ev.event_type}
         </span>
+        {hasBonus && (
+          <span style={{
+            fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.14em',
+            textTransform: 'uppercase', color: 'var(--text-gold)',
+            border: '1px solid rgba(183,140,64,0.4)', padding: '0.2rem 0.6rem',
+          }}>
+            ⬡ +{ev.influence_bonus} Influence Bonus
+          </span>
+        )}
       </div>
 
       {/* Title */}
@@ -106,33 +129,19 @@ export default async function EventDetailPage({ params }) {
       {/* Meta row */}
       <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', marginBottom: '2.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid var(--border-dim)' }}>
         <div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.2rem' }}>
-            Posted
-          </div>
-          <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{createdDate}</div>
+          <div style={metaLabel}>Posted</div>
+          <div style={metaValue}>{createdDate}</div>
         </div>
-        {affectedLabel && (
-          <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.2rem' }}>
-              Affects
-            </div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{affectedLabel}</div>
-          </div>
-        )}
         {ev.starts_at && (
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.2rem' }}>
-              Starts
-            </div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{formatDatetime(ev.starts_at)}</div>
+            <div style={metaLabel}>Starts</div>
+            <div style={metaValue}>{formatDatetime(ev.starts_at)}</div>
           </div>
         )}
         {ev.ends_at && (
           <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.2rem' }}>
-              Ends
-            </div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{formatDatetime(ev.ends_at)}</div>
+            <div style={metaLabel}>Ends</div>
+            <div style={metaValue}>{formatDatetime(ev.ends_at)}</div>
           </div>
         )}
       </div>
@@ -145,43 +154,106 @@ export default async function EventDetailPage({ params }) {
           lineHeight: 1.75,
           fontStyle: 'italic',
           whiteSpace: 'pre-wrap',
-          marginBottom: '3rem',
+          marginBottom: '2.5rem',
         }}>
           {ev.body}
         </div>
       ) : (
-        <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: '3rem' }}>
+        <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: '2.5rem' }}>
           No further details were posted for this event.
         </p>
       )}
 
-      {/* Affected factions chips */}
-      {ev.affected_factions && ev.affected_factions.length > 0 && (
-        <div style={{ marginBottom: '2.5rem' }}>
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.58rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.75rem' }}>
-            Affected Factions
+      {/* Influence bonus summary */}
+      {hasBonus && (
+        <div style={{
+          border: '1px solid rgba(183,140,64,0.35)',
+          background: 'rgba(183,140,64,0.05)',
+          padding: '1.5rem',
+          marginBottom: '3rem',
+        }}>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.6rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '1.25rem' }}>
+            Influence Bonus — Active Rules
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {ev.affected_factions.map(fid => {
-              const faction = factions?.find(f => f.id === fid);
-              if (!faction) return null;
-              return (
-                <Link key={fid} href={`/c/${slug}/faction/${fid}`} style={{ textDecoration: 'none' }}>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '0.4rem',
-                    padding: '0.35rem 0.75rem',
-                    border: '1px solid var(--border-subtle)',
-                    background: 'var(--bg-raised)',
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '0.58rem', letterSpacing: '0.1em', textTransform: 'uppercase',
-                    color: 'var(--text-secondary)',
-                  }}>
-                    <span style={{ width: '8px', height: '8px', background: faction.colour, display: 'inline-block', flexShrink: 0 }} />
-                    {faction.name}
-                  </div>
-                </Link>
-              );
-            })}
+
+          {/* Bonus amount */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontFamily: 'var(--font-display)', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.55rem' }}>Bonus</p>
+            <p style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-gold)' }}>
+              +{ev.influence_bonus} influence &amp; XP
+            </p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+              Awarded to both factions and both players on every qualifying battle.
+            </p>
+          </div>
+
+          {/* Conditions */}
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+            Qualifying battles must match all conditions below
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+
+            {/* Territory */}
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', minWidth: '90px', paddingTop: '0.1rem' }}>
+                Territory
+              </span>
+              {bonusTerritoryNames && bonusTerritoryNames.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                  {bonusTerritoryNames.map((name, i) => (
+                    <span key={i} style={{ padding: '0.2rem 0.55rem', background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Any territory</span>
+              )}
+            </div>
+
+            {/* Battle type */}
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', minWidth: '90px', paddingTop: '0.1rem' }}>
+                Battle Type
+              </span>
+              {ev.bonus_battle_types && ev.bonus_battle_types.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                  {ev.bonus_battle_types.map((t, i) => (
+                    <span key={i} style={{ padding: '0.2rem 0.55rem', background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Any battle type</span>
+              )}
+            </div>
+
+            {/* Factions */}
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', minWidth: '90px', paddingTop: '0.1rem' }}>
+                Faction
+              </span>
+              {bonusFactionData && bonusFactionData.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                  {bonusFactionData.map(f => (
+                    <Link key={f.id} href={`/c/${slug}/faction/${f.id}`} style={{ textDecoration: 'none' }}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                        padding: '0.2rem 0.55rem', background: 'var(--bg-raised)',
+                        border: '1px solid var(--border-subtle)', fontSize: '0.8rem', color: 'var(--text-secondary)',
+                      }}>
+                        <span style={{ width: '7px', height: '7px', background: f.colour, display: 'inline-block', flexShrink: 0, borderRadius: '1px' }} />
+                        {f.name}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Any faction</span>
+              )}
+            </div>
+
           </div>
         </div>
       )}
