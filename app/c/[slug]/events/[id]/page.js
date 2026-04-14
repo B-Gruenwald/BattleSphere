@@ -180,7 +180,7 @@ export default async function EventDetailPage({ params }) {
           <div style={{ marginBottom: '1.25rem' }}>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem', fontFamily: 'var(--font-display)', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.55rem' }}>Bonus</p>
             <p style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-gold)' }}>
-              +{ev.influence_bonus} influence &amp; XP
+              +{ev.influence_bonus} Influence and XP
             </p>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
               Awarded to both factions and both players on every qualifying battle.
