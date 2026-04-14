@@ -47,7 +47,7 @@ export default function AdminFactionEditor({ factions: initialFactions, campaign
     border: '1px solid var(--border-dim)',
     color: 'var(--text-primary)',
     padding: '0.55rem 0.75rem',
-    fontSize: '0.92rem',
+    fontSize: '1rem',
     outline: 'none',
     boxSizing: 'border-box',
   };

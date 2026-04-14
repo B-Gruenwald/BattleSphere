@@ -38,7 +38,7 @@ export default function SetFactionForm({ campaignId, currentFactionId, factions 
     border: '1px solid var(--border-dim)',
     color: 'var(--text-primary)',
     padding: '0.6rem 0.9rem',
-    fontSize: '0.9rem',
+    fontSize: '1rem',
     outline: 'none',
     appearance: 'none',
     flex: 1,

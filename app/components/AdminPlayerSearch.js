@@ -164,7 +164,7 @@ export default function AdminPlayerSearch({ members: initialMembers, campaignId,
     border: '1px solid var(--border-dim)',
     color: 'var(--text-primary)',
     padding: '0.6rem 0.9rem',
-    fontSize: '0.92rem',
+    fontSize: '1rem',
     outline: 'none',
     boxSizing: 'border-box',
     flex: 1,
@@ -340,7 +340,7 @@ export default function AdminPlayerSearch({ members: initialMembers, campaignId,
                     <input
                       readOnly
                       value={url}
-                      style={{ ...inputStyle, flex: 1, color: 'var(--text-secondary)', fontSize: '0.78rem', cursor: 'text', padding: '0.45rem 0.75rem', minWidth: 0 }}
+                      style={{ ...inputStyle, flex: 1, color: 'var(--text-secondary)', fontSize: '1rem', cursor: 'text', padding: '0.45rem 0.75rem', minWidth: 0 }}
                       onFocus={e => e.target.select()}
                     />
                     <button

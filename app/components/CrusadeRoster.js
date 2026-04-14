@@ -72,7 +72,7 @@ function UnitRow({ cur, armyUnit, canEdit, isOwnProfile, campaignArmyRecordId })
     border: '1px solid var(--border-dim)',
     color: 'var(--text-primary)',
     padding: '0.35rem 0.6rem',
-    fontSize: '0.85rem',
+    fontSize: '1rem',
     fontFamily: 'inherit',
     width: '100%',
     boxSizing: 'border-box',

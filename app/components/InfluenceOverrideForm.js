@@ -38,7 +38,7 @@ export default function InfluenceOverrideForm({ campaignId, territoryId, faction
     border: '1px solid var(--border-dim)',
     color: 'var(--text-primary)',
     padding: '0.3rem 0.5rem',
-    fontSize: '0.85rem',
+    fontSize: '1rem',
     outline: 'none',
   };
   const smallBtnStyle = (gold) => ({

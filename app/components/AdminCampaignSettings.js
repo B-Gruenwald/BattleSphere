@@ -161,7 +161,7 @@ export default function AdminCampaignSettings({ campaign, slug }) {
     border: '1px solid var(--border-dim)',
     color: 'var(--text-primary)',
     padding: '0.65rem 0.9rem',
-    fontSize: '0.95rem',
+    fontSize: '1rem',
     outline: 'none',
     boxSizing: 'border-box',
   };

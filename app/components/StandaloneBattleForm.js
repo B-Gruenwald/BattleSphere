@@ -94,7 +94,7 @@ export default function StandaloneBattleForm({ userId, battle }) {
   // ── Styles ──────────────────────────────────────────────────────────────────
   const inputStyle = {
     width: '100%', background: 'var(--surface-2)', border: '1px solid var(--border-dim)',
-    color: 'var(--text-primary)', padding: '0.65rem 0.9rem', fontSize: '0.95rem',
+    color: 'var(--text-primary)', padding: '0.65rem 0.9rem', fontSize: '1rem',
     outline: 'none', appearance: 'none', boxSizing: 'border-box',
   };
   const labelStyle = {
@@ -165,7 +165,7 @@ export default function StandaloneBattleForm({ userId, battle }) {
               <label style={dimLabelStyle}>Army List <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
               <textarea value={attackerArmyList} onChange={e => setAttackerArmyList(e.target.value)}
                 rows={5} placeholder="Paste or type army list…"
-                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, fontFamily: 'monospace', fontSize: '0.82rem' }} />
+                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, fontFamily: 'monospace', fontSize: '1rem' }} />
             </div>
           </div>
 
@@ -191,7 +191,7 @@ export default function StandaloneBattleForm({ userId, battle }) {
               <label style={dimLabelStyle}>Army List <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
               <textarea value={defenderArmyList} onChange={e => setDefenderArmyList(e.target.value)}
                 rows={5} placeholder="Paste or type army list…"
-                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, fontFamily: 'monospace', fontSize: '0.82rem' }} />
+                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, fontFamily: 'monospace', fontSize: '1rem' }} />
             </div>
           </div>
         </div>

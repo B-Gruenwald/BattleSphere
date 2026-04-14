@@ -39,7 +39,7 @@ function LoginForm() {
     border: '1px solid var(--border-dim)',
     color: 'var(--text-primary)',
     padding: '0.75rem 1rem',
-    fontSize: '0.95rem',
+    fontSize: '1rem',
     outline: 'none',
     boxSizing: 'border-box',
   };

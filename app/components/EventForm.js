@@ -39,7 +39,7 @@ const inputStyle = {
   color: 'var(--text-primary)',
   padding: '0.65rem 0.85rem',
   fontFamily: 'var(--font-body)',
-  fontSize: '0.95rem',
+  fontSize: '1rem',
   outline: 'none',
 };
 

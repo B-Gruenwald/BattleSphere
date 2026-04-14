@@ -167,7 +167,7 @@ export default function SendOnboardingPage() {
     color:       'var(--text-primary)',
     padding:     '0.65rem 0.85rem',
     fontFamily:  'var(--font-body)',
-    fontSize:    '0.95rem',
+    fontSize: '1rem',
     outline:     'none',
     boxSizing:   'border-box',
   };
@@ -303,7 +303,7 @@ export default function SendOnboardingPage() {
                 <input
                   readOnly
                   value={inviteLink}
-                  style={{ ...inputStyle, flex: 1, color: 'var(--text-secondary)', fontSize: '0.8rem', cursor: 'text', padding: '0.45rem 0.75rem', minWidth: 0 }}
+                  style={{ ...inputStyle, flex: 1, color: 'var(--text-secondary)', fontSize: '1rem', cursor: 'text', padding: '0.45rem 0.75rem', minWidth: 0 }}
                   onFocus={e => e.target.select()}
                 />
                 <button

@@ -161,7 +161,7 @@ function generateSlug(name) {
 
 const inputStyle = {
   width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-dim)',
-  color: 'var(--text-primary)', padding: '0.75rem 1rem', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box',
+  color: 'var(--text-primary)', padding: '0.75rem 1rem', fontSize: '1rem', outline: 'none', boxSizing: 'border-box',
 };
 const labelStyle = {
   display: 'block', fontFamily: 'var(--font-display)', fontSize: '0.6rem',

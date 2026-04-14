@@ -47,7 +47,7 @@ export default function ArmyCreateClient() {
   const inputStyle = {
     width: '100%', background: 'var(--bg-raised)',
     border: '1px solid var(--border-dim)', color: 'var(--text-primary)',
-    padding: '0.65rem 0.85rem', fontSize: '0.95rem',
+    padding: '0.65rem 0.85rem', fontSize: '1rem',
     outline: 'none', fontFamily: 'inherit',
     boxSizing: 'border-box',
   };
