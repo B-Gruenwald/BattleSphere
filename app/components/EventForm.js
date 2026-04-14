@@ -94,9 +94,9 @@ export default function EventForm({
   const hasExistingBonus = existingEvent?.influence_bonus != null;
   const [bonusEnabled,       setBonusEnabled]       = useState(hasExistingBonus);
   const [influenceBonus,     setInfluenceBonus]     = useState(existingEvent?.influence_bonus ?? 1);
-  const [bonusTerritoryId,   setBonusTerritoryId]   = useState(existingEvent?.bonus_territory_id ?? '');
-  const [bonusBattleType,    setBonusBattleType]    = useState(existingEvent?.bonus_battle_type ?? '');
-  const [bonusFactionId,     setBonusFactionId]     = useState(existingEvent?.bonus_faction_id ?? '');
+  const [bonusTerritoryIds,  setBonusTerritoryIds]  = useState(existingEvent?.bonus_territory_ids ?? []);
+  const [bonusBattleTypes,   setBonusBattleTypes]   = useState(existingEvent?.bonus_battle_types  ?? []);
+  const [bonusFactionIds,    setBonusFactionIds]    = useState(existingEvent?.bonus_faction_ids   ?? []);
 
   const [submitting,         setSubmitting]         = useState(false);
   const [error,              setError]              = useState('');
@@ -125,10 +125,10 @@ export default function EventForm({
       starts_at:          startsAt || null,
       ends_at:            endsAt || null,
       // Influence bonus — null out all fields when bonus is disabled
-      influence_bonus:    bonusEnabled ? (parseInt(influenceBonus) || 1) : null,
-      bonus_territory_id: bonusEnabled && bonusTerritoryId  ? bonusTerritoryId  : null,
-      bonus_battle_type:  bonusEnabled && bonusBattleType   ? bonusBattleType   : null,
-      bonus_faction_id:   bonusEnabled && bonusFactionId    ? bonusFactionId    : null,
+      influence_bonus:     bonusEnabled ? (parseInt(influenceBonus) || 1) : null,
+      bonus_territory_ids: bonusEnabled && bonusTerritoryIds.length > 0 ? bonusTerritoryIds : null,
+      bonus_battle_types:  bonusEnabled && bonusBattleTypes.length  > 0 ? bonusBattleTypes  : null,
+      bonus_faction_ids:   bonusEnabled && bonusFactionIds.length   > 0 ? bonusFactionIds   : null,
       ...(!isEditing && { created_by: userId }),
     };
 
@@ -338,58 +338,85 @@ export default function EventForm({
 
             {/* Conditions header */}
             <label style={{ ...labelStyle, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
-              Conditions — battle must match ALL that are set
+              Conditions
             </label>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '1rem' }}>
-              Leave a condition blank to match any value.
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '1.25rem' }}>
+              A battle must satisfy <strong style={{ color: 'var(--text-secondary)' }}>all</strong> condition types that have selections. Within each type, <strong style={{ color: 'var(--text-secondary)' }}>any one</strong> selection is enough. Leave a type empty to match any value.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-              {/* Territory condition */}
-              <div>
-                <label style={{ ...labelStyle, fontSize: '0.55rem' }}>Territory</label>
-                <select
-                  value={bonusTerritoryId}
-                  onChange={e => setBonusTerritoryId(e.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="">— Any territory —</option>
-                  {(territories || []).map(t => (
-                    <option key={t.id} value={t.id}>
-                      {'  '.repeat((t.depth || 1) - 1)}{t.name}
-                    </option>
-                  ))}
-                </select>
+            {/* Territory condition */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ ...labelStyle, fontSize: '0.55rem' }}>
+                Territory{bonusTerritoryIds.length > 0 ? ` (${bonusTerritoryIds.length} selected)` : ' — any'}
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {(territories || []).filter(t => !t.depth || t.depth === 1).map(t => {
+                  const selected = bonusTerritoryIds.includes(t.id);
+                  return (
+                    <button key={t.id} type="button" onClick={() =>
+                      setBonusTerritoryIds(prev => selected ? prev.filter(id => id !== t.id) : [...prev, t.id])
+                    } style={{
+                      padding: '0.3rem 0.65rem',
+                      background: selected ? 'rgba(183,140,64,0.12)' : 'var(--bg-raised)',
+                      border: `1px solid ${selected ? 'rgba(183,140,64,0.5)' : 'var(--border-subtle)'}`,
+                      color: selected ? 'var(--text-gold)' : 'var(--text-secondary)',
+                      fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.1em',
+                      textTransform: 'uppercase', cursor: 'pointer',
+                    }}>{t.name}</button>
+                  );
+                })}
               </div>
+            </div>
 
-              {/* Battle type condition */}
-              <div>
-                <label style={{ ...labelStyle, fontSize: '0.55rem' }}>Battle Type</label>
-                <select
-                  value={bonusBattleType}
-                  onChange={e => setBonusBattleType(e.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="">— Any type —</option>
-                  {BATTLE_TYPES.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
+            {/* Battle type condition */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ ...labelStyle, fontSize: '0.55rem' }}>
+                Battle Type{bonusBattleTypes.length > 0 ? ` (${bonusBattleTypes.length} selected)` : ' — any'}
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {BATTLE_TYPES.map(t => {
+                  const selected = bonusBattleTypes.includes(t);
+                  return (
+                    <button key={t} type="button" onClick={() =>
+                      setBonusBattleTypes(prev => selected ? prev.filter(v => v !== t) : [...prev, t])
+                    } style={{
+                      padding: '0.3rem 0.65rem',
+                      background: selected ? 'rgba(183,140,64,0.12)' : 'var(--bg-raised)',
+                      border: `1px solid ${selected ? 'rgba(183,140,64,0.5)' : 'var(--border-subtle)'}`,
+                      color: selected ? 'var(--text-gold)' : 'var(--text-secondary)',
+                      fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.1em',
+                      textTransform: 'uppercase', cursor: 'pointer',
+                    }}>{t}</button>
+                  );
+                })}
               </div>
+            </div>
 
-              {/* Faction condition */}
-              <div>
-                <label style={{ ...labelStyle, fontSize: '0.55rem' }}>Faction Involved</label>
-                <select
-                  value={bonusFactionId}
-                  onChange={e => setBonusFactionId(e.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="">— Any faction —</option>
-                  {(factions || []).map(f => (
-                    <option key={f.id} value={f.id}>{f.name}</option>
-                  ))}
-                </select>
+            {/* Faction condition */}
+            <div style={{ marginBottom: '0.5rem' }}>
+              <label style={{ ...labelStyle, fontSize: '0.55rem' }}>
+                Faction Involved{bonusFactionIds.length > 0 ? ` (${bonusFactionIds.length} selected)` : ' — any'}
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {(factions || []).map(f => {
+                  const selected = bonusFactionIds.includes(f.id);
+                  return (
+                    <button key={f.id} type="button" onClick={() =>
+                      setBonusFactionIds(prev => selected ? prev.filter(id => id !== f.id) : [...prev, f.id])
+                    } style={{
+                      display: 'flex', alignItems: 'center', gap: '0.4rem',
+                      padding: '0.3rem 0.65rem',
+                      background: selected ? 'rgba(183,140,64,0.12)' : 'var(--bg-raised)',
+                      border: `1px solid ${selected ? 'rgba(183,140,64,0.5)' : 'var(--border-subtle)'}`,
+                      color: selected ? 'var(--text-gold)' : 'var(--text-secondary)',
+                      fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.1em',
+                      textTransform: 'uppercase', cursor: 'pointer',
+                    }}>
+                      <span style={{ width: '8px', height: '8px', background: f.colour, display: 'inline-block', flexShrink: 0 }} />
+                      {f.name}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </>

@@ -109,14 +109,23 @@ export async function applyEventBonuses(supabase, battle) {
 
   if (!events || events.length === 0) return;
 
-  // Filter to events whose conditions all match this battle (AND logic)
+  // Filter to events whose conditions all match this battle.
+  // AND logic across condition types; OR within each type (any one value matches).
   const matchingEvents = events.filter(ev => {
-    if (ev.bonus_territory_id && ev.bonus_territory_id !== battle.territory_id) return false;
-    if (ev.bonus_battle_type  && ev.bonus_battle_type  !== battle.battle_type)  return false;
-    if (ev.bonus_faction_id) {
+    const territories = ev.bonus_territory_ids;
+    const battleTypes = ev.bonus_battle_types;
+    const factionIds  = ev.bonus_faction_ids;
+
+    if (territories && territories.length > 0) {
+      if (!territories.includes(battle.territory_id)) return false;
+    }
+    if (battleTypes && battleTypes.length > 0) {
+      if (!battleTypes.includes(battle.battle_type)) return false;
+    }
+    if (factionIds && factionIds.length > 0) {
       const involvesFaction =
-        ev.bonus_faction_id === battle.attacker_faction_id ||
-        ev.bonus_faction_id === battle.defender_faction_id;
+        factionIds.includes(battle.attacker_faction_id) ||
+        factionIds.includes(battle.defender_faction_id);
       if (!involvesFaction) return false;
     }
     return true;
