@@ -111,6 +111,15 @@ export default function EventForm({
   const [bonusBattleTypes,   setBonusBattleTypes]   = useState(existingEvent?.bonus_battle_types  ?? []);
   const [bonusFactionIds,    setBonusFactionIds]    = useState(existingEvent?.bonus_faction_ids   ?? []);
 
+  // ── Territory Cascade state ───────────────────────────────────────────────
+  const hasExistingCascade = existingEvent?.cascade_bonus != null;
+  const [cascadeEnabled,      setCascadeEnabled]      = useState(hasExistingCascade);
+  const [cascadeBonus,        setCascadeBonus]        = useState(existingEvent?.cascade_bonus ?? 1);
+  const [cascadeTerritoryId,  setCascadeTerritoryId]  = useState(existingEvent?.cascade_territory_id ?? '');
+
+  // Only top-level territories qualify as cascade triggers (warp routes connect main territories only)
+  const mainTerritories = (territories || []).filter(t => !t.parent_id).sort((a, b) => a.name.localeCompare(b.name));
+
   const [submitting,         setSubmitting]         = useState(false);
   const [error,              setError]              = useState('');
 
@@ -133,6 +142,9 @@ export default function EventForm({
       bonus_territory_ids: bonusEnabled && bonusTerritoryIds.length > 0 ? bonusTerritoryIds : null,
       bonus_battle_types:  bonusEnabled && bonusBattleTypes.length  > 0 ? bonusBattleTypes  : null,
       bonus_faction_ids:   bonusEnabled && bonusFactionIds.length   > 0 ? bonusFactionIds   : null,
+      // Territory Cascade — null out all fields when cascade is disabled
+      cascade_bonus:        cascadeEnabled ? (parseInt(cascadeBonus) || 1) : null,
+      cascade_territory_id: cascadeEnabled && cascadeTerritoryId ? cascadeTerritoryId : null,
       ...(!isEditing && { created_by: userId }),
     };
 
@@ -410,6 +422,80 @@ export default function EventForm({
                   );
                 })}
               </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ── Territory Cascade ── */}
+      <div style={{ ...fieldStyle, paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+          <button
+            type="button"
+            onClick={() => setCascadeEnabled(v => !v)}
+            style={{
+              width: '36px', height: '20px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+              background: cascadeEnabled ? 'var(--text-gold)' : 'var(--border-subtle)',
+              position: 'relative', flexShrink: 0, transition: 'background 0.2s',
+            }}
+            aria-label="Toggle territory cascade"
+          >
+            <span style={{
+              position: 'absolute', top: '2px',
+              left: cascadeEnabled ? '18px' : '2px',
+              width: '16px', height: '16px', borderRadius: '50%',
+              background: '#fff', transition: 'left 0.2s',
+            }} />
+          </button>
+          <label style={{ ...labelStyle, margin: 0, cursor: 'pointer' }} onClick={() => setCascadeEnabled(v => !v)}>
+            Territory Cascade
+          </label>
+        </div>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: cascadeEnabled ? '1.25rem' : 0 }}>
+          {cascadeEnabled
+            ? 'When the winning faction fights in the selected territory (or its sub-territories), they gain bonus influence in every directly connected territory.'
+            : 'Enable to cascade influence into neighbouring territories when a battle is won at a key location.'}
+        </p>
+
+        {cascadeEnabled && (
+          <>
+            {/* Cascade Bonus amount */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={labelStyle}>Cascade Bonus (influence per connected territory)</label>
+              <input
+                type="number"
+                min="1"
+                value={cascadeBonus}
+                onChange={e => setCascadeBonus(e.target.value)}
+                style={{ ...inputStyle, width: '120px' }}
+              />
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.35rem' }}>
+                The winning faction earns this much influence in each territory directly connected to the trigger territory.
+              </p>
+            </div>
+
+            {/* Trigger territory — main territories only */}
+            <div style={{ marginBottom: '0.5rem' }}>
+              <label style={labelStyle}>Trigger Territory</label>
+              {mainTerritories.length > 0 ? (
+                <select
+                  value={cascadeTerritoryId}
+                  onChange={e => setCascadeTerritoryId(e.target.value)}
+                  style={inputStyle}
+                >
+                  <option value="">— Select a territory —</option>
+                  {mainTerritories.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                  No top-level territories found for this campaign.
+                </p>
+              )}
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.35rem' }}>
+                Only top-level territories are listed — battles in sub-territories also count as fighting here.
+              </p>
             </div>
           </>
         )}

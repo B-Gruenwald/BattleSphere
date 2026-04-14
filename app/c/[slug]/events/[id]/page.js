@@ -81,6 +81,12 @@ export default async function EventDetailPage({ params }) {
     ? ev.bonus_faction_ids.map(fid => factions?.find(f => f.id === fid)).filter(Boolean)
     : null;
 
+  // Territory Cascade
+  const hasCascade = ev.cascade_bonus != null && ev.cascade_territory_id != null;
+  const cascadeTerritoryName = hasCascade
+    ? (territories?.find(t => t.id === ev.cascade_territory_id)?.name ?? 'Unknown territory')
+    : null;
+
   const metaLabel = { fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.2rem' };
   const metaValue = { color: 'var(--text-secondary)', fontSize: '0.9rem' };
 
@@ -117,6 +123,15 @@ export default async function EventDetailPage({ params }) {
             border: '1px solid rgba(183,140,64,0.4)', padding: '0.2rem 0.6rem',
           }}>
             ⬡ +{ev.influence_bonus} Influence Bonus
+          </span>
+        )}
+        {hasCascade && (
+          <span style={{
+            fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.14em',
+            textTransform: 'uppercase', color: 'var(--text-gold)',
+            border: '1px solid rgba(183,140,64,0.4)', padding: '0.2rem 0.6rem',
+          }}>
+            ↝ +{ev.cascade_bonus} Territory Cascade
           </span>
         )}
       </div>
@@ -254,6 +269,40 @@ export default async function EventDetailPage({ params }) {
               )}
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Territory Cascade summary */}
+      {hasCascade && (
+        <div style={{
+          border: '1px solid rgba(183,140,64,0.35)',
+          background: 'rgba(183,140,64,0.05)',
+          padding: '1.5rem',
+          marginBottom: '3rem',
+        }}>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.6rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '1.25rem' }}>
+            Territory Cascade — Active Rules
+          </p>
+
+          <div style={{ marginBottom: '1rem' }}>
+            <p style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.55rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Cascade Bonus</p>
+            <p style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-gold)' }}>
+              +{ev.cascade_bonus} Influence per connected territory
+            </p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+              Awarded to the winning faction only. No XP effect.
+            </p>
+          </div>
+
+          <div>
+            <p style={{ fontFamily: 'var(--font-display)', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.55rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Trigger Territory</p>
+            <span style={{ padding: '0.2rem 0.55rem', background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              {cascadeTerritoryName}
+            </span>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.45rem' }}>
+              Fires when the winner's battle is fought in this territory or any of its sub-territories. Influence cascades into every directly connected territory.
+            </p>
           </div>
         </div>
       )}

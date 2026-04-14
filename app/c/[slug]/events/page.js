@@ -120,6 +120,12 @@ export default async function EventsPage({ params }) {
             if (bonusFactionNames)   conditions.push(bonusFactionNames.join(', '));
             else if (hasBonus)       conditions.push('Any faction');
 
+            // Territory Cascade
+            const hasCascade = ev.cascade_bonus != null && ev.cascade_territory_id != null;
+            const cascadeTerritoryName = hasCascade
+              ? (territories?.find(t => t.id === ev.cascade_territory_id)?.name ?? '?')
+              : null;
+
             return (
               <Link
                 key={ev.id}
@@ -170,6 +176,16 @@ export default async function EventsPage({ params }) {
                             ⬡ +{ev.influence_bonus}
                           </span>
                         )}
+                        {hasCascade && (
+                          <span style={{
+                            fontFamily: 'var(--font-display)', fontSize: '0.52rem',
+                            letterSpacing: '0.12em', textTransform: 'uppercase',
+                            color: 'var(--text-gold)', border: '1px solid rgba(183,140,64,0.35)',
+                            padding: '0.15rem 0.5rem', flexShrink: 0,
+                          }}>
+                            ↝ +{ev.cascade_bonus}
+                          </span>
+                        )}
                       </div>
 
                       {/* Type + date meta */}
@@ -186,7 +202,7 @@ export default async function EventsPage({ params }) {
                       {ev.body && (
                         <p style={{
                           color: 'var(--text-secondary)', fontSize: '0.9rem', fontStyle: 'italic',
-                          lineHeight: 1.55, marginBottom: hasBonus ? '0.65rem' : 0,
+                          lineHeight: 1.55, marginBottom: (hasBonus || hasCascade) ? '0.65rem' : 0,
                           overflow: 'hidden', display: '-webkit-box',
                           WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
                         }}>
@@ -199,8 +215,19 @@ export default async function EventsPage({ params }) {
                         <p style={{
                           fontSize: '0.78rem', color: 'var(--text-gold)',
                           fontFamily: 'var(--font-display)', letterSpacing: '0.06em',
+                          marginBottom: hasCascade ? '0.3rem' : 0,
                         }}>
                           ⬡ +{ev.influence_bonus} Influence and XP · {conditions.join(' · ')}
+                        </p>
+                      )}
+
+                      {/* Territory Cascade summary line */}
+                      {hasCascade && (
+                        <p style={{
+                          fontSize: '0.78rem', color: 'var(--text-gold)',
+                          fontFamily: 'var(--font-display)', letterSpacing: '0.06em',
+                        }}>
+                          ↝ +{ev.cascade_bonus} Territory Cascade · Winning faction · {cascadeTerritoryName} & connections
                         </p>
                       )}
                     </div>

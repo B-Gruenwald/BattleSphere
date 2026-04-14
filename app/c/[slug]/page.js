@@ -94,6 +94,12 @@ export default async function CampaignDashboard({ params }) {
     return `+${ev.influence_bonus} Influence and XP · ${parts.join(' · ')}`;
   }
 
+  function buildCascadeSummary(ev) {
+    if (ev.cascade_bonus == null || ev.cascade_territory_id == null) return null;
+    const tName = territories?.find(t => t.id === ev.cascade_territory_id)?.name ?? '?';
+    return `+${ev.cascade_bonus} Territory Cascade · Winning faction · ${tName} & connections`;
+  }
+
   const playerStandings = (allMembers || [])
     .map(m => ({
       userId:   m.user_id,
@@ -267,8 +273,18 @@ export default async function CampaignDashboard({ params }) {
                         fontSize: '0.72rem', color: 'var(--text-gold)',
                         fontFamily: 'var(--font-display)', letterSpacing: '0.06em',
                         marginTop: '0.6rem',
+                        marginBottom: buildCascadeSummary(ev) ? '0.25rem' : 0,
                       }}>
                         ⬡ {buildBonusSummary(ev)}
+                      </p>
+                    )}
+                    {buildCascadeSummary(ev) && (
+                      <p style={{
+                        fontSize: '0.72rem', color: 'var(--text-gold)',
+                        fontFamily: 'var(--font-display)', letterSpacing: '0.06em',
+                        marginTop: buildBonusSummary(ev) ? 0 : '0.6rem',
+                      }}>
+                        ↝ {buildCascadeSummary(ev)}
                       </p>
                     )}
                     <div className="event-card-meta">

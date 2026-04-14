@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { reverseInfluence, reverseEventBonuses } from '@/app/lib/influence';
+import { reverseInfluence, reverseEventBonuses, reverseTerritoryCascade } from '@/app/lib/influence';
 
 export default function AdminBattleManager({ battles, factions, slug, influenceMode }) {
   const router = useRouter();
@@ -25,6 +25,7 @@ export default function AdminBattleManager({ battles, factions, slug, influenceM
     if (battle) {
       await reverseInfluence(supabase, battle, influenceMode || 'standard');
       await reverseEventBonuses(supabase, battle);
+      await reverseTerritoryCascade(supabase, battle);
     }
 
     const { error: deleteError } = await supabase

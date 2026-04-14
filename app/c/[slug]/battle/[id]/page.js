@@ -92,10 +92,16 @@ export default async function BattleDetailPage({ params }) {
     .eq('battle_id', id)
     .order('created_at', { ascending: true });
 
-  // Event bonuses applied to this battle
+  // Event bonuses applied to this battle (Tier 2)
   const { data: eventBonusRows } = await supabase
     .from('battle_event_bonuses')
     .select('*, campaign_events(title, influence_bonus)')
+    .eq('battle_id', id);
+
+  // Territory cascade bonuses applied to this battle (Tier 3)
+  const { data: cascadeBonusRows } = await supabase
+    .from('battle_cascade_bonuses')
+    .select('*, campaign_events(title), territories(name)')
     .eq('battle_id', id);
 
   return (
@@ -250,7 +256,7 @@ export default async function BattleDetailPage({ params }) {
           </div>
         )}
 
-        {/* Event bonuses */}
+        {/* Event bonuses (Tier 2) */}
         {eventBonusRows && eventBonusRows.length > 0 && (
           <div style={{ border: '1px solid rgba(183,140,64,0.3)', background: 'rgba(183,140,64,0.06)', padding: '1.5rem' }}>
             <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.58rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.75rem' }}>
@@ -263,6 +269,25 @@ export default async function BattleDetailPage({ params }) {
                 </span>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                   influence &amp; XP — <em>{row.campaign_events?.title ?? 'Campaign Event'}</em>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Territory Cascade bonuses (Tier 3) */}
+        {cascadeBonusRows && cascadeBonusRows.length > 0 && (
+          <div style={{ border: '1px solid rgba(183,140,64,0.3)', background: 'rgba(183,140,64,0.06)', padding: '1.5rem' }}>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.58rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.75rem' }}>
+              Territory Cascade
+            </p>
+            {cascadeBonusRows.map(row => (
+              <div key={row.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.4rem' }}>
+                <span style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-gold)' }}>
+                  +{row.bonus_amount}
+                </span>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  influence in <em>{row.territories?.name ?? 'territory'}</em> — <em>{row.campaign_events?.title ?? 'Campaign Event'}</em>
                 </span>
               </div>
             ))}

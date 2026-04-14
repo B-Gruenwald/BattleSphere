@@ -182,6 +182,160 @@ export async function applyEventBonuses(supabase, battle) {
 }
 
 /**
+ * Apply Territory Cascade bonuses for a freshly logged battle (Tier 3).
+ *
+ * Checks all active events for the campaign that have a cascade_bonus and a
+ * cascade_territory_id configured. A cascade fires when:
+ *   • The battle is in the cascade territory itself, OR in a direct sub-territory
+ *     of it (i.e. the battle territory's parent_id === cascade_territory_id).
+ *   • The battle has a winner (draws never trigger a cascade).
+ *
+ * For each matching event the winning faction gains cascade_bonus influence in
+ * every territory directly connected to cascade_territory_id via a warp route.
+ * Each awarded territory is recorded in battle_cascade_bonuses for reversal.
+ *
+ * XP is not affected by the cascade.
+ */
+export async function applyTerritoryCascade(supabase, battle) {
+  // No winner → no cascade.
+  if (!battle.winner_faction_id) return;
+  if (!battle.territory_id || !battle.campaign_id) return;
+
+  // Fetch active events with a cascade configured.
+  const { data: events } = await supabase
+    .from('campaign_events')
+    .select('*')
+    .eq('campaign_id', battle.campaign_id)
+    .eq('status', 'active')
+    .not('cascade_bonus', 'is', null)
+    .not('cascade_territory_id', 'is', null);
+
+  if (!events || events.length === 0) return;
+
+  // Fetch the battle territory so we can check its parent_id.
+  const { data: battleTerritory } = await supabase
+    .from('territories')
+    .select('id, parent_id')
+    .eq('id', battle.territory_id)
+    .limit(1);
+
+  const terr = battleTerritory?.[0] ?? null;
+  if (!terr) return;
+
+  // The "effective main territory" for cascade matching:
+  //   • if the battle territory is top-level (no parent), use it directly.
+  //   • if it's a sub-territory, use its parent.
+  const effectiveMainId = terr.parent_id ?? terr.id;
+
+  // Filter events whose cascade_territory_id matches the effective main territory.
+  const matchingEvents = events.filter(ev => ev.cascade_territory_id === effectiveMainId);
+  if (matchingEvents.length === 0) return;
+
+  // Fetch all warp routes connected to this main territory.
+  const { data: routes } = await supabase
+    .from('warp_routes')
+    .select('*')
+    .eq('campaign_id', battle.campaign_id)
+    .or(`territory_a.eq.${effectiveMainId},territory_b.eq.${effectiveMainId}`);
+
+  if (!routes || routes.length === 0) return;
+
+  // Collect the IDs of connected main territories.
+  const connectedIds = routes.map(r =>
+    r.territory_a === effectiveMainId ? r.territory_b : r.territory_a
+  );
+  if (connectedIds.length === 0) return;
+
+  // Fetch current influence rows for the winning faction across all connected territories.
+  const { data: current } = await supabase
+    .from('territory_influence')
+    .select('*')
+    .in('territory_id', connectedIds)
+    .eq('faction_id', battle.winner_faction_id);
+
+  const getPoints = (tid) =>
+    (current || []).find(i => i.territory_id === tid)?.influence_points ?? 0;
+
+  for (const ev of matchingEvents) {
+    const bonus = ev.cascade_bonus;
+
+    // Apply bonus to winning faction in each connected territory.
+    const updates = connectedIds.map(tid => ({
+      campaign_id:      battle.campaign_id,
+      territory_id:     tid,
+      faction_id:       battle.winner_faction_id,
+      influence_points: getPoints(tid) + bonus,
+    }));
+
+    await supabase
+      .from('territory_influence')
+      .upsert(updates, { onConflict: 'territory_id,faction_id' });
+
+    // Record each awarded territory for later reversal.
+    const auditRows = connectedIds.map(tid => ({
+      battle_id:    battle.id,
+      event_id:     ev.id,
+      territory_id: tid,
+      faction_id:   battle.winner_faction_id,
+      bonus_amount: bonus,
+    }));
+
+    await supabase
+      .from('battle_cascade_bonuses')
+      .upsert(auditRows, { onConflict: 'battle_id,event_id,territory_id' });
+  }
+}
+
+/**
+ * Reverse Territory Cascade bonuses for a battle being deleted or re-evaluated.
+ * Reads battle_cascade_bonuses, subtracts the bonus from each territory+faction
+ * combination (clamped at 0), then removes the audit rows.
+ */
+export async function reverseTerritoryCascade(supabase, battle) {
+  if (!battle.id) return;
+
+  const { data: cascadeRows } = await supabase
+    .from('battle_cascade_bonuses')
+    .select('*')
+    .eq('battle_id', battle.id);
+
+  if (!cascadeRows || cascadeRows.length === 0) return;
+
+  // Collect unique territory+faction pairs to fetch current influence.
+  const pairs = cascadeRows.map(r => ({ territory_id: r.territory_id, faction_id: r.faction_id }));
+  const territoryIds = [...new Set(pairs.map(p => p.territory_id))];
+  const factionIds   = [...new Set(pairs.map(p => p.faction_id))];
+
+  const { data: current } = await supabase
+    .from('territory_influence')
+    .select('*')
+    .in('territory_id', territoryIds)
+    .in('faction_id', factionIds);
+
+  const getPoints = (tid, fid) =>
+    (current || []).find(i => i.territory_id === tid && i.faction_id === fid)?.influence_points ?? 0;
+
+  const updates = cascadeRows.map(r => ({
+    campaign_id:      battle.campaign_id,
+    territory_id:     r.territory_id,
+    faction_id:       r.faction_id,
+    influence_points: Math.max(0, getPoints(r.territory_id, r.faction_id) - r.bonus_amount),
+  }));
+
+  if (updates.length > 0) {
+    await supabase
+      .from('territory_influence')
+      .upsert(updates, { onConflict: 'territory_id,faction_id' });
+  }
+
+  // Clear the audit rows.
+  await supabase
+    .from('battle_cascade_bonuses')
+    .delete()
+    .eq('battle_id', battle.id);
+}
+
+/**
  * Reverse all event-linked influence bonuses for a battle that is being
  * deleted. Reads battle_event_bonuses, subtracts each bonus from
  * territory_influence (clamped at 0), then removes the audit rows and
