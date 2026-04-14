@@ -39,7 +39,12 @@ export default async function EventsPage({ params }) {
 
   const { data: factions } = await supabase
     .from('factions')
-    .select('*')
+    .select('id, name, colour')
+    .eq('campaign_id', campaign.id);
+
+  const { data: territories } = await supabase
+    .from('territories')
+    .select('id, name')
     .eq('campaign_id', campaign.id);
 
   const { data: myMembership } = await supabase
@@ -55,11 +60,9 @@ export default async function EventsPage({ params }) {
     (a, b) => (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3)
   );
 
-  function factionNames(ids) {
-    if (!ids || ids.length === 0) return 'All factions';
-    return ids
-      .map(id => factions?.find(f => f.id === id)?.name ?? '?')
-      .join(', ');
+  function resolveNames(ids, list) {
+    if (!ids || ids.length === 0) return null;
+    return ids.map(i => list?.find(x => x.id === i)?.name ?? '?');
   }
 
   return (
@@ -96,12 +99,27 @@ export default async function EventsPage({ params }) {
           )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {sorted.map(ev => {
             const statusColour = STATUS_COLOURS[ev.status] ?? 'var(--text-muted)';
             const date = new Date(ev.created_at).toLocaleDateString('en-GB', {
               day: 'numeric', month: 'short', year: 'numeric',
             });
+
+            const hasBonus = ev.influence_bonus != null;
+            const bonusTerritoryNames = resolveNames(ev.bonus_territory_ids, territories);
+            const bonusBattleTypes    = ev.bonus_battle_types?.length ? ev.bonus_battle_types : null;
+            const bonusFactionNames   = resolveNames(ev.bonus_faction_ids, factions);
+
+            // Build compact condition string
+            const conditions = [];
+            if (bonusTerritoryNames) conditions.push(bonusTerritoryNames.join(', '));
+            else if (hasBonus)       conditions.push('Any territory');
+            if (bonusBattleTypes)    conditions.push(bonusBattleTypes.join(', '));
+            else if (hasBonus)       conditions.push('Any battle type');
+            if (bonusFactionNames)   conditions.push(bonusFactionNames.join(', '));
+            else if (hasBonus)       conditions.push('Any faction');
+
             return (
               <Link
                 key={ev.id}
@@ -112,7 +130,6 @@ export default async function EventsPage({ params }) {
                   padding: '1.5rem 1.75rem',
                   background: ev.status === 'active' ? 'rgba(183,140,64,0.04)' : 'transparent',
                   border: '1px solid var(--border-dim)',
-                  marginBottom: '0.5rem',
                   cursor: 'pointer',
                   transition: 'background 0.15s',
                 }}>
@@ -129,49 +146,61 @@ export default async function EventsPage({ params }) {
 
                     {/* Main content */}
                     <div style={{ flex: 1, minWidth: 0 }}>
+
+                      {/* Title + status badge */}
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
                         <h2 style={{ fontSize: '1.1rem', fontWeight: '700', letterSpacing: '0.04em', color: 'var(--text-primary)' }}>
                           {ev.title}
                         </h2>
                         <span style={{
-                          fontFamily: 'var(--font-display)',
-                          fontSize: '0.52rem',
-                          letterSpacing: '0.12em',
-                          textTransform: 'uppercase',
-                          color: statusColour,
-                          border: `1px solid ${statusColour}40`,
-                          padding: '0.15rem 0.5rem',
-                          flexShrink: 0,
+                          fontFamily: 'var(--font-display)', fontSize: '0.52rem',
+                          letterSpacing: '0.12em', textTransform: 'uppercase',
+                          color: statusColour, border: `1px solid ${statusColour}40`,
+                          padding: '0.15rem 0.5rem', flexShrink: 0,
                         }}>
                           {ev.status}
                         </span>
+                        {hasBonus && (
+                          <span style={{
+                            fontFamily: 'var(--font-display)', fontSize: '0.52rem',
+                            letterSpacing: '0.12em', textTransform: 'uppercase',
+                            color: 'var(--text-gold)', border: '1px solid rgba(183,140,64,0.35)',
+                            padding: '0.15rem 0.5rem', flexShrink: 0,
+                          }}>
+                            ⬡ +{ev.influence_bonus}
+                          </span>
+                        )}
                       </div>
 
-                      <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap' }}>
+                      {/* Type + date meta */}
+                      <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', marginBottom: ev.body || hasBonus ? '0.6rem' : 0 }}>
                         <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
                           {TYPE_LABELS[ev.event_type] ?? ev.event_type}
-                        </span>
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                          {factionNames(ev.affected_factions)}
                         </span>
                         <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
                           {date}
                         </span>
                       </div>
 
+                      {/* Body snippet */}
                       {ev.body && (
                         <p style={{
-                          color: 'var(--text-secondary)',
-                          fontSize: '0.9rem',
-                          fontStyle: 'italic',
-                          marginTop: '0.6rem',
-                          lineHeight: 1.55,
-                          overflow: 'hidden',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
+                          color: 'var(--text-secondary)', fontSize: '0.9rem', fontStyle: 'italic',
+                          lineHeight: 1.55, marginBottom: hasBonus ? '0.65rem' : 0,
+                          overflow: 'hidden', display: '-webkit-box',
+                          WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
                         }}>
                           {ev.body}
+                        </p>
+                      )}
+
+                      {/* Bonus summary line */}
+                      {hasBonus && (
+                        <p style={{
+                          fontSize: '0.78rem', color: 'var(--text-gold)',
+                          fontFamily: 'var(--font-display)', letterSpacing: '0.06em',
+                        }}>
+                          ⬡ +{ev.influence_bonus} Influence and XP · {conditions.join(' · ')}
                         </p>
                       )}
                     </div>
