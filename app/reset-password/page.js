@@ -1,33 +1,54 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
-export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState(null);
+export default function ResetPasswordPage() {
+  const router = useRouter();
+  const [password,  setPassword]  = useState('');
+  const [confirm,   setConfirm]   = useState('');
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState(null);
+  const [done,      setDone]      = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
 
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+    if (password !== confirm) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
-    });
+    const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
       setError(error.message);
       setLoading(false);
     } else {
-      setSent(true);
-      setLoading(false);
+      setDone(true);
+      setTimeout(() => router.push('/dashboard'), 2500);
     }
   }
+
+  const inputStyle = {
+    width: '100%',
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid var(--border-dim)',
+    color: 'var(--text-primary)',
+    padding: '0.75rem 1rem',
+    fontSize: '1rem',
+    outline: 'none',
+    boxSizing: 'border-box',
+  };
 
   return (
     <div style={{
@@ -64,11 +85,11 @@ export default function ForgotPasswordPage() {
             Account Recovery
           </p>
           <h1 style={{ fontSize: '2rem', fontWeight: '700', letterSpacing: '0.06em' }}>
-            Reset Password
+            New Password
           </h1>
         </div>
 
-        {sent ? (
+        {done ? (
           <div style={{
             border: '1px solid var(--gold)',
             padding: '2rem',
@@ -84,20 +105,16 @@ export default function ForgotPasswordPage() {
               color: 'var(--text-gold)',
               marginBottom: '0.75rem',
             }}>
-              Transmission sent
+              Password updated
             </p>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', fontStyle: 'italic', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-              If an account exists for <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>,
-              you&apos;ll receive a reset link shortly.
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', fontStyle: 'italic', lineHeight: 1.6 }}>
+              Redirecting you to the dashboard…
             </p>
-            <Link href="/login" style={{ color: 'var(--text-gold)', fontSize: '0.85rem' }}>
-              Return to Sign In
-            </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', fontStyle: 'italic', lineHeight: 1.6, textAlign: 'center' }}>
-              Enter your email address and we&apos;ll send you a link to reset your password.
+              Choose a new password for your account.
             </p>
 
             <div>
@@ -110,24 +127,39 @@ export default function ForgotPasswordPage() {
                 color: 'var(--text-gold)',
                 marginBottom: '0.5rem',
               }}>
-                Email
+                New Password
               </label>
               <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
                 required
-                placeholder="your@email.com"
-                style={{
-                  width: '100%',
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid var(--border-dim)',
-                  color: 'var(--text-primary)',
-                  padding: '0.75rem 1rem',
-                  fontSize: '0.95rem',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
+                placeholder="At least 8 characters"
+                style={inputStyle}
+                onFocus={e => e.target.style.borderColor = 'var(--gold)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border-dim)'}
+              />
+            </div>
+
+            <div>
+              <label style={{
+                display: 'block',
+                fontFamily: 'var(--font-display)',
+                fontSize: '0.6rem',
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: 'var(--text-gold)',
+                marginBottom: '0.5rem',
+              }}>
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                value={confirm}
+                onChange={e => setConfirm(e.target.value)}
+                required
+                placeholder="Repeat your new password"
+                style={inputStyle}
                 onFocus={e => e.target.style.borderColor = 'var(--gold)'}
                 onBlur={e => e.target.style.borderColor = 'var(--border-dim)'}
               />
@@ -145,7 +177,7 @@ export default function ForgotPasswordPage() {
               disabled={loading}
               style={{ width: '100%', opacity: loading ? 0.6 : 1, marginTop: '0.5rem' }}
             >
-              {loading ? 'Sending…' : 'Send Reset Link'}
+              {loading ? 'Updating…' : 'Set New Password'}
             </button>
 
             <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
@@ -155,6 +187,7 @@ export default function ForgotPasswordPage() {
             </p>
           </form>
         )}
+
       </div>
     </div>
   );
