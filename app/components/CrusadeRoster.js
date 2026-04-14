@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const UNIT_STAT_FIELDS = [
+  { key: 'unit_size',         label: 'Unit Size',   short: 'Size',   type: 'number', min: 0 },
   { key: 'experience_points', label: 'Experience', short: 'XP',     type: 'number', min: 0 },
   { key: 'kills',             label: 'Kills',       short: 'Kills',  type: 'number', min: 0 },
   { key: 'crusade_points',   label: 'Crusade Pts', short: 'CP',     type: 'number', min: 0 },
@@ -25,6 +26,7 @@ function UnitRow({ cur, armyUnit, canEdit, isOwnProfile, campaignArmyRecordId })
   const [saving, setSaving]     = useState(false);
   const [error, setError]       = useState('');
   const [form, setForm]         = useState({
+    unit_size:         cur.unit_size         ?? 0,
     experience_points: cur.experience_points ?? 0,
     kills:             cur.kills             ?? 0,
     crusade_points:    cur.crusade_points    ?? 0,

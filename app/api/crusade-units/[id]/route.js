@@ -54,7 +54,7 @@ export async function PUT(request, { params }) {
   if (!isOwner && !isOrganiser) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const body = await request.json();
-  const allowed = ['experience_points', 'kills', 'crusade_points', 'upgrades', 'scars'];
+  const allowed = ['unit_size', 'experience_points', 'kills', 'crusade_points', 'upgrades', 'scars'];
   const updates = {};
   for (const key of allowed) {
     if (key in body) updates[key] = body[key];
