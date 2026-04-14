@@ -1223,3 +1223,34 @@ a:hover .stat-cell {
     min-width: 33%;
   }
 }
+
+/* ══════════════════════════════════════════════════════════
+   DASHBOARD — RESPONSIVE GRID
+   ══════════════════════════════════════════════════════════ */
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 280px;
+  gap: 2.5rem;
+  align-items: start;
+  margin-bottom: 3rem;
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  /* Recent Battles sidebar spans full width at the bottom */
+  .dashboard-grid > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-grid > :last-child {
+    grid-column: auto;
+  }
+}

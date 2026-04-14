@@ -73,7 +73,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Three-column layout: My Armies | My Campaigns | Recent Battles */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 280px', gap: '2.5rem', alignItems: 'start', marginBottom: '3rem' }}>
+      <div className="dashboard-grid">
 
         {/* ── My Armies ── */}
         <div>
