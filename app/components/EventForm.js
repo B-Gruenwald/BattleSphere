@@ -344,28 +344,60 @@ export default function EventForm({
               A battle must satisfy <strong style={{ color: 'var(--text-secondary)' }}>all</strong> condition types that have selections. Within each type, <strong style={{ color: 'var(--text-secondary)' }}>any one</strong> selection is enough. Leave a type empty to match any value.
             </p>
 
-            {/* Territory condition */}
+            {/* Territory condition — scrollable checkbox list */}
             <div style={{ marginBottom: '1.25rem' }}>
               <label style={{ ...labelStyle, fontSize: '0.55rem' }}>
                 Territory{bonusTerritoryIds.length > 0 ? ` (${bonusTerritoryIds.length} selected)` : ' — any'}
               </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                {(territories || []).filter(t => !t.depth || t.depth === 1).map(t => {
-                  const selected = bonusTerritoryIds.includes(t.id);
-                  return (
-                    <button key={t.id} type="button" onClick={() =>
-                      setBonusTerritoryIds(prev => selected ? prev.filter(id => id !== t.id) : [...prev, t.id])
-                    } style={{
-                      padding: '0.3rem 0.65rem',
-                      background: selected ? 'rgba(183,140,64,0.12)' : 'var(--bg-raised)',
-                      border: `1px solid ${selected ? 'rgba(183,140,64,0.5)' : 'var(--border-subtle)'}`,
-                      color: selected ? 'var(--text-gold)' : 'var(--text-secondary)',
-                      fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.1em',
-                      textTransform: 'uppercase', cursor: 'pointer',
-                    }}>{t.name}</button>
-                  );
-                })}
-              </div>
+              {(territories || []).length > 0 ? (
+                <div style={{
+                  maxHeight: '200px', overflowY: 'auto',
+                  border: '1px solid var(--border-subtle)',
+                  background: 'var(--bg-raised)',
+                }}>
+                  {(territories || []).map(t => {
+                    const selected = bonusTerritoryIds.includes(t.id);
+                    const indent = ((t.depth || 1) - 1) * 1.1;
+                    return (
+                      <label key={t.id} style={{
+                        display: 'flex', alignItems: 'center', gap: '0.6rem',
+                        padding: '0.45rem 0.75rem',
+                        paddingLeft: `${0.75 + indent}rem`,
+                        cursor: 'pointer',
+                        background: selected ? 'rgba(183,140,64,0.08)' : 'transparent',
+                        borderBottom: '1px solid var(--border-subtle)',
+                        fontSize: '0.85rem',
+                        color: selected ? 'var(--text-gold)' : 'var(--text-secondary)',
+                        userSelect: 'none',
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() =>
+                            setBonusTerritoryIds(prev =>
+                              selected ? prev.filter(id => id !== t.id) : [...prev, t.id]
+                            )
+                          }
+                          style={{ accentColor: 'var(--text-gold)', flexShrink: 0 }}
+                        />
+                        {t.depth > 1 && (
+                          <span style={{ color: 'var(--border-dim)', fontSize: '0.7rem' }}>↳</span>
+                        )}
+                        {t.name}
+                        {t.type && t.depth > 1 && (
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginLeft: 'auto' }}>
+                            {t.type}
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                  No territories found for this campaign.
+                </p>
+              )}
             </div>
 
             {/* Battle type condition */}
