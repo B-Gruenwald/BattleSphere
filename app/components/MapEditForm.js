@@ -25,7 +25,7 @@ function AddForm({ onAdd, onCancel, placeholder = 'Territory name' }) {
     border: '1px solid var(--border-dim)',
     color: 'var(--text-primary)',
     padding: '0.5rem 0.75rem',
-    fontSize: '0.88rem',
+    fontSize: '1rem', // must be ≥16px to prevent iOS auto-zoom on focus
     outline: 'none',
     boxSizing: 'border-box',
     width: '100%',
@@ -185,7 +185,7 @@ export default function MapEditForm({ territories: initial, factions, campaignId
     border: '1px solid var(--border-dim)',
     color: 'var(--text-primary)',
     padding: '0.5rem 0.75rem',
-    fontSize: '0.9rem',
+    fontSize: '1rem', // must be ≥16px to prevent iOS auto-zoom on focus
     outline: 'none',
     boxSizing: 'border-box',
   };
