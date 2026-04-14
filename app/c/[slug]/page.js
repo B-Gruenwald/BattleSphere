@@ -167,6 +167,8 @@ export default async function CampaignDashboard({ params }) {
             showFactionChooser={!!(isMember && !myMembership?.faction_id && factions?.length > 0)}
             currentFactionId={myMembership?.faction_id || null}
             isOrganiser={!!isOrganiser}
+            isMember={!!isMember}
+            userId={user.id}
           />
         </div>
       </div>

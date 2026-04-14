@@ -15,6 +15,8 @@ export default function CampaignHeaderActions({
   showFactionChooser,
   currentFactionId,
   isOrganiser,
+  isMember,
+  userId,
 }) {
   return (
     <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -24,6 +26,11 @@ export default function CampaignHeaderActions({
           factions={factions}
           currentFactionId={currentFactionId}
         />
+      )}
+      {isMember && userId && (
+        <Link href={`/c/${campaignSlug}/player/${userId}`} style={{ textDecoration: 'none' }}>
+          <button className="btn-secondary" style={{ padding: '0.5rem 1.25rem' }}>My Profile</button>
+        </Link>
       )}
       <Link href={`/campaign/${publicSlug}`} target="_blank" style={{ textDecoration: 'none' }}>
         <button className="btn-secondary" style={{ padding: '0.5rem 1.25rem', fontSize: '0.6rem' }}>
