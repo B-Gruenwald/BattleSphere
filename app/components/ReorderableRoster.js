@@ -57,7 +57,7 @@ export default function ReorderableRoster({ initialUnits, armyId, isOwner, photo
               {/* Content area */}
               <div style={{ flex: 1, padding: '1rem 1.25rem' }}>
 
-                {/* Header row: name + type + reorder buttons */}
+                {/* Header row: name + type + thumbnail */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: unit.description ? '0.5rem' : 0 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem', flexWrap: 'wrap' }}>
                     <h3 style={{ fontSize: '0.95rem', fontWeight: '700', letterSpacing: '0.04em', color: 'var(--text-primary)' }}>
@@ -70,21 +70,18 @@ export default function ReorderableRoster({ initialUnits, armyId, isOwner, photo
                     )}
                   </div>
 
-                  {/* ↑/↓ only visible to owner */}
-                  {isOwner && (
-                    <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-                      <button
-                        onClick={() => canUp && moveUnit(idx, 'up')}
-                        disabled={!canUp || reordering}
-                        title="Move up"
-                        style={btnStyle(canUp, reordering)}
-                      >↑</button>
-                      <button
-                        onClick={() => canDown && moveUnit(idx, 'down')}
-                        disabled={!canDown || reordering}
-                        title="Move down"
-                        style={btnStyle(canDown, reordering)}
-                      >↓</button>
+                  {/* First-photo thumbnail — inline in header row */}
+                  {firstPhoto && (
+                    <div
+                      onClick={() => setLightbox(firstPhoto.url)}
+                      title="View photo"
+                      style={{ width: '44px', height: '44px', flexShrink: 0, overflow: 'hidden', cursor: 'zoom-in', border: '1px solid var(--border-dim)' }}
+                    >
+                      <img
+                        src={firstPhoto.url}
+                        alt=""
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      />
                     </div>
                   )}
                 </div>
@@ -96,24 +93,31 @@ export default function ReorderableRoster({ initialUnits, armyId, isOwner, photo
                 )}
               </div>
 
-              {/* First-photo thumbnail — far right, fills card height */}
-              {firstPhoto && (
-                <div
-                  style={{
-                    width: '64px',
-                    flexShrink: 0,
-                    borderLeft: '1px solid var(--border-dim)',
-                    overflow: 'hidden',
-                    cursor: 'zoom-in',
-                  }}
-                  onClick={() => setLightbox(firstPhoto.url)}
-                  title="View photo"
-                >
-                  <img
-                    src={firstPhoto.url}
-                    alt=""
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  />
+              {/* ↑/↓ strip — far right, only visible to owner */}
+              {isOwner && (
+                <div style={{
+                  width: '36px',
+                  flexShrink: 0,
+                  borderLeft: '1px solid var(--border-dim)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.25rem',
+                  padding: '0.5rem 0',
+                }}>
+                  <button
+                    onClick={() => canUp && moveUnit(idx, 'up')}
+                    disabled={!canUp || reordering}
+                    title="Move up"
+                    style={btnStyle(canUp, reordering)}
+                  >↑</button>
+                  <button
+                    onClick={() => canDown && moveUnit(idx, 'down')}
+                    disabled={!canDown || reordering}
+                    title="Move down"
+                    style={btnStyle(canDown, reordering)}
+                  >↓</button>
                 </div>
               )}
             </div>
