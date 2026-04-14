@@ -25,6 +25,12 @@ export default async function NewEventPage({ params }) {
     .eq('campaign_id', campaign.id)
     .order('name');
 
+  const { data: territories } = await supabase
+    .from('territories')
+    .select('id, name, type, depth')
+    .eq('campaign_id', campaign.id)
+    .order('sort_order', { ascending: true });
+
   return (
     <div style={{ padding: '4rem 2rem', maxWidth: '900px', margin: '0 auto' }}>
 
@@ -41,7 +47,7 @@ export default async function NewEventPage({ params }) {
         </p>
       </div>
 
-      <EventForm campaign={campaign} factions={factions ?? []} userId={user.id} />
+      <EventForm campaign={campaign} factions={factions ?? []} territories={territories ?? []} userId={user.id} />
     </div>
   );
 }

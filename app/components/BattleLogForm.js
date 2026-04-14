@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { applyEventBonuses } from '@/app/lib/influence';
 
 const BATTLE_TYPES = [
   'KillTeam / Gang War',
@@ -191,6 +192,7 @@ export default function BattleLogForm({ campaign, territories, factions, members
     if (insertError) { setError(insertError.message); setSubmitting(false); return; }
 
     await updateInfluence();
+    await applyEventBonuses(supabase, battle);
 
     router.push(`/c/${campaign.slug}/battle/${battle.id}`);
   }

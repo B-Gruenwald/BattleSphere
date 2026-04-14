@@ -22,7 +22,8 @@ export const XP_RANKS = [
 /**
  * Compute total XP for a player from a list of battles.
  * Battles must include: attacker_player_id, defender_player_id,
- * attacker_faction_id, defender_faction_id, winner_faction_id, territory_id.
+ * attacker_faction_id, defender_faction_id, winner_faction_id, territory_id,
+ * event_xp_bonus.
  */
 export function calcPlayerXP(battles, userId) {
   let xp = 0;
@@ -41,6 +42,9 @@ export function calcPlayerXP(battles, userId) {
     if (isDraw)    xp += 2;
     else if (won)  xp += 3;
     else           xp += 1; // loss
+
+    // Flat bonus from active campaign events (same amount for both players)
+    xp += b.event_xp_bonus || 0;
   }
   return xp;
 }

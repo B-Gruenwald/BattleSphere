@@ -4,6 +4,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
+const BATTLE_TYPES = [
+  'KillTeam / Gang War',
+  'Boarding Action',
+  'Combat Patrol',
+  'Incursion',
+  'Strike Force',
+  'Onslaught',
+  'Apocalypse',
+];
+
 const EVENT_TYPES = [
   { value: 'narrative',     label: 'Narrative'      },
   { value: 'mechanic',      label: 'Game Mechanic'  },
@@ -60,6 +70,7 @@ const fieldStyle = { marginBottom: '1.5rem' };
 export default function EventForm({
   campaign,
   factions,
+  territories,
   userId,
   existingEvent = null,   // pass when editing
 }) {
@@ -78,6 +89,15 @@ export default function EventForm({
   const [endsAt,             setEndsAt]             = useState(
     existingEvent?.ends_at ? existingEvent.ends_at.slice(0, 16) : ''
   );
+
+  // ── Influence bonus state ────────────────────────────────────────────────────
+  const hasExistingBonus = existingEvent?.influence_bonus != null;
+  const [bonusEnabled,       setBonusEnabled]       = useState(hasExistingBonus);
+  const [influenceBonus,     setInfluenceBonus]     = useState(existingEvent?.influence_bonus ?? 1);
+  const [bonusTerritoryId,   setBonusTerritoryId]   = useState(existingEvent?.bonus_territory_id ?? '');
+  const [bonusBattleType,    setBonusBattleType]    = useState(existingEvent?.bonus_battle_type ?? '');
+  const [bonusFactionId,     setBonusFactionId]     = useState(existingEvent?.bonus_faction_id ?? '');
+
   const [submitting,         setSubmitting]         = useState(false);
   const [error,              setError]              = useState('');
 
@@ -104,6 +124,11 @@ export default function EventForm({
       affected_factions:  affectedFactions.length > 0 ? affectedFactions : null,
       starts_at:          startsAt || null,
       ends_at:            endsAt || null,
+      // Influence bonus — null out all fields when bonus is disabled
+      influence_bonus:    bonusEnabled ? (parseInt(influenceBonus) || 1) : null,
+      bonus_territory_id: bonusEnabled && bonusTerritoryId  ? bonusTerritoryId  : null,
+      bonus_battle_type:  bonusEnabled && bonusBattleType   ? bonusBattleType   : null,
+      bonus_faction_id:   bonusEnabled && bonusFactionId    ? bonusFactionId    : null,
       ...(!isEditing && { created_by: userId }),
     };
 
@@ -263,6 +288,113 @@ export default function EventForm({
           </div>
         </div>
       )}
+
+      {/* ── Influence Bonus ── */}
+      <div style={{ ...fieldStyle, paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+          <button
+            type="button"
+            onClick={() => setBonusEnabled(v => !v)}
+            style={{
+              width: '36px', height: '20px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+              background: bonusEnabled ? 'var(--text-gold)' : 'var(--border-subtle)',
+              position: 'relative', flexShrink: 0, transition: 'background 0.2s',
+            }}
+            aria-label="Toggle influence bonus"
+          >
+            <span style={{
+              position: 'absolute', top: '2px',
+              left: bonusEnabled ? '18px' : '2px',
+              width: '16px', height: '16px', borderRadius: '50%',
+              background: '#fff', transition: 'left 0.2s',
+            }} />
+          </button>
+          <label style={{ ...labelStyle, margin: 0, cursor: 'pointer' }} onClick={() => setBonusEnabled(v => !v)}>
+            Influence Bonus
+          </label>
+        </div>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: bonusEnabled ? '1.25rem' : 0 }}>
+          {bonusEnabled
+            ? 'Battles matching the conditions below will grant a flat influence & XP bonus to both factions while this event is Active.'
+            : 'Enable to grant a flat influence & XP bonus to qualifying battles during this event.'}
+        </p>
+
+        {bonusEnabled && (
+          <>
+            {/* Bonus amount */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={labelStyle}>Bonus Amount (influence & XP, per player)</label>
+              <input
+                type="number"
+                min="1"
+                value={influenceBonus}
+                onChange={e => setInfluenceBonus(e.target.value)}
+                style={{ ...inputStyle, width: '120px' }}
+              />
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.35rem' }}>
+                Both factions earn this much influence on the territory. Both players earn this much XP.
+              </p>
+            </div>
+
+            {/* Conditions header */}
+            <label style={{ ...labelStyle, color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
+              Conditions — battle must match ALL that are set
+            </label>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '1rem' }}>
+              Leave a condition blank to match any value.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+              {/* Territory condition */}
+              <div>
+                <label style={{ ...labelStyle, fontSize: '0.55rem' }}>Territory</label>
+                <select
+                  value={bonusTerritoryId}
+                  onChange={e => setBonusTerritoryId(e.target.value)}
+                  style={inputStyle}
+                >
+                  <option value="">— Any territory —</option>
+                  {(territories || []).map(t => (
+                    <option key={t.id} value={t.id}>
+                      {'  '.repeat((t.depth || 1) - 1)}{t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Battle type condition */}
+              <div>
+                <label style={{ ...labelStyle, fontSize: '0.55rem' }}>Battle Type</label>
+                <select
+                  value={bonusBattleType}
+                  onChange={e => setBonusBattleType(e.target.value)}
+                  style={inputStyle}
+                >
+                  <option value="">— Any type —</option>
+                  {BATTLE_TYPES.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Faction condition */}
+              <div>
+                <label style={{ ...labelStyle, fontSize: '0.55rem' }}>Faction Involved</label>
+                <select
+                  value={bonusFactionId}
+                  onChange={e => setBonusFactionId(e.target.value)}
+                  style={inputStyle}
+                >
+                  <option value="">— Any faction —</option>
+                  {(factions || []).map(f => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
 
       {error && (
         <p style={{ color: 'var(--crimson-bright)', fontSize: '0.9rem', marginBottom: '1rem' }}>{error}</p>

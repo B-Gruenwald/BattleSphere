@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { reverseInfluence } from '@/app/lib/influence';
+import { reverseInfluence, reverseEventBonuses } from '@/app/lib/influence';
 
 const BATTLE_TYPES = [
   'KillTeam / Gang War',
@@ -162,6 +162,7 @@ export default function BattleEditForm({ battle, campaign, territories, factions
     setError('');
 
     await reverseInfluence(supabase, battle, campaign.influence_mode || 'standard');
+    await reverseEventBonuses(supabase, battle);
 
     const { error: deleteError } = await supabase
       .from('battles')
