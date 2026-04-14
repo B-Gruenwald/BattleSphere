@@ -35,7 +35,7 @@ export default async function EditEventPage({ params }) {
 
   const { data: territories } = await supabase
     .from('territories')
-    .select('id, name, type, depth')
+    .select('id, name, type, depth, parent_id')
     .eq('campaign_id', campaign.id)
     .order('depth')
     .order('name');

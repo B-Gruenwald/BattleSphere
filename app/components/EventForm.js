@@ -4,6 +4,20 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
+// Flatten territories into parent → children order for display
+function sortTerritoriesHierarchically(territories) {
+  const tops = territories.filter(t => !t.parent_id).sort((a, b) => a.name.localeCompare(b.name));
+  const result = [];
+  for (const top of tops) {
+    result.push(top);
+    const children = territories
+      .filter(t => t.parent_id === top.id)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    result.push(...children);
+  }
+  return result;
+}
+
 const BATTLE_TYPES = [
   'KillTeam / Gang War',
   'Boarding Action',
@@ -82,7 +96,6 @@ export default function EventForm({
   const [body,               setBody]               = useState(existingEvent?.body || '');
   const [eventType,          setEventType]          = useState(existingEvent?.event_type || 'narrative');
   const [status,             setStatus]             = useState(existingEvent?.status || 'active');
-  const [affectedFactions,   setAffectedFactions]   = useState(existingEvent?.affected_factions || []);
   const [startsAt,           setStartsAt]           = useState(
     existingEvent?.starts_at ? existingEvent.starts_at.slice(0, 16) : ''
   );
@@ -101,14 +114,6 @@ export default function EventForm({
   const [submitting,         setSubmitting]         = useState(false);
   const [error,              setError]              = useState('');
 
-  function toggleFaction(factionId) {
-    setAffectedFactions(prev =>
-      prev.includes(factionId)
-        ? prev.filter(id => id !== factionId)
-        : [...prev, factionId]
-    );
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
     if (!title.trim()) { setError('Title is required.'); return; }
@@ -121,7 +126,6 @@ export default function EventForm({
       body:               body.trim() || null,
       event_type:         eventType,
       status,
-      affected_factions:  affectedFactions.length > 0 ? affectedFactions : null,
       starts_at:          startsAt || null,
       ends_at:            endsAt || null,
       // Influence bonus — null out all fields when bonus is disabled
@@ -244,50 +248,6 @@ export default function EventForm({
         </div>
       </div>
 
-      {/* Affected factions */}
-      {factions && factions.length > 0 && (
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Affected Factions</label>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '0.75rem' }}>
-            Leave all unselected to apply this event to the whole campaign.
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {factions.map(f => {
-              const selected = affectedFactions.includes(f.id);
-              return (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => toggleFaction(f.id)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    padding: '0.35rem 0.75rem',
-                    background: selected ? 'rgba(183,140,64,0.12)' : 'var(--bg-raised)',
-                    border: `1px solid ${selected ? 'rgba(183,140,64,0.5)' : 'var(--border-subtle)'}`,
-                    color: selected ? 'var(--text-gold)' : 'var(--text-secondary)',
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '0.58rem',
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <span style={{
-                    width: '8px', height: '8px',
-                    background: f.colour,
-                    display: 'inline-block',
-                    flexShrink: 0,
-                  }} />
-                  {f.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* ── Influence Bonus ── */}
       <div style={{ ...fieldStyle, paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle)' }}>
@@ -355,7 +315,7 @@ export default function EventForm({
                   border: '1px solid var(--border-subtle)',
                   background: 'var(--bg-raised)',
                 }}>
-                  {(territories || []).map(t => {
+                  {sortTerritoriesHierarchically(territories || []).map(t => {
                     const selected = bonusTerritoryIds.includes(t.id);
                     const indent = ((t.depth || 1) - 1) * 1.1;
                     return (
