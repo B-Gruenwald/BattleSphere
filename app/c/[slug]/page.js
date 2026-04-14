@@ -76,6 +76,24 @@ export default async function CampaignDashboard({ params }) {
   const profileMap = Object.fromEntries((allProfiles || []).map(p => [p.id, p]));
   const factionMap = Object.fromEntries((factions    || []).map(f => [f.id, f]));
 
+  function resolveNames(ids, list) {
+    if (!ids || ids.length === 0) return null;
+    return ids.map(i => list?.find(x => x.id === i)?.name ?? '?');
+  }
+
+  function buildBonusSummary(ev) {
+    if (ev.influence_bonus == null) return null;
+    const tNames = resolveNames(ev.bonus_territory_ids, territories);
+    const bTypes = ev.bonus_battle_types?.length ? ev.bonus_battle_types : null;
+    const fNames = resolveNames(ev.bonus_faction_ids, factions);
+    const parts = [
+      tNames ? tNames.join(', ') : 'Any territory',
+      bTypes ? bTypes.join(', ')  : 'Any battle type',
+      fNames ? fNames.join(', ')  : 'Any faction',
+    ];
+    return `+${ev.influence_bonus} Influence and XP · ${parts.join(' · ')}`;
+  }
+
   const playerStandings = (allMembers || [])
     .map(m => ({
       userId:   m.user_id,
@@ -244,6 +262,15 @@ export default async function CampaignDashboard({ params }) {
                     </div>
                     <p className="event-card-title">{ev.title}</p>
                     {ev.body && <EventCardBody body={ev.body} />}
+                    {buildBonusSummary(ev) && (
+                      <p style={{
+                        fontSize: '0.72rem', color: 'var(--text-gold)',
+                        fontFamily: 'var(--font-display)', letterSpacing: '0.06em',
+                        marginTop: '0.6rem',
+                      }}>
+                        ⬡ {buildBonusSummary(ev)}
+                      </p>
+                    )}
                     <div className="event-card-meta">
                       {endWeek && <span>Ends Week {endWeek}</span>}
                     </div>
