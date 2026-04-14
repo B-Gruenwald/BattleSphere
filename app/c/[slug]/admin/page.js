@@ -228,6 +228,7 @@ export default async function AdminPage({ params }) {
           battles={battles || []}
           factions={factions || []}
           slug={slug}
+          influenceMode={campaign.influence_mode || 'standard'}
         />
       </div>
 

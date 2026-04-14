@@ -32,12 +32,13 @@ const LANDMARK_TYPES = {
 export default function AdminCampaignSettings({ campaign, slug }) {
   const supabase = createClient();
 
-  const [name,        setName]        = useState(campaign.name || '');
-  const [description, setDescription] = useState(campaign.description || '');
-  const [setting,     setSetting]     = useState(campaign.setting || 'Gothic Sci-Fi');
-  const [saving,      setSaving]      = useState(false);
-  const [saved,       setSaved]       = useState(false);
-  const [error,       setError]       = useState('');
+  const [name,          setName]          = useState(campaign.name || '');
+  const [description,   setDescription]   = useState(campaign.description || '');
+  const [setting,       setSetting]       = useState(campaign.setting || 'Gothic Sci-Fi');
+  const [influenceMode, setInfluenceMode] = useState(campaign.influence_mode || 'standard');
+  const [saving,        setSaving]        = useState(false);
+  const [saved,         setSaved]         = useState(false);
+  const [error,         setError]         = useState('');
 
   // Rename modal state
   const [pendingSetting,  setPendingSetting]  = useState(null);
@@ -46,7 +47,8 @@ export default function AdminCampaignSettings({ campaign, slug }) {
 
   const dirty = name !== campaign.name
     || description !== (campaign.description || '')
-    || setting !== campaign.setting;
+    || setting !== campaign.setting
+    || influenceMode !== (campaign.influence_mode || 'standard');
 
   async function save(overrideSetting) {
     const saveSetting = overrideSetting !== undefined ? overrideSetting : setting;
@@ -58,9 +60,10 @@ export default function AdminCampaignSettings({ campaign, slug }) {
     const { error: err } = await supabase
       .from('campaigns')
       .update({
-        name:        name.trim(),
-        description: description.trim() || null,
-        setting:     saveSetting,
+        name:           name.trim(),
+        description:    description.trim() || null,
+        setting:        saveSetting,
+        influence_mode: influenceMode,
       })
       .eq('id', campaign.id);
 
@@ -138,9 +141,10 @@ export default function AdminCampaignSettings({ campaign, slug }) {
       const { error: saveErr } = await supabase
         .from('campaigns')
         .update({
-          name:        name.trim(),
-          description: description.trim() || null,
-          setting:     newSetting,
+          name:           name.trim(),
+          description:    description.trim() || null,
+          setting:        newSetting,
+          influence_mode: influenceMode,
         })
         .eq('id', campaign.id);
       if (saveErr) throw saveErr;
@@ -287,6 +291,44 @@ export default function AdminCampaignSettings({ campaign, slug }) {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Influence Mode */}
+        <div style={{ marginBottom: '1.75rem' }}>
+          <label style={labelStyle}>Influence Mode</label>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.6rem' }}>
+            {[
+              { value: 'standard', label: 'Standard',      desc: 'Win: +3 / +1 · Draw: +2 / +2' },
+              { value: 'victory',  label: 'Victory Points', desc: 'Win: +1 for winner only · Draw: none' },
+              { value: 'off',      label: 'Manual',         desc: 'No automatic influence — organiser manages manually' },
+            ].map(({ value, label, desc }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => { setInfluenceMode(value); setSaved(false); }}
+                style={{
+                  padding: '0.5rem 0.9rem',
+                  cursor: 'pointer',
+                  border: `1px solid ${influenceMode === value ? 'var(--gold)' : 'var(--border-dim)'}`,
+                  background: influenceMode === value ? 'rgba(183,140,64,0.12)' : 'rgba(255,255,255,0.02)',
+                  color: influenceMode === value ? 'var(--text-gold)' : 'var(--text-secondary)',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.58rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  transition: 'all 0.15s',
+                }}
+                title={desc}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: 0 }}>
+            {influenceMode === 'standard' && 'Battle results automatically award influence points: winner +3, loser +1, draw +2 each.'}
+            {influenceMode === 'victory'  && 'Only the winner gains influence (+1 per victory). Draws and losses award nothing.'}
+            {influenceMode === 'off'      && 'Influence is not updated automatically. Use the manual override on each territory to set values yourself.'}
+          </p>
         </div>
 
         {/* Actions */}

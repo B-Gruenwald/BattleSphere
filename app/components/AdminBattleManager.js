@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { reverseInfluence } from '@/app/lib/influence';
 
-export default function AdminBattleManager({ battles, factions, slug }) {
+export default function AdminBattleManager({ battles, factions, slug, influenceMode }) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -22,7 +22,7 @@ export default function AdminBattleManager({ battles, factions, slug }) {
 
     // Reverse influence before deleting the record
     const battle = battles.find(b => b.id === battleId);
-    if (battle) await reverseInfluence(supabase, battle);
+    if (battle) await reverseInfluence(supabase, battle, influenceMode || 'standard');
 
     const { error: deleteError } = await supabase
       .from('battles')

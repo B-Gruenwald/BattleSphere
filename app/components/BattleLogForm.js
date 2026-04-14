@@ -57,21 +57,35 @@ export default function BattleLogForm({ campaign, territories, factions, members
     result === 'defender' ? defenderFactionId : null;
 
   // ── Influence update helper ──────────────────────────────────────────────────
-  // Win: winner +3, loser +1. Draw: both +2.
+  // standard : Win → winner +3, loser +1 · Draw → both +2
+  // victory  : Win → winner +1 only · Draw awards nothing
+  // off      : Skip — organiser manages influence manually
   async function updateInfluence() {
+    const mode = campaign.influence_mode || 'standard';
+    if (mode === 'off') return;
     if (!territoryId || !attackerFactionId || !defenderFactionId || !result) return;
 
     // Build a map of { factionId → pointsDelta }
     const deltas = {};
-    if (result === 'attacker') {
-      deltas[attackerFactionId] = 3;
-      deltas[defenderFactionId] = 1;
-    } else if (result === 'defender') {
-      deltas[defenderFactionId] = 3;
-      deltas[attackerFactionId] = 1;
-    } else if (result === 'draw') {
-      deltas[attackerFactionId] = 2;
-      deltas[defenderFactionId] = 2;
+    if (mode === 'standard') {
+      if (result === 'attacker') {
+        deltas[attackerFactionId] = 3;
+        deltas[defenderFactionId] = 1;
+      } else if (result === 'defender') {
+        deltas[defenderFactionId] = 3;
+        deltas[attackerFactionId] = 1;
+      } else if (result === 'draw') {
+        deltas[attackerFactionId] = 2;
+        deltas[defenderFactionId] = 2;
+      }
+    } else if (mode === 'victory') {
+      // Only the winner gains +1; draws and losses award nothing.
+      if (result === 'attacker') {
+        deltas[attackerFactionId] = 1;
+      } else if (result === 'defender') {
+        deltas[defenderFactionId] = 1;
+      }
+      // draw → no deltas → returns early below
     }
 
     const factionIds = Object.keys(deltas);
@@ -253,14 +267,24 @@ export default function BattleLogForm({ campaign, territories, factions, members
               </option>
             ))}
           </select>
-          {territoryId && result && (
-            <p style={hintStyle}>
-              {result === 'draw'
-                ? '⬡ Both factions will gain +1 influence here.'
-                : `⬡ ${result === 'attacker' ? factions.find(f => f.id === attackerFactionId)?.name || 'Registering Player' : factions.find(f => f.id === defenderFactionId)?.name || 'Opponent'} will gain +3 influence here.`
-              }
-            </p>
-          )}
+          {territoryId && result && (() => {
+            const mode = campaign.influence_mode || 'standard';
+            if (mode === 'off') return null;
+            const winnerName = result === 'attacker'
+              ? factions.find(f => f.id === attackerFactionId)?.name || 'Registering Player'
+              : factions.find(f => f.id === defenderFactionId)?.name || 'Opponent';
+            let hint = null;
+            if (mode === 'standard') {
+              hint = result === 'draw'
+                ? '⬡ Both factions will gain +2 influence here.'
+                : `⬡ ${winnerName} will gain +3 influence here; the other faction gains +1.`;
+            } else if (mode === 'victory') {
+              hint = result === 'draw'
+                ? '⬡ No influence is awarded for draws in this campaign.'
+                : `⬡ ${winnerName} will gain +1 influence here.`;
+            }
+            return hint ? <p style={hintStyle}>{hint}</p> : null;
+          })()}
         </div>
       </div>
 

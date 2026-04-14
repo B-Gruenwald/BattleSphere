@@ -1,38 +1,50 @@
 /**
  * Shared influence helpers.
  *
- * Influence rules (matches BattleLogForm.updateInfluence):
- *   Win  → winner +3, loser +1
- *   Draw → both factions +2
+ * Influence modes:
+ *   standard : Win → winner +3, loser +1 · Draw → both +2
+ *   victory  : Win → winner +1 only · Draw and loss award nothing
+ *   off      : No automatic influence; organiser manages manually
  *
- * reverseInfluence undoes those exact amounts when a battle is deleted.
+ * reverseInfluence undoes the exact amounts that were awarded when a battle
+ * was first logged, based on the campaign's current influence_mode.
  * Influence is clamped at 0 and never goes negative.
  */
 
-export async function reverseInfluence(supabase, battle) {
+export async function reverseInfluence(supabase, battle, mode = 'standard') {
+  // Off mode: influence was never written automatically, nothing to reverse.
+  if (mode === 'off') return;
+
   // If the battle had no territory or factions, no influence was ever applied.
   if (!battle.territory_id || !battle.attacker_faction_id || !battle.defender_faction_id) return;
 
   const isDraw      = !battle.winner_faction_id;
   const attackerWon = battle.winner_faction_id === battle.attacker_faction_id;
 
-  // Build a map of { factionId → pointsDelta }
-  // Mirrors the inverse of BattleLogForm.updateInfluence:
-  //   Win  → winner −3, loser −1
-  //   Draw → both −2
+  // Build { factionId → pointsDelta } — the inverse of what was originally awarded.
   const factionDeltas = {};
-  if (isDraw) {
-    factionDeltas[battle.attacker_faction_id] = -2;
-    factionDeltas[battle.defender_faction_id] = -2;
-  } else if (attackerWon) {
-    factionDeltas[battle.attacker_faction_id] = -3;
-    factionDeltas[battle.defender_faction_id] = -1;
-  } else {
-    factionDeltas[battle.defender_faction_id] = -3;
-    factionDeltas[battle.attacker_faction_id] = -1;
+
+  if (mode === 'standard') {
+    if (isDraw) {
+      factionDeltas[battle.attacker_faction_id] = -2;
+      factionDeltas[battle.defender_faction_id] = -2;
+    } else if (attackerWon) {
+      factionDeltas[battle.attacker_faction_id] = -3;
+      factionDeltas[battle.defender_faction_id] = -1;
+    } else {
+      factionDeltas[battle.defender_faction_id] = -3;
+      factionDeltas[battle.attacker_faction_id] = -1;
+    }
+  } else if (mode === 'victory') {
+    // Only the winner received +1; draws awarded nothing.
+    if (!isDraw) {
+      const winnerId = attackerWon ? battle.attacker_faction_id : battle.defender_faction_id;
+      factionDeltas[winnerId] = -1;
+    }
   }
 
   const factionIds = Object.keys(factionDeltas);
+  if (factionIds.length === 0) return;
 
   // Fetch current influence rows for these factions on this territory
   const { data: current } = await supabase

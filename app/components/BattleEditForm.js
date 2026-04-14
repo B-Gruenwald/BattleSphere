@@ -161,7 +161,7 @@ export default function BattleEditForm({ battle, campaign, territories, factions
     setDeleting(true);
     setError('');
 
-    await reverseInfluence(supabase, battle);
+    await reverseInfluence(supabase, battle, campaign.influence_mode || 'standard');
 
     const { error: deleteError } = await supabase
       .from('battles')
