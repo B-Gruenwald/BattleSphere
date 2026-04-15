@@ -40,7 +40,7 @@ export default async function PlayersPage({ params }) {
   // Fetch all battles for win counts + XP calculation
   const { data: battles } = await supabase
     .from('battles')
-    .select('attacker_player_id, defender_player_id, winner_faction_id, attacker_faction_id, defender_faction_id, territory_id')
+    .select('attacker_player_id, defender_player_id, winner_faction_id, attacker_faction_id, defender_faction_id, territory_id, event_xp_bonus')
     .eq('campaign_id', campaign.id);
 
   // Fetch player achievements for this campaign

@@ -53,7 +53,7 @@ export default async function CampaignDashboard({ params }) {
   // ── All battles (faction standings + player XP) ───────────
   const { data: allBattles } = await supabase
     .from('battles')
-    .select('attacker_player_id, defender_player_id, attacker_faction_id, defender_faction_id, winner_faction_id, territory_id')
+    .select('attacker_player_id, defender_player_id, attacker_faction_id, defender_faction_id, winner_faction_id, territory_id, event_xp_bonus')
     .eq('campaign_id', campaign.id);
 
   // ── Active + upcoming events (events strip) ───────────────
