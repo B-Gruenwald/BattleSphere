@@ -87,7 +87,7 @@ export default async function PlayersPage({ params }) {
       achievements: achievementsByPlayer[m.user_id] || [],
       xp:           calcPlayerXP(battles, m.user_id),
     }))
-    .sort((a, b) => b.stats.wins - a.stats.wins || a.profile?.username?.localeCompare(b.profile?.username));
+    .sort((a, b) => (a.profile?.username ?? '').localeCompare(b.profile?.username ?? ''));
 
   return (
     <div style={{ padding: '3rem 2rem', maxWidth: '860px', margin: '0 auto' }}>
