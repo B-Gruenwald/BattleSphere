@@ -1,4 +1,4 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import PhotoGallery from '@/app/components/PhotoGallery';
@@ -33,7 +33,7 @@ export default async function BattleDetailPage({ params }) {
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  // No login required — battle detail pages are publicly shareable.
 
   const { data: campaign } = await supabase
     .from('campaigns').select('*').eq('slug', slug).single();
@@ -66,12 +66,14 @@ export default async function BattleDetailPage({ params }) {
   const attackerPlayer   = profileMap[battle.attacker_player_id];
   const defenderPlayer   = profileMap[battle.defender_player_id];
 
-  // Co-ownership: logger, attacker, defender, or campaign organiser may edit
-  const canEdit =
+  // Co-ownership: logger, attacker, defender, or campaign organiser may edit.
+  // Anonymous visitors (user === null) cannot edit.
+  const canEdit = !!user && (
     user.id === battle.logged_by          ||
     user.id === battle.attacker_player_id ||
     user.id === battle.defender_player_id ||
-    user.id === campaign.organiser_id;
+    user.id === campaign.organiser_id
+  );
 
   const isDraw      = !battle.winner_faction_id;
   const attackerWon = battle.winner_faction_id === battle.attacker_faction_id;
@@ -384,7 +386,7 @@ export default async function BattleDetailPage({ params }) {
         photos={battlePhotos || []}
         entityType="battle"
         entityId={id}
-        userId={user.id}
+        userId={user?.id ?? null}
         canUpload={canEdit}
         canManage={canEdit}
       />
