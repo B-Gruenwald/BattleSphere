@@ -27,8 +27,14 @@ const TYPE_META = {
   },
 };
 
-// Format a week range as "14 Apr – 20 Apr" or "28 Apr – 4 May"
-function formatWeekRange(weekStart, weekEnd) {
+// Format a date range. For catch-up entries, include the year.
+function formatWeekRange(weekStart, weekEnd, isCatchUp) {
+  if (isCatchUp) {
+    const opts = { day: 'numeric', month: 'short', year: 'numeric' };
+    const s = new Date(weekStart).toLocaleDateString('en-GB', opts);
+    const e = new Date(weekEnd).toLocaleDateString('en-GB', opts);
+    return `${s} – ${e}`;
+  }
   const opts = { day: 'numeric', month: 'short' };
   const s = new Date(weekStart).toLocaleDateString('en-GB', opts);
   const e = new Date(weekEnd).toLocaleDateString('en-GB', opts);
@@ -41,9 +47,10 @@ const PREVIEW_COUNT = 2;
 export default function WeeklyUpdateEntry({ update }) {
   const [expanded, setExpanded] = useState(false);
 
-  const meta     = TYPE_META[update.update_type] ?? TYPE_META.hobby_progress;
-  const content  = Array.isArray(update.content) ? update.content : [];
-  const weekRange = formatWeekRange(update.week_start, update.week_end);
+  const meta      = TYPE_META[update.update_type] ?? TYPE_META.hobby_progress;
+  const content   = Array.isArray(update.content) ? update.content : [];
+  const isCatchUp = !!update.is_catch_up;
+  const weekRange = formatWeekRange(update.week_start, update.week_end, isCatchUp);
   const hasMore   = content.length > PREVIEW_COUNT;
   const visible   = expanded ? content : content.slice(0, PREVIEW_COUNT);
   const hiddenCount = content.length - PREVIEW_COUNT;
@@ -88,13 +95,13 @@ export default function WeeklyUpdateEntry({ update }) {
               border: `1px solid ${meta.accent}40`,
               padding: '0.1rem 0.4rem',
             }}>
-              Week of {weekRange}
+              {isCatchUp ? weekRange : `Week of ${weekRange}`}
             </span>
           </div>
 
           {/* Title */}
           <div style={{ fontSize: '1rem', color: 'var(--text-primary)', fontWeight: '600', marginBottom: '0.35rem' }}>
-            {meta.label}
+            {isCatchUp ? `${meta.label} — Campaign History` : meta.label}
           </div>
 
           {/* Summary chip */}

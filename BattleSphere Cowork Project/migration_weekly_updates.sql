@@ -11,8 +11,10 @@ CREATE TABLE IF NOT EXISTS chronicle_weekly_updates (
   week_end    TIMESTAMPTZ NOT NULL,
   -- content: JSON array of player summaries
   -- [ { player_id, username, lines: string[] }, ... ]
-  content     JSONB       NOT NULL DEFAULT '[]'::jsonb,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  content      JSONB       NOT NULL DEFAULT '[]'::jsonb,
+  -- is_catch_up: true on the first-run entry that covers all historical activity
+  is_catch_up  BOOLEAN     NOT NULL DEFAULT FALSE,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
   -- One row per campaign + type + week
   UNIQUE (campaign_id, update_type, week_start)

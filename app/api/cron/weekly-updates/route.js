@@ -11,6 +11,10 @@
  *   army_progress   — crusade units newly enlisted, units whose stats were
  *                     updated (XP, kills, etc.), and army-level record updates.
  *
+ * First-run behaviour: if a campaign has never had a weekly update generated,
+ * the window is expanded to cover all activity since the campaign was created
+ * (a one-time catch-up entry labelled "Campaign History").
+ *
  * Results are upserted into chronicle_weekly_updates with a UNIQUE constraint
  * on (campaign_id, update_type, week_start), so the cron is safe to re-run.
  */
@@ -21,13 +25,11 @@ const CRON_SECRET = process.env.CRON_SECRET;
 
 // ── Week window ───────────────────────────────────────────────────────────────
 // Returns the Mon 00:00 UTC → Sun 23:59:59.999 UTC of the *previous* week.
-// When the cron fires on a Friday this gives Mon–Sun of the week that just ended.
 function getPreviousWeekRange() {
   const now = new Date();
   const dow = now.getUTCDay(); // 0 = Sun … 6 = Sat
   const daysSinceMon = dow === 0 ? 6 : dow - 1;
 
-  // Monday 00:00 UTC of the current week
   const thisMonday = new Date(Date.UTC(
     now.getUTCFullYear(),
     now.getUTCMonth(),
@@ -35,8 +37,8 @@ function getPreviousWeekRange() {
     0, 0, 0, 0,
   ));
 
-  const weekStart = new Date(thisMonday.getTime() - 7 * 24 * 60 * 60 * 1000); // Mon previous week
-  const weekEnd   = new Date(thisMonday.getTime() - 1);                        // Sun 23:59:59.999
+  const weekStart = new Date(thisMonday.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const weekEnd   = new Date(thisMonday.getTime() - 1);
 
   return { weekStart, weekEnd };
 }
@@ -49,27 +51,48 @@ export async function GET(request) {
   }
 
   const supabase = createAdminClient();
-  const { weekStart, weekEnd } = getPreviousWeekRange();
+  const defaultWindow = getPreviousWeekRange();
 
-  console.log(`weekly-updates cron: window ${weekStart.toISOString()} → ${weekEnd.toISOString()}`);
+  // Fetch all existing weekly update rows so we can detect first-run campaigns
+  const { data: existingUpdates } = await supabase
+    .from('chronicle_weekly_updates')
+    .select('campaign_id, update_type');
 
-  // Fetch all campaigns
+  const campaignsWithUpdates = new Set(
+    (existingUpdates || []).map(r => r.campaign_id),
+  );
+
+  console.log(`weekly-updates cron: default window ${defaultWindow.weekStart.toISOString()} → ${defaultWindow.weekEnd.toISOString()}`);
+
+  // Fetch all campaigns (include created_at for catch-up window)
   const { data: campaigns, error: campErr } = await supabase
     .from('campaigns')
-    .select('id, name');
+    .select('id, name, created_at');
 
   if (campErr) {
     console.error('weekly-updates: error fetching campaigns', campErr);
     return Response.json({ error: 'DB error.' }, { status: 500 });
   }
 
-  let hobbyWritten = 0;
-  let armyWritten  = 0;
   const errors = [];
+  const now = new Date();
 
   for (const campaign of (campaigns || [])) {
     try {
-      await processCampaign(supabase, campaign, weekStart, weekEnd);
+      let weekStart, weekEnd, isCatchUp;
+
+      if (!campaignsWithUpdates.has(campaign.id)) {
+        // First run for this campaign — cover everything since it was created
+        weekStart = new Date(campaign.created_at);
+        weekEnd   = now;
+        isCatchUp = true;
+      } else {
+        weekStart = defaultWindow.weekStart;
+        weekEnd   = defaultWindow.weekEnd;
+        isCatchUp = false;
+      }
+
+      await processCampaign(supabase, campaign, weekStart, weekEnd, isCatchUp);
     } catch (err) {
       console.error(`weekly-updates: error for campaign ${campaign.id}`, err);
       errors.push({ campaignId: campaign.id, error: err.message });
@@ -78,11 +101,11 @@ export async function GET(request) {
   }
 
   console.log(`weekly-updates cron done. errors=${errors.length}`);
-  return Response.json({ weekStart, weekEnd, errors });
+  return Response.json({ defaultWindow, errors });
 }
 
 // ── Per-campaign processing ───────────────────────────────────────────────────
-async function processCampaign(supabase, campaign, weekStart, weekEnd) {
+async function processCampaign(supabase, campaign, weekStart, weekEnd, isCatchUp = false) {
   const cid  = campaign.id;
   const wS   = weekStart.toISOString();
   const wE   = weekEnd.toISOString();
@@ -251,16 +274,17 @@ async function processCampaign(supabase, campaign, weekStart, weekEnd) {
       .from('chronicle_weekly_updates')
       .upsert(
         {
-          campaign_id: cid,
-          update_type: 'hobby_progress',
-          week_start:  weekStart.toISOString(),
-          week_end:    weekEnd.toISOString(),
-          content:     hobbyContent,
+          campaign_id:  cid,
+          update_type:  'hobby_progress',
+          week_start:   weekStart.toISOString(),
+          week_end:     weekEnd.toISOString(),
+          content:      hobbyContent,
+          is_catch_up:  isCatchUp,
         },
         { onConflict: 'campaign_id,update_type,week_start' },
       );
     if (error) console.error(`weekly-updates: upsert hobby for ${cid}`, error);
-    else console.log(`weekly-updates: hobby_progress written for ${campaign.name}`);
+    else console.log(`weekly-updates: hobby_progress${isCatchUp ? ' (catch-up)' : ''} written for ${campaign.name}`);
   }
 
   if (armyContent.length > 0) {
@@ -268,15 +292,16 @@ async function processCampaign(supabase, campaign, weekStart, weekEnd) {
       .from('chronicle_weekly_updates')
       .upsert(
         {
-          campaign_id: cid,
-          update_type: 'army_progress',
-          week_start:  weekStart.toISOString(),
-          week_end:    weekEnd.toISOString(),
-          content:     armyContent,
+          campaign_id:  cid,
+          update_type:  'army_progress',
+          week_start:   weekStart.toISOString(),
+          week_end:     weekEnd.toISOString(),
+          content:      armyContent,
+          is_catch_up:  isCatchUp,
         },
         { onConflict: 'campaign_id,update_type,week_start' },
       );
     if (error) console.error(`weekly-updates: upsert army for ${cid}`, error);
-    else console.log(`weekly-updates: army_progress written for ${campaign.name}`);
+    else console.log(`weekly-updates: army_progress${isCatchUp ? ' (catch-up)' : ''} written for ${campaign.name}`);
   }
 }
