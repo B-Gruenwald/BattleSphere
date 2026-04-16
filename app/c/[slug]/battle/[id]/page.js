@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import PhotoGallery from '@/app/components/PhotoGallery';
+import AddToCampaignPanel from '@/app/components/AddToCampaignPanel';
 
 // Render **bold** and *italic* markdown-style markup
 function RichText({ text }) {
@@ -105,6 +106,44 @@ export default async function BattleDetailPage({ params }) {
     .from('battle_cascade_bonuses')
     .select('*, campaign_events(title), territories(name)')
     .eq('battle_id', id);
+
+  // Cross-campaign links: source battle (if this is a copy) + linked copies (if this is the original)
+  let sourceCampaign = null;
+  if (battle.source_battle_id) {
+    const { data: sourceRows } = await supabase
+      .from('battles')
+      .select('id, campaign_id')
+      .eq('id', battle.source_battle_id)
+      .limit(1);
+    const sourceBattle = sourceRows?.[0] ?? null;
+    if (sourceBattle) {
+      const { data: sCampRows } = await supabase
+        .from('campaigns')
+        .select('id, name, slug')
+        .eq('id', sourceBattle.campaign_id)
+        .limit(1);
+      sourceCampaign = sCampRows?.[0] ?? null;
+    }
+  }
+
+  const { data: linkedBattleRows } = await supabase
+    .from('battles')
+    .select('id, campaign_id')
+    .eq('source_battle_id', id);
+
+  let linkedCampaigns = [];
+  if (linkedBattleRows && linkedBattleRows.length > 0) {
+    const linkedCampaignIds = [...new Set(linkedBattleRows.map(r => r.campaign_id))];
+    const { data: linkedCampData } = await supabase
+      .from('campaigns')
+      .select('id, name, slug')
+      .in('id', linkedCampaignIds);
+    // Pair each campaign with the linked battle id
+    linkedCampaigns = (linkedCampData || []).map(c => {
+      const lb = linkedBattleRows.find(r => r.campaign_id === c.id);
+      return { ...c, linkedBattleId: lb?.id ?? null };
+    });
+  }
 
   return (
     <div style={{ padding: '3rem 2rem', maxWidth: '860px', margin: '0 auto' }}>
@@ -391,8 +430,49 @@ export default async function BattleDetailPage({ params }) {
         canManage={canEdit}
       />
 
+      {/* Cross-campaign links */}
+      {(sourceCampaign || linkedCampaigns.length > 0) && (
+        <div style={{
+          marginBottom: '2rem',
+          padding: '1rem 1.25rem',
+          background: 'rgba(183,140,64,0.04)',
+          border: '1px solid var(--border-dim)',
+          borderLeft: '3px solid var(--text-gold)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.5rem',
+        }}>
+          <p style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '0.55rem',
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: 'var(--text-gold)',
+            marginBottom: '0.25rem',
+          }}>
+            Multi-Campaign Record
+          </p>
+          {sourceCampaign && (
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              Originally fought in{' '}
+              <Link href={`/c/${sourceCampaign.slug}`} style={{ color: 'var(--text-gold)', textDecoration: 'none' }}>
+                {sourceCampaign.name}
+              </Link>
+            </p>
+          )}
+          {linkedCampaigns.map(lc => (
+            <p key={lc.id} style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              Also recorded in{' '}
+              <Link href={`/c/${lc.slug}/battle/${lc.linkedBattleId}`} style={{ color: 'var(--text-gold)', textDecoration: 'none' }}>
+                {lc.name}
+              </Link>
+            </p>
+          ))}
+        </div>
+      )}
+
       {/* Actions */}
-      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
         <Link href={`/c/${slug}`}>
           <button className="btn-secondary">← Campaign Dashboard</button>
         </Link>
@@ -405,6 +485,10 @@ export default async function BattleDetailPage({ params }) {
           <Link href={`/c/${slug}/battle/${id}/edit`}>
             <button className="btn-secondary">Edit Battle</button>
           </Link>
+        )}
+        {/* Show link-to-campaign button only to participants and only if not itself a linked copy */}
+        {user && (user.id === battle.attacker_player_id || user.id === battle.defender_player_id) && (
+          <AddToCampaignPanel battleId={id} />
         )}
       </div>
     </div>

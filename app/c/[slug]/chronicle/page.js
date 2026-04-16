@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import WeeklyUpdateEntry from '@/app/components/WeeklyUpdateEntry';
 
 const EVENT_TYPE_LABELS = {
   narrative:    'Narrative',
@@ -350,6 +351,13 @@ export default async function ChroniclePage({ params }) {
     .select('*')
     .eq('campaign_id', campaign.id);
 
+  // Fetch weekly updates (Deployment Reports + Crusade Reports)
+  const { data: weeklyUpdates } = await supabase
+    .from('chronicle_weekly_updates')
+    .select('*')
+    .eq('campaign_id', campaign.id)
+    .order('week_start', { ascending: false });
+
   // Fetch factions + territories for battle rendering
   const { data: factions } = await supabase
     .from('factions')
@@ -398,8 +406,16 @@ export default async function ChroniclePage({ params }) {
     factionMap,
   }));
 
+  // Weekly updates — use week_end as the sort key so they appear at the end
+  // of the week they cover (Sunday), naturally slotted into the timeline.
+  const weeklyEntries = (weeklyUpdates || []).map(u => ({
+    type:   'weekly_update',
+    sortKey: u.week_end,
+    update:  u,
+  }));
+
   // Merge and sort newest first
-  const timeline = [...battleEntries, ...eventEntries, ...achievementEntries]
+  const timeline = [...battleEntries, ...eventEntries, ...achievementEntries, ...weeklyEntries]
     .sort((a, b) => new Date(b.sortKey) - new Date(a.sortKey));
 
   const dayGroups = groupByDay(timeline);
@@ -468,6 +484,10 @@ export default async function ChroniclePage({ params }) {
           <span style={{ fontSize: '0.85rem', lineHeight: 1 }}>🏆</span>
           <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Achievement</span>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <div style={{ width: '10px', height: '10px', background: '#6a8fc7', borderRadius: '50%' }} />
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Weekly Report</span>
+        </div>
       </div>
 
       {/* Timeline */}
@@ -518,15 +538,18 @@ export default async function ChroniclePage({ params }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {group.entries.map((entry, i) => (
                   <div key={
-                    entry.type === 'battle'      ? `b-${entry.battle.id}`
-                    : entry.type === 'event'     ? `e-${entry.ev.id}`
+                    entry.type === 'battle'        ? `b-${entry.battle.id}`
+                    : entry.type === 'event'       ? `e-${entry.ev.id}`
+                    : entry.type === 'weekly_update' ? `w-${entry.update.id}`
                     : `a-${entry.achievement.id}`
                   }>
                     {entry.type === 'battle'
                       ? BattleEntry({ entry, slug })
                       : entry.type === 'event'
                         ? EventEntry({ entry, slug })
-                        : AchievementEntry({ entry, slug })
+                        : entry.type === 'weekly_update'
+                          ? <WeeklyUpdateEntry update={entry.update} />
+                          : AchievementEntry({ entry, slug })
                     }
                   </div>
                 ))}
