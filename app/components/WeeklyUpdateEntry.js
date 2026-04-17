@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 // Labels and colour accents per update type
 const TYPE_META = {
@@ -39,6 +40,28 @@ function formatWeekRange(weekStart, weekEnd, isCatchUp) {
   const s = new Date(weekStart).toLocaleDateString('en-GB', opts);
   const e = new Date(weekEnd).toLocaleDateString('en-GB', opts);
   return `${s} – ${e}`;
+}
+
+// Render a single line — handles both legacy strings and new structured objects.
+// Structured: { text, army_id, army_name } — army_name is hyperlinked to /armies/[id].
+function LineText({ line, accent }) {
+  if (typeof line === 'string') return <span>{line}</span>;
+  const { text, army_id, army_name } = line;
+  if (!army_id || !army_name) return <span>{text}</span>;
+  const idx = text.indexOf(army_name);
+  if (idx === -1) return <span>{text}</span>;
+  return (
+    <span>
+      {text.slice(0, idx)}
+      <Link
+        href={`/armies/${army_id}`}
+        style={{ color: accent, textDecoration: 'underline', textDecorationColor: `${accent}60` }}
+      >
+        {army_name}
+      </Link>
+      {text.slice(idx + army_name.length)}
+    </span>
+  );
 }
 
 // PREVIEW_COUNT: players shown before "show more" kicks in
@@ -138,7 +161,7 @@ export default function WeeklyUpdateEntry({ update }) {
                     lineHeight: 1.5,
                     fontStyle: 'italic',
                   }}>
-                    · {line}
+                    · <LineText line={line} accent={meta.accent} />
                   </div>
                 ))}
               </div>

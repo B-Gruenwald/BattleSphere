@@ -173,9 +173,11 @@ async function processCampaign(supabase, campaign, weekStart, weekEnd, isCatchUp
   for (const r of newArmyLinks) {
     ensureHobbyPlayer(r.player_id);
     const name = armyNameMap[r.army_id] ?? 'an army';
-    hobbyByPlayer[r.player_id].lines.push(
-      `Deployed ${name} to the campaign`,
-    );
+    hobbyByPlayer[r.player_id].lines.push({
+      text:      `Deployed ${name} to the campaign`,
+      army_id:   r.army_id,
+      army_name: name,
+    });
   }
 
   // Group new units by army
@@ -188,9 +190,11 @@ async function processCampaign(supabase, campaign, weekStart, weekEnd, isCatchUp
     if (!pid) continue;
     ensureHobbyPlayer(pid);
     const armyName = armyNameMap[armyId] ?? 'their army';
-    hobbyByPlayer[pid].lines.push(
-      `Added ${count} new unit${count !== 1 ? 's' : ''} to ${armyName}`,
-    );
+    hobbyByPlayer[pid].lines.push({
+      text:      `Added ${count} new unit${count !== 1 ? 's' : ''} to ${armyName}`,
+      army_id:   armyId,
+      army_name: armyName,
+    });
   }
 
   const hobbyContent = Object.values(hobbyByPlayer).filter(p => p.lines.length > 0);
@@ -233,46 +237,59 @@ async function processCampaign(supabase, campaign, weekStart, weekEnd, isCatchUp
     }
   }
 
-  // Group by player
-  const enlistedByPlayer = {};
+  // Group by army (so each line links to a specific army)
+  const enlistedByArmy = {};
   for (const r of newCrusadeUnits) {
-    const pid = r.player_id;
-    enlistedByPlayer[pid] = (enlistedByPlayer[pid] ?? 0) + 1;
+    const { army_id, player_id } = carIdToPlayer[r.campaign_army_record_id] ?? {};
+    if (!army_id) continue;
+    if (!enlistedByArmy[army_id]) enlistedByArmy[army_id] = { player_id, count: 0 };
+    enlistedByArmy[army_id].count++;
   }
-  for (const [pid, count] of Object.entries(enlistedByPlayer)) {
+  for (const [armyId, { player_id: pid, count }] of Object.entries(enlistedByArmy)) {
     ensureArmyPlayer(pid);
-    armyByPlayer[pid].lines.push(
-      `Enlisted ${count} unit${count !== 1 ? 's' : ''} to their Crusade force`,
-    );
+    const armyName = armyNameMap[armyId] ?? 'their army';
+    armyByPlayer[pid].lines.push({
+      text:      `Enlisted ${count} unit${count !== 1 ? 's' : ''} to ${armyName}`,
+      army_id:   armyId,
+      army_name: armyName,
+    });
   }
 
-  const progressedByPlayer = {};
+  const progressedByArmy = {};
   for (const r of updatedCrusadeUnits) {
-    const pid = r.player_id;
-    progressedByPlayer[pid] = (progressedByPlayer[pid] ?? 0) + 1;
+    const { army_id, player_id } = carIdToPlayer[r.campaign_army_record_id] ?? {};
+    if (!army_id) continue;
+    if (!progressedByArmy[army_id]) progressedByArmy[army_id] = { player_id, count: 0 };
+    progressedByArmy[army_id].count++;
   }
-  for (const [pid, count] of Object.entries(progressedByPlayer)) {
+  for (const [armyId, { player_id: pid, count }] of Object.entries(progressedByArmy)) {
     ensureArmyPlayer(pid);
-    armyByPlayer[pid].lines.push(
-      `Updated battle honours for ${count} unit${count !== 1 ? 's' : ''} (XP, kills, or upgrades)`,
-    );
+    const armyName = armyNameMap[armyId] ?? 'their army';
+    armyByPlayer[pid].lines.push({
+      text:      `Updated battle honours for ${count} unit${count !== 1 ? 's' : ''} of ${armyName}`,
+      army_id:   armyId,
+      army_name: armyName,
+    });
   }
 
   for (const r of updatedCarRows) {
     ensureArmyPlayer(r.player_id);
     const armyName = armyNameMap[r.army_id] ?? 'their army';
-    armyByPlayer[r.player_id].lines.push(
-      `Updated ${armyName}'s Crusade roster (supply, requisition, or notes)`,
-    );
+    armyByPlayer[r.player_id].lines.push({
+      text:      `Updated ${armyName}'s Crusade roster (supply, requisition, or notes)`,
+      army_id:   r.army_id,
+      army_name: armyName,
+    });
   }
 
   const armyContent = Object.values(armyByPlayer).filter(p => p.lines.length > 0);
 
   // ── Upsert results ─────────────────────────────────────────────────────────
+  const lineText = l => (typeof l === 'string' ? l : l.text);
   const summary = {
     window:      `${wS} → ${wE}`,
-    hobbyLines:  hobbyContent.flatMap(p => p.lines.map(l => `${p.username}: ${l}`)),
-    armyLines:   armyContent.flatMap(p => p.lines.map(l => `${p.username}: ${l}`)),
+    hobbyLines:  hobbyContent.flatMap(p => p.lines.map(l => `${p.username}: ${lineText(l)}`)),
+    armyLines:   armyContent.flatMap(p => p.lines.map(l => `${p.username}: ${lineText(l)}`)),
     errors:      [],
   };
 
