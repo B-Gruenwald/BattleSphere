@@ -44,25 +44,32 @@ function getPreviousWeekRange() {
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────
+// Add ?dry=true to see what would be written without actually writing anything.
 export async function GET(request) {
   const authHeader = request.headers.get('authorization');
   if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
     return Response.json({ error: 'Unauthorised.' }, { status: 401 });
   }
 
+  const { searchParams } = new URL(request.url);
+  const dryRun = searchParams.get('dry') === 'true';
+
   const supabase = createAdminClient();
   const defaultWindow = getPreviousWeekRange();
 
   // Fetch all existing weekly update rows so we can detect first-run campaigns
-  const { data: existingUpdates } = await supabase
+  const { data: existingUpdates, error: existingErr } = await supabase
     .from('chronicle_weekly_updates')
     .select('campaign_id, update_type');
+
+  if (existingErr) {
+    // Table might not exist yet
+    return Response.json({ error: `chronicle_weekly_updates query failed: ${existingErr.message}` }, { status: 500 });
+  }
 
   const campaignsWithUpdates = new Set(
     (existingUpdates || []).map(r => r.campaign_id),
   );
-
-  console.log(`weekly-updates cron: default window ${defaultWindow.weekStart.toISOString()} → ${defaultWindow.weekEnd.toISOString()}`);
 
   // Fetch all campaigns (include created_at for catch-up window)
   const { data: campaigns, error: campErr } = await supabase
@@ -70,53 +77,46 @@ export async function GET(request) {
     .select('id, name, created_at');
 
   if (campErr) {
-    console.error('weekly-updates: error fetching campaigns', campErr);
-    return Response.json({ error: 'DB error.' }, { status: 500 });
+    return Response.json({ error: `campaigns query failed: ${campErr.message}` }, { status: 500 });
   }
 
-  const errors = [];
+  const results = [];
   const now = new Date();
 
   for (const campaign of (campaigns || [])) {
-    try {
-      let weekStart, weekEnd, isCatchUp;
+    let weekStart, weekEnd, isCatchUp;
 
-      if (!campaignsWithUpdates.has(campaign.id)) {
-        // First run for this campaign — cover everything since it was created
-        weekStart = new Date(campaign.created_at);
-        weekEnd   = now;
-        isCatchUp = true;
-      } else {
-        weekStart = defaultWindow.weekStart;
-        weekEnd   = defaultWindow.weekEnd;
-        isCatchUp = false;
-      }
-
-      await processCampaign(supabase, campaign, weekStart, weekEnd, isCatchUp);
-    } catch (err) {
-      console.error(`weekly-updates: error for campaign ${campaign.id}`, err);
-      errors.push({ campaignId: campaign.id, error: err.message });
-      continue;
+    if (!campaignsWithUpdates.has(campaign.id)) {
+      weekStart = new Date(campaign.created_at);
+      weekEnd   = now;
+      isCatchUp = true;
+    } else {
+      weekStart = defaultWindow.weekStart;
+      weekEnd   = defaultWindow.weekEnd;
+      isCatchUp = false;
     }
+
+    const result = await processCampaign(supabase, campaign, weekStart, weekEnd, isCatchUp, dryRun);
+    results.push({ campaign: campaign.name, isCatchUp, ...result });
   }
 
-  console.log(`weekly-updates cron done. errors=${errors.length}`);
-  return Response.json({ defaultWindow, errors });
+  return Response.json({ dryRun, defaultWindow, results });
 }
 
 // ── Per-campaign processing ───────────────────────────────────────────────────
-async function processCampaign(supabase, campaign, weekStart, weekEnd, isCatchUp = false) {
+async function processCampaign(supabase, campaign, weekStart, weekEnd, isCatchUp = false, dryRun = false) {
   const cid  = campaign.id;
   const wS   = weekStart.toISOString();
   const wE   = weekEnd.toISOString();
 
   // ── Fetch all campaign_army_records for this campaign ──────────────────────
-  const { data: carRows } = await supabase
+  const { data: carRows, error: carErr } = await supabase
     .from('campaign_army_records')
     .select('id, army_id, player_id, created_at, updated_at')
     .eq('campaign_id', cid);
 
-  if (!carRows || carRows.length === 0) return; // no armies in campaign
+  if (carErr) return { skipped: `campaign_army_records error: ${carErr.message}` };
+  if (!carRows || carRows.length === 0) return { skipped: 'no armies linked to campaign' };
 
   const armyIds  = [...new Set(carRows.map(r => r.army_id))];
   const playerIds = [...new Set(carRows.map(r => r.player_id))];
@@ -269,39 +269,48 @@ async function processCampaign(supabase, campaign, weekStart, weekEnd, isCatchUp
   const armyContent = Object.values(armyByPlayer).filter(p => p.lines.length > 0);
 
   // ── Upsert results ─────────────────────────────────────────────────────────
-  if (hobbyContent.length > 0) {
-    const { error } = await supabase
-      .from('chronicle_weekly_updates')
-      .upsert(
-        {
-          campaign_id:  cid,
-          update_type:  'hobby_progress',
-          week_start:   weekStart.toISOString(),
-          week_end:     weekEnd.toISOString(),
-          content:      hobbyContent,
-          is_catch_up:  isCatchUp,
-        },
-        { onConflict: 'campaign_id,update_type,week_start' },
-      );
-    if (error) console.error(`weekly-updates: upsert hobby for ${cid}`, error);
-    else console.log(`weekly-updates: hobby_progress${isCatchUp ? ' (catch-up)' : ''} written for ${campaign.name}`);
+  const summary = {
+    window:      `${wS} → ${wE}`,
+    hobbyLines:  hobbyContent.flatMap(p => p.lines.map(l => `${p.username}: ${l}`)),
+    armyLines:   armyContent.flatMap(p => p.lines.map(l => `${p.username}: ${l}`)),
+    errors:      [],
+  };
+
+  if (!dryRun) {
+    if (hobbyContent.length > 0) {
+      const { error } = await supabase
+        .from('chronicle_weekly_updates')
+        .upsert(
+          {
+            campaign_id:  cid,
+            update_type:  'hobby_progress',
+            week_start:   weekStart.toISOString(),
+            week_end:     weekEnd.toISOString(),
+            content:      hobbyContent,
+            is_catch_up:  isCatchUp,
+          },
+          { onConflict: 'campaign_id,update_type,week_start' },
+        );
+      if (error) summary.errors.push(`hobby upsert: ${error.message}`);
+    }
+
+    if (armyContent.length > 0) {
+      const { error } = await supabase
+        .from('chronicle_weekly_updates')
+        .upsert(
+          {
+            campaign_id:  cid,
+            update_type:  'army_progress',
+            week_start:   weekStart.toISOString(),
+            week_end:     weekEnd.toISOString(),
+            content:      armyContent,
+            is_catch_up:  isCatchUp,
+          },
+          { onConflict: 'campaign_id,update_type,week_start' },
+        );
+      if (error) summary.errors.push(`army upsert: ${error.message}`);
+    }
   }
 
-  if (armyContent.length > 0) {
-    const { error } = await supabase
-      .from('chronicle_weekly_updates')
-      .upsert(
-        {
-          campaign_id:  cid,
-          update_type:  'army_progress',
-          week_start:   weekStart.toISOString(),
-          week_end:     weekEnd.toISOString(),
-          content:      armyContent,
-          is_catch_up:  isCatchUp,
-        },
-        { onConflict: 'campaign_id,update_type,week_start' },
-      );
-    if (error) console.error(`weekly-updates: upsert army for ${cid}`, error);
-    else console.log(`weekly-updates: army_progress${isCatchUp ? ' (catch-up)' : ''} written for ${campaign.name}`);
-  }
+  return summary;
 }
