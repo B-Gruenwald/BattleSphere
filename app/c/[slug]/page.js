@@ -127,6 +127,13 @@ export default async function CampaignDashboard({ params }) {
     .from('achievements').select('*').eq('campaign_id', campaign.id)
     .order('created_at', { ascending: false }).limit(5);
 
+  const { data: recentWeeklyUpdates } = await supabase
+    .from('chronicle_weekly_updates')
+    .select('id, update_type, week_start, week_end, is_catch_up')
+    .eq('campaign_id', campaign.id)
+    .order('week_end', { ascending: false })
+    .limit(5);
+
   const achievementPlayerIds = [...new Set(
     (recentAchievements || [])
       .filter(a => a.awarded_to_type === 'player' && a.awarded_to_player_id)
@@ -140,9 +147,10 @@ export default async function CampaignDashboard({ params }) {
   );
 
   const chronicleEntries = [
-    ...(recentBattles      || []).map(b => ({ type: 'battle',      created_at: b.created_at, data: b })),
-    ...(recentEvents       || []).map(e => ({ type: 'event',       created_at: e.created_at, data: e })),
-    ...(recentAchievements || []).map(a => ({ type: 'achievement', created_at: a.created_at, data: a })),
+    ...(recentBattles        || []).map(b => ({ type: 'battle',        created_at: b.created_at,  data: b })),
+    ...(recentEvents         || []).map(e => ({ type: 'event',         created_at: e.created_at,  data: e })),
+    ...(recentAchievements   || []).map(a => ({ type: 'achievement',   created_at: a.created_at,  data: a })),
+    ...(recentWeeklyUpdates  || []).map(u => ({ type: 'weekly_update', created_at: u.week_end,    data: u })),
   ]
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     .slice(0, 5);
@@ -471,6 +479,29 @@ export default async function CampaignDashboard({ params }) {
                     </Link>
                   );
                 }
+                if (entry.type === 'weekly_update') {
+                  const u = entry.data;
+                  const isHobby = u.update_type === 'hobby_progress';
+                  const accent  = isHobby ? '#6a8fc7' : '#8a6fc7';
+                  const label   = isHobby ? 'Deployment Report' : 'Crusade Report';
+                  return (
+                    <Link key={`w-${u.id}`} href={`/c/${slug}/chronicle`} style={{ textDecoration: 'none' }}>
+                      <div style={rowStyle}>
+                        <div style={{ width: '5px', height: '5px', background: accent, borderRadius: '50%', flexShrink: 0, marginTop: '0.5rem' }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {u.is_catch_up ? `${label} — Campaign History` : label}
+                          </div>
+                          <div style={{ fontSize: '0.66rem', color: accent, fontFamily: 'var(--font-display)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: '0.1rem' }}>
+                            Weekly Report
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', flexShrink: 0 }}>{date}</span>
+                      </div>
+                    </Link>
+                  );
+                }
+
                 return null;
               })}
             </div>
