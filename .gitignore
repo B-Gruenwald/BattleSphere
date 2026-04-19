@@ -16,6 +16,8 @@
 # next.js
 /.next/
 /out/
+# Cowork sandbox build artefact (if distDir ever gets overridden)
+/sessions/
 
 # production
 /build

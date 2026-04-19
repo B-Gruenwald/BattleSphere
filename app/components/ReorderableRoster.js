@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 const btnStyle = (active, reordering) => ({
   background: 'none',
@@ -61,7 +62,13 @@ export default function ReorderableRoster({ initialUnits, armyId, isOwner, photo
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: unit.description ? '0.5rem' : 0 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem', flexWrap: 'wrap' }}>
                     <h3 style={{ fontSize: '0.95rem', fontWeight: '700', letterSpacing: '0.04em', color: 'var(--text-primary)' }}>
-                      {unit.name}
+                      <Link
+                        href={`/units/${unit.id}`}
+                        style={{ color: 'inherit', textDecoration: 'none', borderBottom: '1px dotted var(--border-subtle)' }}
+                        title="View unit portrait"
+                      >
+                        {unit.name}
+                      </Link>
                     </h3>
                     {unit.unit_type && (
                       <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
