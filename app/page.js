@@ -5,8 +5,8 @@ import { createClient } from '@/lib/supabase/server';
 // ── Demo links — swap placeholders before going live ─────────────────────────
 // ARMY_DEMO_URL: the public URL to Benjamin's army portfolio page, e.g. /armies/[id]
 // CAMPAIGN_DEMO_SLUG: the slug of the Vespator Front (or other demo) campaign
-const ARMY_DEMO_URL      = '/armies/YOUR_ARMY_ID_HERE';   // TODO: replace with real army ID
-const CAMPAIGN_DEMO_SLUG = 'YOUR_CAMPAIGN_SLUG_HERE';      // TODO: replace with Vespator Front slug
+const ARMY_DEMO_URL      = '/armies/b0e70783-09ee-4eeb-9b99-9bd425ced524';
+const CAMPAIGN_DEMO_SLUG = 'austriacus-subsector-93n4g';
 const LEAGUE_DEMO_SLUG   = 'home-game-league-anpa6';
 
 export default async function HomePage() {
