@@ -1,8 +1,59 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import PhotoGallery from '@/app/components/PhotoGallery';
 import AddToCampaignPanel from '@/app/components/AddToCampaignPanel';
+
+// ── Dynamic metadata for Discord / social previews ──────────────────────────
+export async function generateMetadata({ params }) {
+  const { slug, id } = await params;
+  const admin = createAdminClient();
+
+  const { data: campRows } = await admin
+    .from('campaigns').select('*').eq('slug', slug).limit(1);
+  const campaign = campRows?.[0] ?? null;
+  if (!campaign) return {};
+
+  const { data: battleRows } = await admin
+    .from('battles').select('*').eq('id', id).eq('campaign_id', campaign.id).limit(1);
+  const battle = battleRows?.[0] ?? null;
+  if (!battle) return {};
+
+  const { data: factions } = await admin
+    .from('factions').select('id, name').eq('campaign_id', campaign.id);
+  const factionMap   = Object.fromEntries((factions || []).map(f => [f.id, f]));
+  const attackerName = factionMap[battle.attacker_faction_id]?.name || 'Attacker';
+  const defenderName = factionMap[battle.defender_faction_id]?.name || 'Defender';
+  const winnerName   = factionMap[battle.winner_faction_id]?.name   || null;
+  const isDraw       = !battle.winner_faction_id;
+  const resultText   = isDraw ? 'Tactical Draw' : `${winnerName} Victory`;
+
+  const title = battle.headline
+    ? `${battle.headline} — ${campaign.name}`
+    : `${attackerName} vs ${defenderName} — ${campaign.name}`;
+
+  const description = `${resultText} · ${attackerName} vs ${defenderName}`
+    + (battle.narrative ? ` · "${battle.narrative.slice(0, 80)}…"` : '');
+
+  const ogImageUrl = `${process.env.NEXT_PUBLIC_APP_URL}/c/${slug}/battle/${id}/opengraph-image`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [{ url: ogImageUrl, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImageUrl],
+    },
+  };
+}
 
 // Render **bold** and *italic* markdown-style markup
 function RichText({ text }) {
