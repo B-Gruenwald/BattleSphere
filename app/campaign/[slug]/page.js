@@ -12,12 +12,18 @@ const SETTING_LABELS = {
   'High Fantasy':  'High Fantasy',
   'Historical':    'Historical',
   'Custom':        'Custom Setting',
+  'League':        'League Campaign',
 };
 
 const STATUS_COLOURS = {
   upcoming: '#6a8fc7',
   active:   '#b78c40',
   resolved: '#5a5445',
+};
+
+const WEEKLY_UPDATE_META = {
+  hobby_progress: { label: 'Deployment Report', colour: '#6a8fc7' },
+  army_progress:  { label: 'Crusade Report',     colour: '#8a6fc7' },
 };
 
 export default async function PublicCampaignPage({ params }) {
@@ -29,6 +35,8 @@ export default async function PublicCampaignPage({ params }) {
     .from('campaigns').select('*').eq('slug', slug).single();
 
   if (!campaign) notFound();
+
+  const isLeague = campaign.campaign_format === 'league';
 
   // ── Current user (may be null) ───────────────────────────────────────────────
   const { data: { user } } = await supabase.auth.getUser();
@@ -44,6 +52,7 @@ export default async function PublicCampaignPage({ params }) {
     { data: recentBattles },
     { data: recentEvents },
     { data: recentAchievements },
+    { data: recentWeeklyUpdates },
     { count: memberCount },
     { count: battleCount },
     { count: activeEventCount },
@@ -66,6 +75,10 @@ export default async function PublicCampaignPage({ params }) {
       .eq('campaign_id', campaign.id).order('created_at', { ascending: false }).limit(5),
     supabase.from('achievements').select('*')
       .eq('campaign_id', campaign.id).order('created_at', { ascending: false }).limit(5),
+    supabase.from('chronicle_weekly_updates')
+      .select('id, update_type, week_start, week_end, is_catch_up')
+      .eq('campaign_id', campaign.id)
+      .order('week_end', { ascending: false }).limit(5),
     supabase.from('campaign_members')
       .select('*', { count: 'exact', head: true }).eq('campaign_id', campaign.id),
     supabase.from('battles')
@@ -74,7 +87,7 @@ export default async function PublicCampaignPage({ params }) {
       .select('*', { count: 'exact', head: true }).eq('campaign_id', campaign.id).eq('status', 'active'),
   ]);
 
-  // ── Player standings (top 6 by XP) ──────────────────────────────────────────
+  // ── Player standings / league table ──────────────────────────────────────────
   const { data: allMembers } = await supabase
     .from('campaign_members').select('user_id, faction_id').eq('campaign_id', campaign.id);
 
@@ -86,6 +99,7 @@ export default async function PublicCampaignPage({ params }) {
   const factionMap  = Object.fromEntries((factions   || []).map(f => [f.id, f]));
   const profileMap  = Object.fromEntries((allProfiles || []).map(p => [p.id, p]));
 
+  // XP-based standings (narrative)
   const playerStandings = (allMembers || [])
     .map(m => ({
       userId:   m.user_id,
@@ -95,6 +109,33 @@ export default async function PublicCampaignPage({ params }) {
     }))
     .sort((a, b) => b.xp - a.xp)
     .slice(0, 6);
+
+  // League standings (points-based)
+  function getLeagueStats(userId) {
+    const fought = (allBattles || []).filter(
+      b => b.attacker_player_id === userId || b.defender_player_id === userId
+    );
+    const wins   = fought.filter(b => {
+      const myFaction = b.attacker_player_id === userId ? b.attacker_faction_id : b.defender_faction_id;
+      return b.winner_faction_id === myFaction;
+    }).length;
+    const draws  = fought.filter(b => b.winner_faction_id === null).length;
+    const losses = fought.length - wins - draws;
+    return { wins, draws, losses, played: fought.length, points: wins * 3 + draws };
+  }
+
+  const leagueStandings = isLeague
+    ? (allMembers || [])
+        .map(m => ({
+          userId:   m.user_id,
+          username: profileMap[m.user_id]?.username ?? 'Unknown',
+          colour:   factionMap[m.faction_id]?.colour ?? 'var(--border-dim)',
+          teamName: factionMap[m.faction_id]?.name ?? '—',
+          ...getLeagueStats(m.user_id),
+        }))
+        .sort((a, b) => b.points - a.points || b.wins - a.wins)
+        .slice(0, 6)
+    : [];
 
   // ── Achievement profile map (for chronicle) ──────────────────────────────────
   const achievementPlayerIds = [...new Set(
@@ -109,11 +150,12 @@ export default async function PublicCampaignPage({ params }) {
     (achievementProfiles || []).map(p => [p.id, p])
   );
 
-  // ── Chronicle ────────────────────────────────────────────────────────────────
+  // ── Chronicle (battles + events + achievements + weekly updates) ──────────────
   const chronicleEntries = [
-    ...(recentBattles      || []).map(b => ({ type: 'battle',      created_at: b.created_at, data: b })),
-    ...(recentEvents       || []).map(e => ({ type: 'event',       created_at: e.created_at, data: e })),
-    ...(recentAchievements || []).map(a => ({ type: 'achievement', created_at: a.created_at, data: a })),
+    ...(recentBattles       || []).map(b => ({ type: 'battle',        created_at: b.created_at,  data: b })),
+    ...(recentEvents        || []).map(e => ({ type: 'event',         created_at: e.created_at,  data: e })),
+    ...(recentAchievements  || []).map(a => ({ type: 'achievement',   created_at: a.created_at,  data: a })),
+    ...(recentWeeklyUpdates || []).map(u => ({ type: 'weekly_update', created_at: u.week_end,    data: u })),
   ]
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     .slice(0, 5);
@@ -207,60 +249,70 @@ export default async function PublicCampaignPage({ params }) {
         </div>
 
         {/* ════════════════════════════════════════════════════════
-            HERO ROW — Bulletin (left) + Map (right)
+            HERO ROW — League: Bulletin full-width
+                        Narrative: Bulletin + Map
             ════════════════════════════════════════════════════════ */}
-        <div className="hero-row">
-
-          {/* Bulletin Panel — shows dispatch if public RLS is enabled */}
-          <BulletinPanel
-            campaignId={campaign.id}
-            campaignSlug={slug}
-            isOrganiser={false}
-            factions={factions || []}
-            territories={territories || []}
-          />
-
-          <div className="hero-map-wrap">
-            {territories && territories.length > 0 ? (
-              <CampaignMap
-                territories={territories}
-                factions={factions || []}
-                influenceData={influenceData || []}
-                warpRoutes={warpRoutes || []}
-                campaignSlug={slug}
-                setting={campaign.setting}
-              />
-            ) : (
-              <div style={{
-                height: '100%', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', color: 'var(--text-muted)',
-                fontStyle: 'italic', fontSize: '0.9rem',
-              }}>
-                No territories mapped yet.
-              </div>
-            )}
-            <Link
-              href={`/c/${slug}/map`}
-              style={{
-                position: 'absolute', bottom: '1rem', right: '1rem',
-                background: 'rgba(8,8,12,0.82)',
-                border: '1px solid rgba(183,140,64,0.3)',
-                padding: '0.35rem 0.85rem',
-                fontFamily: 'var(--font-display)', fontSize: '0.52rem',
-                letterSpacing: '0.14em', textTransform: 'uppercase',
-                color: 'var(--text-gold)', textDecoration: 'none',
-                backdropFilter: 'blur(4px)',
-              }}
-            >
-              Full Map →
-            </Link>
+        {isLeague ? (
+          <div style={{ marginBottom: '2rem' }}>
+            <BulletinPanel
+              campaignId={campaign.id}
+              campaignSlug={slug}
+              isOrganiser={false}
+              factions={factions || []}
+              territories={[]}
+            />
           </div>
-        </div>
+        ) : (
+          <div className="hero-row">
+            <BulletinPanel
+              campaignId={campaign.id}
+              campaignSlug={slug}
+              isOrganiser={false}
+              factions={factions || []}
+              territories={territories || []}
+            />
+            <div className="hero-map-wrap">
+              {territories && territories.length > 0 ? (
+                <CampaignMap
+                  territories={territories}
+                  factions={factions || []}
+                  influenceData={influenceData || []}
+                  warpRoutes={warpRoutes || []}
+                  campaignSlug={slug}
+                  setting={campaign.setting}
+                />
+              ) : (
+                <div style={{
+                  height: '100%', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', color: 'var(--text-muted)',
+                  fontStyle: 'italic', fontSize: '0.9rem',
+                }}>
+                  No territories mapped yet.
+                </div>
+              )}
+              <Link
+                href={`/c/${slug}/map`}
+                style={{
+                  position: 'absolute', bottom: '1rem', right: '1rem',
+                  background: 'rgba(8,8,12,0.82)',
+                  border: '1px solid rgba(183,140,64,0.3)',
+                  padding: '0.35rem 0.85rem',
+                  fontFamily: 'var(--font-display)', fontSize: '0.52rem',
+                  letterSpacing: '0.14em', textTransform: 'uppercase',
+                  color: 'var(--text-gold)', textDecoration: 'none',
+                  backdropFilter: 'blur(4px)',
+                }}
+              >
+                Full Map →
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* ════════════════════════════════════════════════════════
-            EVENTS STRIP
+            EVENTS STRIP (narrative only)
             ════════════════════════════════════════════════════════ */}
-        {activeEvents && activeEvents.length > 0 && (
+        {!isLeague && activeEvents && activeEvents.length > 0 && (
           <div className="events-strip">
             <div style={{
               display: 'flex', justifyContent: 'space-between',
@@ -296,15 +348,15 @@ export default async function PublicCampaignPage({ params }) {
             ════════════════════════════════════════════════════════ */}
         <div className="stats-bar">
           {[
-            { label: 'Factions',      value: factions?.length ?? 0,    href: null },
-            { label: 'Players',       value: memberCount ?? 0,          href: null },
-            { label: 'Battles',       value: battleCount ?? 0,          href: null },
-            { label: 'Territories',   value: topLevelTerritoryCount,    href: null },
-            { label: 'Active Events', value: activeEventCount ?? 0,     href: null },
+            { label: isLeague ? 'Teams' : 'Factions', value: factions?.length ?? 0 },
+            { label: 'Players',  value: memberCount ?? 0 },
+            { label: 'Battles',  value: battleCount ?? 0 },
+            !isLeague && { label: 'Territories',   value: topLevelTerritoryCount },
+            !isLeague && { label: 'Active Events', value: activeEventCount ?? 0 },
             ...(currentBulletin?.act_label
-              ? [{ label: 'Current Act', value: currentBulletin.act_label, href: null }]
+              ? [{ label: 'Current Act', value: currentBulletin.act_label }]
               : []),
-          ].map((stat, i, arr) => (
+          ].filter(Boolean).map((stat, i, arr) => (
             <div key={stat.label} className="stat-cell" style={{
               flex: 1,
               borderRight: i < arr.length - 1 ? '1px solid var(--border-dim)' : 'none',
@@ -322,35 +374,87 @@ export default async function PublicCampaignPage({ params }) {
         </div>
 
         {/* ════════════════════════════════════════════════════════
-            BOTTOM ROW — Faction Standings | Player Standings | Chronicle
+            BOTTOM ROW
             ════════════════════════════════════════════════════════ */}
         <div className="bottom-row">
 
-          {/* ── Faction Standings ──────────────────────────────────────────── */}
+          {/* ── Left col: League Table (league) OR Faction Standings (narrative) ── */}
           <div className="standings-col">
-            <div className="standings-col-header">
-              <h2 className="standings-col-title">Faction Standings</h2>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              {factions && factions.length > 0
-                ? [...factions]
-                    .map(f => ({ ...f, wins: (allBattles || []).filter(b => b.winner_faction_id === f.id).length }))
-                    .sort((a, b) => b.wins - a.wins)
-                    .map((f, i) => (
-                      <Link key={f.id} href={`/c/${slug}/faction/${f.id}`} style={{ textDecoration: 'none' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.2rem 0' }}>
-                          <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.48rem', color: 'var(--text-muted)', width: '12px', textAlign: 'right', flexShrink: 0 }}>{i + 1}</span>
-                          <div style={{ width: '8px', height: '8px', background: f.colour, flexShrink: 0 }} />
-                          <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem', flex: 1 }}>{f.name}</span>
-                          <span style={{ color: f.wins > 0 ? f.colour : 'var(--text-muted)', fontSize: '0.78rem', fontWeight: f.wins > 0 ? '700' : '400' }}>
-                            {f.wins} VP
-                          </span>
-                        </div>
-                      </Link>
-                    ))
-                : <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No factions yet.</p>
-              }
-            </div>
+            {isLeague ? (
+              <>
+                <div className="standings-col-header">
+                  <h2 className="standings-col-title">League Table</h2>
+                  <Link href={`/c/${slug}/players`} style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textDecoration: 'none' }}>
+                    Full table →
+                  </Link>
+                </div>
+                {/* Column headers */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '20px 1fr 40px 40px 40px 40px 52px',
+                  gap: '0.25rem',
+                  padding: '0 0 0.5rem',
+                  borderBottom: '1px solid var(--border-dim)',
+                  marginBottom: '0.5rem',
+                }}>
+                  {['#', 'Player', 'W', 'D', 'L', 'P', 'Pts'].map(h => (
+                    <span key={h} style={{
+                      fontFamily: 'var(--font-display)', fontSize: '0.44rem',
+                      letterSpacing: '0.1em', textTransform: 'uppercase',
+                      color: 'var(--text-muted)', textAlign: h === 'Player' ? 'left' : 'center',
+                    }}>{h}</span>
+                  ))}
+                </div>
+                {leagueStandings.map((p, i) => {
+                  const isFirst = i === 0;
+                  return (
+                    <div key={p.userId} style={{
+                      display: 'grid',
+                      gridTemplateColumns: '20px 1fr 40px 40px 40px 40px 52px',
+                      gap: '0.25rem',
+                      alignItems: 'center',
+                      padding: '0.35rem 0',
+                      borderBottom: '1px solid var(--border-dim)',
+                      background: isFirst ? 'rgba(183,140,64,0.04)' : 'transparent',
+                    }}>
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.5rem', color: isFirst ? 'var(--text-gold)' : 'var(--text-muted)', textAlign: 'right' }}>{i + 1}</span>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: isFirst ? '700' : '400' }}>{p.username}</span>
+                      <span style={{ fontSize: '0.78rem', color: '#6a8fc7', textAlign: 'center' }}>{p.wins}</span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', textAlign: 'center' }}>{p.draws}</span>
+                      <span style={{ fontSize: '0.78rem', color: p.losses > 0 ? '#e05a5a' : 'var(--text-secondary)', textAlign: 'center' }}>{p.losses}</span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', textAlign: 'center' }}>{p.played}</span>
+                      <span style={{ fontSize: '0.88rem', fontWeight: '700', color: isFirst ? 'var(--text-gold)' : 'var(--text-primary)', textAlign: 'center' }}>{p.points}</span>
+                    </div>
+                  );
+                })}
+              </>
+            ) : (
+              <>
+                <div className="standings-col-header">
+                  <h2 className="standings-col-title">Faction Standings</h2>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  {factions && factions.length > 0
+                    ? [...factions]
+                        .map(f => ({ ...f, wins: (allBattles || []).filter(b => b.winner_faction_id === f.id).length }))
+                        .sort((a, b) => b.wins - a.wins)
+                        .map((f, i) => (
+                          <Link key={f.id} href={`/c/${slug}/faction/${f.id}`} style={{ textDecoration: 'none' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.2rem 0' }}>
+                              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.48rem', color: 'var(--text-muted)', width: '12px', textAlign: 'right', flexShrink: 0 }}>{i + 1}</span>
+                              <div style={{ width: '8px', height: '8px', background: f.colour, flexShrink: 0 }} />
+                              <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem', flex: 1 }}>{f.name}</span>
+                              <span style={{ color: f.wins > 0 ? f.colour : 'var(--text-muted)', fontSize: '0.78rem', fontWeight: f.wins > 0 ? '700' : '400' }}>
+                                {f.wins} VP
+                              </span>
+                            </div>
+                          </Link>
+                        ))
+                    : <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No factions yet.</p>
+                  }
+                </div>
+              </>
+            )}
           </div>
 
           {/* ── Player Standings ───────────────────────────────────────────── */}
@@ -384,6 +488,9 @@ export default async function PublicCampaignPage({ params }) {
           <div className="standings-col" style={{ borderLeft: '1px solid var(--border-dim)' }}>
             <div className="standings-col-header">
               <h2 className="standings-col-title">Latest Chronicle</h2>
+              <Link href={`/c/${slug}/chronicle`} style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textDecoration: 'none' }}>
+                Full chronicle →
+              </Link>
             </div>
 
             {chronicleEntries.length > 0 ? (
@@ -455,6 +562,26 @@ export default async function PublicCampaignPage({ params }) {
                       </div>
                     );
                   }
+
+                  if (entry.type === 'weekly_update') {
+                    const u    = entry.data;
+                    const meta = WEEKLY_UPDATE_META[u.update_type] ?? WEEKLY_UPDATE_META.hobby_progress;
+                    return (
+                      <Link key={`u-${u.id}`} href={`/c/${slug}/chronicle`} style={{ textDecoration: 'none' }}>
+                        <div style={rowStyle}>
+                          <div style={{ width: '5px', height: '5px', background: meta.colour, borderRadius: '50%', flexShrink: 0, marginTop: '0.5rem' }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta.label}</div>
+                            <div style={{ fontSize: '0.66rem', color: meta.colour, fontFamily: 'var(--font-display)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: '0.1rem' }}>
+                              {u.is_catch_up ? 'Campaign history' : 'Weekly update'}
+                            </div>
+                          </div>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', flexShrink: 0 }}>{date}</span>
+                        </div>
+                      </Link>
+                    );
+                  }
+
                   return null;
                 })}
               </div>
