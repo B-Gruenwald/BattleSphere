@@ -1,11 +1,13 @@
 /**
  * XP system helpers.
  *
- * XP mirrors the influence rules exactly:
- *   Win  on a territory → +3 XP
- *   Draw on a territory → +2 XP
- *   Loss on a territory → +1 XP
- *   No territory        → 0 XP
+ * XP is awarded for every battle regardless of whether a territory is at stake:
+ *   Win  → +3 XP
+ *   Draw → +2 XP
+ *   Loss → +1 XP
+ *
+ * Territory battles additionally award any event_xp_bonus configured on an
+ * active campaign event.
  *
  * XP is always additive and never decreases.
  */
@@ -28,9 +30,6 @@ export const XP_RANKS = [
 export function calcPlayerXP(battles, userId) {
   let xp = 0;
   for (const b of (battles || [])) {
-    // Influence only applies when a territory is at stake
-    if (!b.territory_id) continue;
-
     const isAttacker = b.attacker_player_id === userId;
     const isDefender = b.defender_player_id === userId;
     if (!isAttacker && !isDefender) continue;
@@ -43,8 +42,8 @@ export function calcPlayerXP(battles, userId) {
     else if (won)  xp += 3;
     else           xp += 1; // loss
 
-    // Flat bonus from active campaign events (same amount for both players)
-    xp += b.event_xp_bonus || 0;
+    // Event XP bonus only applies to territory battles
+    if (b.territory_id) xp += b.event_xp_bonus || 0;
   }
   return xp;
 }
