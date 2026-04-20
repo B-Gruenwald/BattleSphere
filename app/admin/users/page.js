@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const metadata = {
@@ -13,15 +14,29 @@ export default async function AdminUsers() {
     .select('*')
     .order('created_at', { ascending: false });
 
-  // Campaign membership counts per user
   const userIds = (profiles || []).map(p => p.id);
+
+  // Campaign memberships — need user_id + campaign_id for counts and profile links
   const { data: memberships } = userIds.length > 0
-    ? await supabase.from('campaign_members').select('user_id').in('user_id', userIds)
+    ? await supabase.from('campaign_members').select('user_id, campaign_id').in('user_id', userIds)
     : { data: [] };
 
+  // Campaigns — need slug for profile links
+  const campaignIds = [...new Set((memberships || []).map(m => m.campaign_id))];
+  const { data: campaigns } = campaignIds.length > 0
+    ? await supabase.from('campaigns').select('id, slug').in('id', campaignIds)
+    : { data: [] };
+
+  const campaignSlugById = Object.fromEntries((campaigns || []).map(c => [c.id, c.slug]));
+
+  // Per-user: campaign count + first campaign slug (for profile link)
   const memberCountMap = {};
+  const userFirstCampaignSlug = {};
   (memberships || []).forEach(m => {
     memberCountMap[m.user_id] = (memberCountMap[m.user_id] || 0) + 1;
+    if (!userFirstCampaignSlug[m.user_id] && campaignSlugById[m.campaign_id]) {
+      userFirstCampaignSlug[m.user_id] = campaignSlugById[m.campaign_id];
+    }
   });
 
   // Email addresses via the auth admin API (service role required)
@@ -35,6 +50,8 @@ export default async function AdminUsers() {
     textTransform: 'uppercase',
     color: 'var(--text-muted)',
   };
+
+  const COLS = '1.2fr 2fr 90px 140px 90px';
 
   return (
     <div style={{ padding: '3rem 2rem', maxWidth: '1100px', margin: '0 auto' }}>
@@ -60,13 +77,13 @@ export default async function AdminUsers() {
         {/* Table header */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '1.2fr 2fr 90px 140px',
+          gridTemplateColumns: COLS,
           gap: '1rem',
           padding: '0.7rem 1.25rem',
           borderBottom: '1px solid var(--border-dim)',
           background: 'rgba(255,255,255,0.02)',
         }}>
-          {['Username', 'Email', 'Campaigns', 'Registered'].map(h => (
+          {['Username', 'Email', 'Campaigns', 'Registered', ''].map(h => (
             <span key={h} style={colHeaderStyle}>{h}</span>
           ))}
         </div>
@@ -77,16 +94,17 @@ export default async function AdminUsers() {
           </div>
         ) : (
           (profiles || []).map(p => {
-            const email     = emailMap[p.id] ?? '—';
-            const campaigns = memberCountMap[p.id] || 0;
-            const created   = new Date(p.created_at).toLocaleDateString('en-GB', {
+            const email      = emailMap[p.id] ?? '—';
+            const campaigns  = memberCountMap[p.id] || 0;
+            const created    = new Date(p.created_at).toLocaleDateString('en-GB', {
               day: 'numeric', month: 'short', year: 'numeric',
             });
+            const firstSlug  = userFirstCampaignSlug[p.id];
 
             return (
               <div key={p.id} style={{
                 display: 'grid',
-                gridTemplateColumns: '1.2fr 2fr 90px 140px',
+                gridTemplateColumns: COLS,
                 gap: '1rem',
                 padding: '0.85rem 1.25rem',
                 borderBottom: '1px solid var(--border-dim)',
@@ -130,6 +148,24 @@ export default async function AdminUsers() {
                 {/* Registered date */}
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                   {created}
+                </div>
+
+                {/* Profile link */}
+                <div>
+                  {firstSlug ? (
+                    <Link href={`/c/${firstSlug}/player/${p.id}`} style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '0.54rem',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      color: '#e05a5a',
+                      textDecoration: 'none',
+                    }}>
+                      Profile →
+                    </Link>
+                  ) : (
+                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>—</span>
+                  )}
                 </div>
               </div>
             );

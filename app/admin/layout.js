@@ -57,6 +57,7 @@ export default async function AdminLayout({ children }) {
         <div style={{ width: '1px', height: '14px', background: 'rgba(200,60,60,0.3)' }} />
         <Link href="/admin" style={subNavLinkStyle}>Overview</Link>
         <Link href="/admin/users" style={subNavLinkStyle}>Users</Link>
+        <Link href="/admin/battles" style={subNavLinkStyle}>Battles</Link>
         <Link href="/admin/send-onboarding" style={subNavLinkStyle}>Send Onboarding</Link>
       </div>
 
