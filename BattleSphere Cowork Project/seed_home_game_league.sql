@@ -57,6 +57,9 @@ BEGIN
   END IF;
   RAISE NOTICE 'Campaign ID: %', cid;
 
+  -- Ensure the campaign is flagged as league format
+  UPDATE campaigns SET campaign_format = 'league' WHERE id = cid;
+
   -- ── 2. Look up faction IDs ─────────────────────────────────────────────────
   SELECT id INTO f_wardens FROM factions WHERE campaign_id = cid AND name = 'Imperial Wardens' LIMIT 1;
   SELECT id INTO f_hive    FROM factions WHERE campaign_id = cid AND name = 'Forces of the Hive Mind' LIMIT 1;
@@ -330,14 +333,14 @@ BEGIN
   -- Note: chronicle page requires login + membership. These appear in order,
   -- newest first. Content is JSONB: [{player_id, username, lines: string[]}]
 
-  -- Entry 1: hobby_progress catch-up — all 8 armies deployed (Jan 2026)
+  -- Entry 1: hobby_progress catch-up — all 8 armies deployed (catch-up through Feb)
   INSERT INTO chronicle_weekly_updates
     (id, campaign_id, update_type, week_start, week_end, is_catch_up, content)
   VALUES (
     'e1000001-0000-0000-0000-000000000000',
     cid, 'hobby_progress',
-    '2026-01-15 00:00:00+00',
-    '2026-02-06 23:59:59+00',
+    '2026-02-24 00:00:00+00',
+    '2026-03-01 23:59:59+00',
     true,
     jsonb_build_array(
       jsonb_build_object('player_id', u_kv, 'username', 'KaiserVon', 'lines', jsonb_build_array(
@@ -376,14 +379,14 @@ BEGIN
   )
   ON CONFLICT (campaign_id, update_type, week_start) DO NOTHING;
 
-  -- Entry 2: hobby_progress — new units added (Feb 10)
+  -- Entry 2: hobby_progress — new units added (Mar 3–9)
   INSERT INTO chronicle_weekly_updates
     (id, campaign_id, update_type, week_start, week_end, is_catch_up, content)
   VALUES (
     'e1000002-0000-0000-0000-000000000000',
     cid, 'hobby_progress',
-    '2026-02-09 00:00:00+00',
-    '2026-02-15 23:59:59+00',
+    '2026-03-03 00:00:00+00',
+    '2026-03-09 23:59:59+00',
     false,
     jsonb_build_array(
       jsonb_build_object('player_id', u_kv, 'username', 'KaiserVon', 'lines', jsonb_build_array(
@@ -402,14 +405,14 @@ BEGIN
   )
   ON CONFLICT (campaign_id, update_type, week_start) DO NOTHING;
 
-  -- Entry 3: hobby_progress — painting updates (Feb 17)
+  -- Entry 3: hobby_progress — painting updates (Mar 17–23)
   INSERT INTO chronicle_weekly_updates
     (id, campaign_id, update_type, week_start, week_end, is_catch_up, content)
   VALUES (
     'e1000003-0000-0000-0000-000000000000',
     cid, 'hobby_progress',
-    '2026-02-16 00:00:00+00',
-    '2026-02-22 23:59:59+00',
+    '2026-03-17 00:00:00+00',
+    '2026-03-23 23:59:59+00',
     false,
     jsonb_build_array(
       jsonb_build_object('player_id', u_kv, 'username', 'KaiserVon', 'lines', jsonb_build_array(
