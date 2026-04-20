@@ -188,6 +188,7 @@ export default function CreateCampaignPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError]   = useState(null);
   const [form, setForm]     = useState({
+    format: 'narrative',
     name: '', setting: 'Gothic Sci-Fi', description: '', visibility: 'Private',
     scale: 'Star Sector', territoryCount: 6, depth: 1,
     factions: [{ name: '', colour: '#e63946' }, { name: '', colour: '#457b9d' }],
@@ -208,9 +209,16 @@ export default function CreateCampaignPage() {
     setForm(f => ({ ...f, factions: f.factions.filter((_, idx) => idx !== i) }));
   };
 
+  const isLeague    = form.format === 'league';
+  const stepLabels  = isLeague
+    ? ['League Basics', 'Teams', 'Review & Create']
+    : ['Campaign Basics', 'Map Generator', 'Factions', 'Review & Create'];
+  const maxStep = stepLabels.length;
+
   function canProceed() {
     if (step === 1) return form.name.trim().length >= 2;
-    if (step === 3) return form.factions.every(f => f.name.trim().length >= 1);
+    const teamsStep = isLeague ? 2 : 3;
+    if (step === teamsStep) return form.factions.every(f => f.name.trim().length >= 1);
     return true;
   }
 
@@ -226,9 +234,14 @@ export default function CreateCampaignPage() {
 
       // 1. Create campaign
       const { data: campaign, error: e1 } = await supabase.from('campaigns').insert({
-        slug, name: form.name, setting: form.setting, description: form.description,
+        slug, name: form.name,
+        setting: form.format === 'league' ? 'League' : form.setting,
+        description: form.description,
         visibility: form.visibility, organiser_id: user.id,
-        map_scale: form.scale, map_territory_count: form.territoryCount, map_depth: form.depth,
+        campaign_format: form.format,
+        ...(form.format === 'narrative' ? {
+          map_scale: form.scale, map_territory_count: form.territoryCount, map_depth: form.depth,
+        } : {}),
       }).select().single();
       if (e1) throw e1;
 
@@ -242,7 +255,12 @@ export default function CreateCampaignPage() {
         .insert(form.factions.map(f => ({ campaign_id: campaign.id, name: f.name, colour: f.colour })));
       if (e3) throw e3;
 
-      // 4. Generate & insert territories layer by layer
+      // 4. Generate & insert territories (narrative campaigns only)
+      if (form.format === 'league') {
+        router.push(`/c/${slug}`);
+        return;
+      }
+      // Generate & insert territories layer by layer
       const territories = generateTerritories(form.setting, form.territoryCount, form.depth);
       const idMap = {};
 
@@ -285,26 +303,48 @@ export default function CreateCampaignPage() {
   function Step1() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+        {/* Format selector */}
         <div>
-          <label style={labelStyle}>Campaign Name</label>
+          <label style={labelStyle}>Campaign Format</label>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            {[
+              { value: 'narrative', label: 'Narrative Campaign', desc: 'Interactive map, territory control, events and chronicle. Full narrative campaign experience.' },
+              { value: 'league',    label: 'League',             desc: 'Battle results, league table standings and hobby progress. No map or territory system.' },
+            ].map(f => (
+              <button key={f.value} type="button"
+                onClick={() => { set('format', f.value); setStep(1); }}
+                style={{ ...selBtn(form.format === f.value), flex: 1, textAlign: 'left', padding: '1rem' }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.3rem' }}>{f.label}</div>
+                <div style={{ fontSize: '0.78rem', fontStyle: 'italic', color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0 }}>{f.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label style={labelStyle}>{isLeague ? 'League Name' : 'Campaign Name'}</label>
           <input type="text" value={form.name} onChange={e => set('name', e.target.value)}
-            placeholder="e.g. The Vespator Crusade" style={inputStyle}
+            placeholder={isLeague ? 'e.g. The Vespator League' : 'e.g. The Vespator Crusade'} style={inputStyle}
             onFocus={e => e.target.style.borderColor = 'var(--gold)'}
             onBlur={e => e.target.style.borderColor = 'var(--border-dim)'} />
         </div>
-        <div>
-          <label style={labelStyle}>Genre Setting</label>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            {['Gothic Sci-Fi', 'High Fantasy'].map(s => (
-              <button key={s} type="button" onClick={() => set('setting', s)} style={{ ...selBtn(form.setting === s), flex: 1 }}>{s}</button>
-            ))}
+
+        {!isLeague && (
+          <div>
+            <label style={labelStyle}>Genre Setting</label>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              {['Gothic Sci-Fi', 'High Fantasy'].map(s => (
+                <button key={s} type="button" onClick={() => set('setting', s)} style={{ ...selBtn(form.setting === s), flex: 1 }}>{s}</button>
+              ))}
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic', marginTop: '0.5rem' }}>
+              {form.setting === 'Gothic Sci-Fi'
+                ? 'Dark gothic science fiction. Territories represent star systems, forge worlds, and hive cities.'
+                : 'Epic high fantasy. Territories are mystical gates to different planar realms, surrounded by dungeons, shrines, and cursed lands.'}
+            </p>
           </div>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic', marginTop: '0.5rem' }}>
-            {form.setting === 'Gothic Sci-Fi'
-              ? 'Dark gothic science fiction. Territories represent star systems, forge worlds, and hive cities.'
-              : 'Epic high fantasy. Territories are mystical gates to different planar realms, surrounded by dungeons, shrines, and cursed lands.'}
-          </p>
-        </div>
+        )}
         <div>
           <label style={labelStyle}>Description <span style={{ opacity: 0.5 }}>(optional)</span></label>
           <textarea value={form.description} onChange={e => set('description', e.target.value)}
@@ -363,19 +403,22 @@ export default function CreateCampaignPage() {
     );
   }
 
-  // ─── Step 3: Factions ──────────────────────────────────────────────────────
+  // ─── Step 3: Factions / Teams ─────────────────────────────────────────────
   function Step3() {
+    const itemLabel = isLeague ? 'Team' : 'Faction';
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.9rem' }}>
-          Add 2–6 factions. Players will be assigned to factions after the campaign is created.
+          {isLeague
+            ? 'Add 2–6 teams. Players will join a team after the league is created.'
+            : 'Add 2–6 factions. Players will be assigned to factions after the campaign is created.'}
         </p>
         {form.factions.map((faction, i) => (
           <div key={i} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
             <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Faction {i + 1}</label>
+              <label style={labelStyle}>{itemLabel} {i + 1}</label>
               <input type="text" value={faction.name} onChange={e => setFaction(i, 'name', e.target.value)}
-                placeholder="e.g. Space Marines, Chaos, Aeldari" style={inputStyle}
+                placeholder={isLeague ? 'e.g. Space Marines, Orks, Aeldari' : 'e.g. Space Marines, Chaos, Aeldari'} style={inputStyle}
                 onFocus={e => e.target.style.borderColor = 'var(--gold)'}
                 onBlur={e => e.target.style.borderColor = 'var(--border-dim)'} />
             </div>
@@ -395,7 +438,7 @@ export default function CreateCampaignPage() {
         {form.factions.length < 6 && (
           <button type="button" onClick={addFaction}
             style={{ background: 'none', border: '1px dashed var(--border-dim)', color: 'var(--text-muted)', padding: '0.75rem', cursor: 'pointer', fontFamily: 'var(--font-display)', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', width: '100%' }}>
-            + Add Faction
+            + Add {isLeague ? 'Team' : 'Faction'}
           </button>
         )}
       </div>
@@ -404,19 +447,22 @@ export default function CreateCampaignPage() {
 
   // ─── Step 4: Review ────────────────────────────────────────────────────────
   function Step4() {
+    const reviewRows = [
+      { label: isLeague ? 'League Name'   : 'Campaign Name', value: form.name },
+      { label: 'Format',                                      value: isLeague ? 'League' : 'Narrative Campaign' },
+      !isLeague && { label: 'Genre Setting', value: form.setting },
+      { label: 'Visibility',                                  value: form.visibility },
+      { label: 'Description',                                 value: form.description || '—' },
+      !isLeague && { label: 'Map Scale', value: `${form.scale} · ${form.territoryCount} territories · Depth ${form.depth}` },
+      { label: isLeague ? 'Teams' : 'Factions',               value: form.factions.map(f => f.name || '(unnamed)').join(', ') },
+    ].filter(Boolean);
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.9rem' }}>
-          Everything can be renamed and adjusted later from the Campaign Admin panel.
+          Everything can be renamed and adjusted later from the {isLeague ? 'League' : 'Campaign'} Admin panel.
         </p>
-        {[
-          { label: 'Campaign Name', value: form.name },
-          { label: 'Genre Setting', value: form.setting },
-          { label: 'Visibility', value: form.visibility },
-          { label: 'Description', value: form.description || '—' },
-          { label: 'Map Scale', value: `${form.scale} · ${form.territoryCount} territories · Depth ${form.depth}` },
-          { label: 'Factions', value: form.factions.map(f => f.name || '(unnamed)').join(', ') },
-        ].map(({ label, value }) => (
+        {reviewRows.map(({ label, value }) => (
           <div key={label} style={{ borderBottom: '1px solid var(--border-dim)', paddingBottom: '1.25rem' }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.58rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.35rem' }}>{label}</div>
             <div style={{ color: 'var(--text-primary)', fontSize: '0.95rem' }}>{value}</div>
@@ -439,8 +485,6 @@ export default function CreateCampaignPage() {
     );
   }
 
-  const stepLabels = ['Campaign Basics', 'Map Generator', 'Factions', 'Review & Create'];
-
   return (
     <div style={{ minHeight: 'calc(100vh - 64px)', padding: '4rem 2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <div style={{ width: '100%', maxWidth: '600px' }}>
@@ -448,7 +492,7 @@ export default function CreateCampaignPage() {
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
           <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.24em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.75rem' }}>
-            New Campaign Space
+            {isLeague ? 'New League' : 'New Campaign Space'}
           </p>
           <h1 style={{ fontSize: '2rem', fontWeight: '700', letterSpacing: '0.06em', marginBottom: '2rem' }}>
             {stepLabels[step - 1]}
@@ -461,10 +505,20 @@ export default function CreateCampaignPage() {
           </div>
         </div>
 
+        {/* Step rendering — league: Basics / Teams / Review; narrative: Basics / Map / Factions / Review */}
         {step === 1 && Step1()}
-        {step === 2 && Step2()}
-        {step === 3 && Step3()}
-        {step === 4 && Step4()}
+        {isLeague  ? (
+          <>
+            {step === 2 && Step3()}
+            {step === 3 && Step4()}
+          </>
+        ) : (
+          <>
+            {step === 2 && Step2()}
+            {step === 3 && Step3()}
+            {step === 4 && Step4()}
+          </>
+        )}
 
         {/* Navigation */}
         <div style={{ display: 'flex', gap: '1rem', marginTop: '2.5rem', justifyContent: 'space-between' }}>
@@ -472,10 +526,10 @@ export default function CreateCampaignPage() {
             ? <button type="button" className="btn-secondary" onClick={() => setStep(s => s - 1)} disabled={loading}>Back</button>
             : <div />
           }
-          {step < 4
+          {step < maxStep
             ? <button type="button" className="btn-primary" onClick={() => setStep(s => s + 1)} disabled={!canProceed()}>Continue</button>
             : <button type="button" className="btn-primary" onClick={handleCreate} disabled={loading} style={{ opacity: loading ? 0.6 : 1 }}>
-                {loading ? 'Creating campaign…' : 'Create Campaign'}
+                {loading ? `Creating ${isLeague ? 'league' : 'campaign'}…` : `Create ${isLeague ? 'League' : 'Campaign'}`}
               </button>
           }
         </div>

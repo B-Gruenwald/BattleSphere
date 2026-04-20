@@ -6,21 +6,23 @@ async function CampaignNav({ slug }) {
   const supabase = await createClient();
   const { data: campaign } = await supabase
     .from('campaigns')
-    .select('name')
+    .select('*')
     .eq('slug', slug)
     .single();
 
   if (!campaign) return null;
 
+  const isLeague = campaign.campaign_format === 'league';
+
   const links = [
-    { label: 'Map',          href: `/c/${slug}/map` },
-    { label: 'Factions',     href: `/c/${slug}/factions` },
-    { label: 'Players',      href: `/c/${slug}/players` },
+    !isLeague && { label: 'Map',       href: `/c/${slug}/map` },
+    { label: isLeague ? 'Teams' : 'Factions', href: `/c/${slug}/factions` },
+    { label: isLeague ? 'League Table' : 'Players', href: `/c/${slug}/players` },
     { label: 'Battles',      href: `/c/${slug}/battles` },
-    { label: 'Events',       href: `/c/${slug}/events` },
+    !isLeague && { label: 'Events',    href: `/c/${slug}/events` },
     { label: 'Chronicle',    href: `/c/${slug}/chronicle` },
     { label: 'Achievements', href: `/c/${slug}/achievements` },
-  ];
+  ].filter(Boolean);
 
   return (
     <div style={{

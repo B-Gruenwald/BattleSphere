@@ -171,12 +171,42 @@ export default async function CampaignDashboard({ params }) {
     .limit(1);
   const currentBulletin = currentBulletinRows?.[0] ?? null;
 
+  const isLeague = campaign.campaign_format === 'league';
+
+  // League table standings (top 6 by points, shown on dashboard for league campaigns)
+  function getLeagueStats(userId) {
+    const fought = (allBattles || []).filter(
+      b => b.attacker_player_id === userId || b.defender_player_id === userId
+    );
+    const wins = fought.filter(b => {
+      const isAttacker = b.attacker_player_id === userId;
+      const theirFaction = isAttacker ? b.attacker_faction_id : b.defender_faction_id;
+      return b.winner_faction_id === theirFaction;
+    }).length;
+    const draws  = fought.filter(b => b.winner_faction_id === null).length;
+    const losses = fought.length - wins - draws;
+    return { wins, draws, losses, played: fought.length, points: wins * 3 + draws };
+  }
+
+  const leagueStandings = isLeague
+    ? (allMembers || [])
+        .map(m => ({
+          userId:   m.user_id,
+          username: profileMap[m.user_id]?.username ?? 'Unknown',
+          colour:   factionMap[m.faction_id]?.colour ?? 'var(--border-dim)',
+          ...getLeagueStats(m.user_id),
+        }))
+        .sort((a, b) => b.points - a.points || b.wins - a.wins)
+        .slice(0, 6)
+    : [];
+
   const SETTING_LABELS = {
     'Gothic Sci-Fi': 'Gothic Sci-Fi · Warhammer 40,000',
     'Space Opera': 'Space Opera',
     'High Fantasy': 'High Fantasy',
     'Historical': 'Historical',
     'Custom': 'Custom Setting',
+    'League': 'League Campaign',
   };
 
   return (
@@ -206,55 +236,65 @@ export default async function CampaignDashboard({ params }) {
       </div>
 
       {/* ════════════════════════════════════════════════════════
-          HERO ROW — Bulletin (left) + Map (right)
+          HERO ROW — Bulletin (left) + Map (right, narrative only)
           ════════════════════════════════════════════════════════ */}
-      <div className="hero-row">
-
-        <BulletinPanel
-          campaignId={campaign.id}
-          campaignSlug={slug}
-          isOrganiser={!!isOrganiser}
-          factions={factions || []}
-          territories={territories || []}
-        />
-
-        <div className="hero-map-wrap">
-          {territories && territories.length > 0 ? (
-            <CampaignMap
-              territories={territories}
-              factions={factions || []}
-              influenceData={influenceData || []}
-              warpRoutes={warpRoutes || []}
-              campaignSlug={slug}
-              setting={campaign.setting}
-            />
-          ) : (
-            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
-              No territories mapped yet.
-            </div>
-          )}
-          <Link
-            href={`/c/${slug}/map`}
-            style={{
-              position: 'absolute', bottom: '1rem', right: '1rem',
-              background: 'rgba(8,8,12,0.82)',
-              border: '1px solid rgba(183,140,64,0.3)',
-              padding: '0.35rem 0.85rem',
-              fontFamily: 'var(--font-display)', fontSize: '0.52rem',
-              letterSpacing: '0.14em', textTransform: 'uppercase',
-              color: 'var(--text-gold)', textDecoration: 'none',
-              backdropFilter: 'blur(4px)',
-            }}
-          >
-            Full Map →
-          </Link>
+      {isLeague ? (
+        <div style={{ marginBottom: '2rem' }}>
+          <BulletinPanel
+            campaignId={campaign.id}
+            campaignSlug={slug}
+            isOrganiser={!!isOrganiser}
+            factions={factions || []}
+            territories={[]}
+          />
         </div>
-      </div>
+      ) : (
+        <div className="hero-row">
+          <BulletinPanel
+            campaignId={campaign.id}
+            campaignSlug={slug}
+            isOrganiser={!!isOrganiser}
+            factions={factions || []}
+            territories={territories || []}
+          />
+          <div className="hero-map-wrap">
+            {territories && territories.length > 0 ? (
+              <CampaignMap
+                territories={territories}
+                factions={factions || []}
+                influenceData={influenceData || []}
+                warpRoutes={warpRoutes || []}
+                campaignSlug={slug}
+                setting={campaign.setting}
+              />
+            ) : (
+              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
+                No territories mapped yet.
+              </div>
+            )}
+            <Link
+              href={`/c/${slug}/map`}
+              style={{
+                position: 'absolute', bottom: '1rem', right: '1rem',
+                background: 'rgba(8,8,12,0.82)',
+                border: '1px solid rgba(183,140,64,0.3)',
+                padding: '0.35rem 0.85rem',
+                fontFamily: 'var(--font-display)', fontSize: '0.52rem',
+                letterSpacing: '0.14em', textTransform: 'uppercase',
+                color: 'var(--text-gold)', textDecoration: 'none',
+                backdropFilter: 'blur(4px)',
+              }}
+            >
+              Full Map →
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* ════════════════════════════════════════════════════════
           EVENTS STRIP
           ════════════════════════════════════════════════════════ */}
-      {activeEvents && activeEvents.length > 0 && (
+      {!isLeague && activeEvents && activeEvents.length > 0 && (
         <div className="events-strip">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '1rem 1.5rem 0.75rem' }}>
             <h2 className="strip-label">Active Events</h2>
@@ -311,15 +351,15 @@ export default async function CampaignDashboard({ params }) {
           ════════════════════════════════════════════════════════ */}
       <div className="stats-bar">
         {[
-          { label: 'Factions',      value: factions?.length ?? 0, href: `/c/${slug}/factions` },
-          { label: 'Players',       value: memberCount ?? 0,       href: `/c/${slug}/players` },
+          { label: isLeague ? 'Teams' : 'Factions', value: factions?.length ?? 0, href: `/c/${slug}/factions` },
+          { label: isLeague ? 'League Table' : 'Players', value: memberCount ?? 0, href: `/c/${slug}/players` },
           { label: 'Battles',       value: battleCount ?? 0,       href: `/c/${slug}/battles` },
-          { label: 'Territories',   value: territoryCount ?? 0,    href: `/c/${slug}/map` },
-          { label: 'Active Events', value: activeEventCount ?? 0,  href: `/c/${slug}/events` },
+          !isLeague && { label: 'Territories',   value: territoryCount ?? 0,    href: `/c/${slug}/map` },
+          !isLeague && { label: 'Active Events', value: activeEventCount ?? 0,  href: `/c/${slug}/events` },
           ...(currentBulletin?.act_label
-            ? [{ label: 'Current Act', value: currentBulletin.act_label, href: null }]
+            ? [{ label: isLeague ? 'Current Season' : 'Current Act', value: currentBulletin.act_label, href: null }]
             : []),
-        ].map((stat, i, arr) => (
+        ].filter(Boolean).map((stat, i, arr) => (
           stat.href ? (
             <Link key={stat.label} href={stat.href} style={{ textDecoration: 'none', flex: 1 }}>
               <div className="stat-cell" style={{ borderRight: i < arr.length - 1 ? '1px solid var(--border-dim)' : 'none' }}>
@@ -341,32 +381,66 @@ export default async function CampaignDashboard({ params }) {
           ════════════════════════════════════════════════════════ */}
       <div className="bottom-row">
 
-        {/* Faction Standings */}
+        {/* Faction Standings (narrative) / League Table (league) */}
         <div className="standings-col">
-          <div className="standings-col-header">
-            <h2 className="standings-col-title">Faction Standings</h2>
-            <Link href={`/c/${slug}/factions`} style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textDecoration: 'none' }}>View all →</Link>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            {factions && factions.length > 0
-              ? [...factions]
-                  .map(f => ({ ...f, wins: (allBattles || []).filter(b => b.winner_faction_id === f.id).length }))
-                  .sort((a, b) => b.wins - a.wins)
-                  .map((f, i) => (
-                    <Link key={f.id} href={`/c/${slug}/faction/${f.id}`} style={{ textDecoration: 'none' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.2rem 0' }}>
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.48rem', color: 'var(--text-muted)', width: '12px', textAlign: 'right', flexShrink: 0 }}>{i + 1}</span>
-                        <div style={{ width: '8px', height: '8px', background: f.colour, flexShrink: 0 }} />
-                        <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem', flex: 1 }}>{f.name}</span>
-                        <span style={{ color: f.wins > 0 ? f.colour : 'var(--text-muted)', fontSize: '0.78rem', fontWeight: f.wins > 0 ? '700' : '400' }}>
-                          {f.wins} VP
-                        </span>
-                      </div>
-                    </Link>
-                  ))
-              : <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No factions yet.</p>
-            }
-          </div>
+          {isLeague ? (
+            <>
+              <div className="standings-col-header">
+                <h2 className="standings-col-title">League Table</h2>
+                <Link href={`/c/${slug}/players`} style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textDecoration: 'none' }}>Full table →</Link>
+              </div>
+              {/* Mini league table header */}
+              <div style={{ display: 'grid', gridTemplateColumns: '16px 1fr 36px 36px 36px 44px', gap: '0.4rem', marginBottom: '0.5rem', paddingBottom: '0.4rem', borderBottom: '1px solid var(--border-dim)' }}>
+                {['', 'Player', 'W', 'D', 'L', 'Pts'].map(h => (
+                  <span key={h} style={{ fontFamily: 'var(--font-display)', fontSize: '0.44rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: h === 'Player' || h === '' ? 'left' : 'center' }}>{h}</span>
+                ))}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {leagueStandings.length > 0
+                  ? leagueStandings.map((p, i) => (
+                      <Link key={p.userId} href={`/c/${slug}/player/${p.userId}`} style={{ textDecoration: 'none' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '16px 1fr 36px 36px 36px 44px', gap: '0.4rem', alignItems: 'center', padding: '0.15rem 0' }}>
+                          <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.48rem', color: 'var(--text-muted)', textAlign: 'right' }}>{i + 1}</span>
+                          <span style={{ color: 'var(--text-primary)', fontSize: '0.88rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.username}</span>
+                          <span style={{ textAlign: 'center', fontSize: '0.82rem', color: p.wins > 0 ? p.colour : 'var(--text-secondary)', fontWeight: p.wins > 0 ? '700' : '400' }}>{p.wins}</span>
+                          <span style={{ textAlign: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{p.draws}</span>
+                          <span style={{ textAlign: 'center', fontSize: '0.82rem', color: p.losses > 0 ? '#e05a5a' : 'var(--text-secondary)' }}>{p.losses}</span>
+                          <span style={{ textAlign: 'center', fontSize: '0.9rem', fontWeight: '700', color: p.points > 0 ? 'var(--text-gold)' : 'var(--text-muted)' }}>{p.points}</span>
+                        </div>
+                      </Link>
+                    ))
+                  : <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No battles recorded yet.</p>
+                }
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="standings-col-header">
+                <h2 className="standings-col-title">Faction Standings</h2>
+                <Link href={`/c/${slug}/factions`} style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textDecoration: 'none' }}>View all →</Link>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                {factions && factions.length > 0
+                  ? [...factions]
+                      .map(f => ({ ...f, wins: (allBattles || []).filter(b => b.winner_faction_id === f.id).length }))
+                      .sort((a, b) => b.wins - a.wins)
+                      .map((f, i) => (
+                        <Link key={f.id} href={`/c/${slug}/faction/${f.id}`} style={{ textDecoration: 'none' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.2rem 0' }}>
+                            <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.48rem', color: 'var(--text-muted)', width: '12px', textAlign: 'right', flexShrink: 0 }}>{i + 1}</span>
+                            <div style={{ width: '8px', height: '8px', background: f.colour, flexShrink: 0 }} />
+                            <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem', flex: 1 }}>{f.name}</span>
+                            <span style={{ color: f.wins > 0 ? f.colour : 'var(--text-muted)', fontSize: '0.78rem', fontWeight: f.wins > 0 ? '700' : '400' }}>
+                              {f.wins} VP
+                            </span>
+                          </div>
+                        </Link>
+                      ))
+                  : <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>No factions yet.</p>
+                }
+              </div>
+            </>
+          )}
         </div>
 
         {/* Player Standings */}
