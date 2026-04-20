@@ -81,6 +81,8 @@ export default async function AdminPage({ params }) {
     .eq('campaign_id', campaign.id)
     .order('created_at', { ascending: false });
 
+  const isLeague = campaign.campaign_format === 'league';
+
   const sectionLabel = {
     fontFamily: 'var(--font-display)',
     fontSize: '0.6rem',
@@ -188,18 +190,20 @@ export default async function AdminPage({ params }) {
         <AdminFactionEditor factions={factions || []} campaignId={campaign.id} />
       </div>
 
-      {/* ═══ SECTION 4: Map ══════════════════════════════════════════════════ */}
-      <div style={{ marginBottom: '3.5rem' }}>
-        <div style={{ borderBottom: '1px solid var(--border-dim)', marginBottom: '2rem', paddingBottom: '0.75rem' }}>
-          <h2 style={sectionTitle}>Campaign Map</h2>
+      {/* ═══ SECTION 4: Map (narrative only) ════════════════════════════════ */}
+      {!isLeague && (
+        <div style={{ marginBottom: '3.5rem' }}>
+          <div style={{ borderBottom: '1px solid var(--border-dim)', marginBottom: '2rem', paddingBottom: '0.75rem' }}>
+            <h2 style={sectionTitle}>Campaign Map</h2>
+          </div>
+          <p style={sectionDesc}>
+            Add, rename, or remove territories and sub-territories on your campaign map.
+          </p>
+          <Link href={`/c/${slug}/map/edit`}>
+            <button className="btn-primary">Edit Campaign Map →</button>
+          </Link>
         </div>
-        <p style={sectionDesc}>
-          Add, rename, or remove territories and sub-territories on your campaign map.
-        </p>
-        <Link href={`/c/${slug}/map/edit`}>
-          <button className="btn-primary">Edit Campaign Map →</button>
-        </Link>
-      </div>
+      )}
 
       {/* ═══ SECTION 4b: Campaign Digest Messages ═══════════════════════════ */}
       <div style={{ marginBottom: '3.5rem' }}>
