@@ -125,49 +125,6 @@ export async function GET(request, { params }) {
           }}
         />
 
-        {/* Top gradient + brand stamp */}
-        <div
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            top: 0,
-            height: 180,
-            display: 'flex',
-            backgroundImage: 'linear-gradient(180deg, rgba(10,10,15,0.72) 0%, rgba(10,10,15,0) 100%)',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            top: 44,
-            left: 48,
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          <div
-            style={{
-              width: 18,
-              height: 18,
-              backgroundColor: GOLD,
-              transform: 'rotate(45deg)',
-              marginRight: 18,
-            }}
-          />
-          <div
-            style={{
-              fontSize: 22,
-              letterSpacing: 9,
-              textTransform: 'uppercase',
-              color: GOLD,
-              fontWeight: 700,
-            }}
-          >
-            BattleSphere
-          </div>
-        </div>
-
         {/* Title block (bottom) */}
         <div
           style={{
@@ -249,7 +206,7 @@ export async function GET(request, { params }) {
             <div style={{ fontSize: 17, letterSpacing: 4, color: TEXT_MUT, textTransform: 'uppercase' }}>
               Painted · Played · Recorded
             </div>
-            <div style={{ fontSize: 20, letterSpacing: 4, color: GOLD, fontWeight: 700 }}>
+            <div style={{ fontSize: 30, letterSpacing: 5, color: GOLD, fontWeight: 700 }}>
               battlesphere.cc
             </div>
           </div>
