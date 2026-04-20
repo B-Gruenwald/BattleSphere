@@ -62,7 +62,7 @@ export default async function PublicCampaignPage({ params }) {
     supabase.from('territory_influence').select('*').eq('campaign_id', campaign.id),
     supabase.from('warp_routes').select('*').eq('campaign_id', campaign.id),
     supabase.from('battles')
-      .select('attacker_player_id, defender_player_id, attacker_faction_id, defender_faction_id, winner_faction_id')
+      .select('attacker_player_id, defender_player_id, attacker_faction_id, defender_faction_id, winner_faction_id, territory_id, event_xp_bonus')
       .eq('campaign_id', campaign.id),
     supabase.from('campaign_events').select('*')
       .eq('campaign_id', campaign.id).in('status', ['active', 'upcoming'])
