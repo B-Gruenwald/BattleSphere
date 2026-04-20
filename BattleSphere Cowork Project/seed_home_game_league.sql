@@ -238,110 +238,89 @@ BEGIN
   -- 3 draws (winner_faction_id NULL), 21 decisive results.
 
   -- Round 1 — 7 Feb 2026
+  -- Columns: id, campaign_id, attacker_player_id, defender_player_id,
+  --          attacker_faction_id, defender_faction_id, winner_faction_id, logged_by, created_at, headline
+  -- winner_faction_id = NULL means draw; otherwise = winning side's faction
   INSERT INTO battles (id, campaign_id, attacker_player_id, defender_player_id,
-    attacker_faction_id, defender_faction_id, winner_faction_id, result, logged_by, created_at, headline)
+    attacker_faction_id, defender_faction_id, winner_faction_id, logged_by, created_at, headline)
   VALUES
-    -- Draw: KaiserVon vs HiveTyrant
-    ('d1000001-0000-0000-0000-000000000000', cid, u_kv, u_ht, f_wardens, f_hive, NULL, 'draw',
+    ('d1000001-0000-0000-0000-000000000000', cid, u_kv, u_ht, f_wardens, f_hive, NULL,
      u_kv, '2026-02-07 18:30:00+00', 'Hard-fought stalemate on the factory floor'),
-    -- Draw: DarkPatron vs FreeAgent
-    ('d1000002-0000-0000-0000-000000000000', cid, u_dp, u_fa, f_chaos, f_indie, NULL, 'draw',
+    ('d1000002-0000-0000-0000-000000000000', cid, u_dp, u_fa, f_chaos, f_indie, NULL,
      u_dp, '2026-02-07 20:00:00+00', 'Brass and steel grind to a halt'),
-    -- Draw: HiveTyrant vs WardMaster9
-    ('d1000003-0000-0000-0000-000000000000', cid, u_ht, u_wm, f_hive, f_wardens, NULL, 'draw',
+    ('d1000003-0000-0000-0000-000000000000', cid, u_ht, u_wm, f_hive, f_wardens, NULL,
      u_ht, '2026-02-07 21:15:00+00', 'The swarm falls just short of total consumption'),
-    -- KaiserVon beats WardMaster9
-    ('d1000004-0000-0000-0000-000000000000', cid, u_kv, u_wm, f_wardens, f_wardens, f_wardens, 'attacker_wins',
+    ('d1000004-0000-0000-0000-000000000000', cid, u_kv, u_wm, f_wardens, f_wardens, f_wardens,
      u_kv, '2026-02-07 22:30:00+00', 'Brothers in arms — one side walks away victorious')
   ON CONFLICT (id) DO NOTHING;
 
   -- Round 2 — 14 Feb 2026
   INSERT INTO battles (id, campaign_id, attacker_player_id, defender_player_id,
-    attacker_faction_id, defender_faction_id, winner_faction_id, result, logged_by, created_at, headline)
+    attacker_faction_id, defender_faction_id, winner_faction_id, logged_by, created_at, headline)
   VALUES
-    -- KaiserVon beats SwarmlordX
-    ('d1000005-0000-0000-0000-000000000000', cid, u_kv, u_sx, f_wardens, f_hive, f_wardens, 'attacker_wins',
+    ('d1000005-0000-0000-0000-000000000000', cid, u_kv, u_sx, f_wardens, f_hive, f_wardens,
      u_kv, '2026-02-14 18:00:00+00', 'Bolter discipline shatters the xenos advance'),
-    -- KaiserVon beats NightPrince
-    ('d1000006-0000-0000-0000-000000000000', cid, u_kv, u_np, f_wardens, f_chaos, f_wardens, 'attacker_wins',
+    ('d1000006-0000-0000-0000-000000000000', cid, u_kv, u_np, f_wardens, f_chaos, f_wardens,
      u_kv, '2026-02-14 19:30:00+00', 'Chaos sorcery fails before unshakeable faith'),
-    -- KaiserVon beats RogueMercenary
-    ('d1000007-0000-0000-0000-000000000000', cid, u_kv, u_rm, f_wardens, f_indie, f_wardens, 'attacker_wins',
+    ('d1000007-0000-0000-0000-000000000000', cid, u_kv, u_rm, f_wardens, f_indie, f_wardens,
      u_kv, '2026-02-14 21:00:00+00', 'No quarter — the Iron Dogs are routed'),
-    -- KaiserVon beats FreeAgent
-    ('d1000008-0000-0000-0000-000000000000', cid, u_kv, u_fa, f_wardens, f_indie, f_wardens, 'attacker_wins',
+    ('d1000008-0000-0000-0000-000000000000', cid, u_kv, u_fa, f_wardens, f_indie, f_wardens,
      u_kv, '2026-02-14 22:30:00+00', 'Mechanicus ingenuity outgunned at every turn')
   ON CONFLICT (id) DO NOTHING;
 
   -- Round 3 — 21 Feb 2026
   INSERT INTO battles (id, campaign_id, attacker_player_id, defender_player_id,
-    attacker_faction_id, defender_faction_id, winner_faction_id, result, logged_by, created_at, headline)
+    attacker_faction_id, defender_faction_id, winner_faction_id, logged_by, created_at, headline)
   VALUES
-    -- FreeAgent beats WardMaster9
-    ('d1000009-0000-0000-0000-000000000000', cid, u_fa, u_wm, f_indie, f_wardens, f_indie, 'attacker_wins',
+    ('d1000009-0000-0000-0000-000000000000', cid, u_fa, u_wm, f_indie, f_wardens, f_indie,
      u_fa, '2026-02-21 18:00:00+00', 'Mechanicus precision dismantles the Warden line'),
-    -- FreeAgent beats SwarmlordX
-    ('d1000010-0000-0000-0000-000000000000', cid, u_fa, u_sx, f_indie, f_hive, f_indie, 'attacker_wins',
+    ('d1000010-0000-0000-0000-000000000000', cid, u_fa, u_sx, f_indie, f_hive, f_indie,
      u_fa, '2026-02-21 19:30:00+00', 'Arc rifles cut through chitin with clinical efficiency'),
-    -- FreeAgent beats NightPrince
-    ('d1000011-0000-0000-0000-000000000000', cid, u_fa, u_np, f_indie, f_chaos, f_indie, 'attacker_wins',
+    ('d1000011-0000-0000-0000-000000000000', cid, u_fa, u_np, f_indie, f_chaos, f_indie,
      u_fa, '2026-02-21 21:00:00+00', 'The shadows offer no cover from Omnissiah''s sight'),
-    -- FreeAgent beats RogueMercenary
-    ('d1000012-0000-0000-0000-000000000000', cid, u_fa, u_rm, f_indie, f_indie, f_indie, 'attacker_wins',
+    ('d1000012-0000-0000-0000-000000000000', cid, u_fa, u_rm, f_indie, f_indie, f_indie,
      u_fa, '2026-02-21 22:30:00+00', 'Free Blade cuts the Iron Dogs apart — nothing personal')
   ON CONFLICT (id) DO NOTHING;
 
   -- Round 4 — 28 Feb 2026
   INSERT INTO battles (id, campaign_id, attacker_player_id, defender_player_id,
-    attacker_faction_id, defender_faction_id, winner_faction_id, result, logged_by, created_at, headline)
+    attacker_faction_id, defender_faction_id, winner_faction_id, logged_by, created_at, headline)
   VALUES
-    -- HiveTyrant beats DarkPatron
-    ('d1000013-0000-0000-0000-000000000000', cid, u_ht, u_dp, f_hive, f_chaos, f_hive, 'attacker_wins',
+    ('d1000013-0000-0000-0000-000000000000', cid, u_ht, u_dp, f_hive, f_chaos, f_hive,
      u_ht, '2026-02-28 18:00:00+00', 'Flesh overwhelms brass — the tyranids feast tonight'),
-    -- DarkPatron beats WardMaster9
-    ('d1000014-0000-0000-0000-000000000000', cid, u_dp, u_wm, f_chaos, f_wardens, f_chaos, 'attacker_wins',
+    ('d1000014-0000-0000-0000-000000000000', cid, u_dp, u_wm, f_chaos, f_wardens, f_chaos,
      u_dp, '2026-02-28 19:30:00+00', 'Berzerker rage overruns the defensive line'),
-    -- DarkPatron beats SwarmlordX
-    ('d1000015-0000-0000-0000-000000000000', cid, u_dp, u_sx, f_chaos, f_hive, f_chaos, 'attacker_wins',
+    ('d1000015-0000-0000-0000-000000000000', cid, u_dp, u_sx, f_chaos, f_hive, f_chaos,
      u_dp, '2026-02-28 21:00:00+00', 'Khorne cares not — and neither do the Chosen of Brass'),
-    -- DarkPatron beats NightPrince
-    ('d1000016-0000-0000-0000-000000000000', cid, u_dp, u_np, f_chaos, f_chaos, f_chaos, 'attacker_wins',
+    ('d1000016-0000-0000-0000-000000000000', cid, u_dp, u_np, f_chaos, f_chaos, f_chaos,
      u_dp, '2026-02-28 22:30:00+00', 'The stronger warband prevails — infighting decides the league')
   ON CONFLICT (id) DO NOTHING;
 
   -- Round 5 — 7 Mar 2026
   INSERT INTO battles (id, campaign_id, attacker_player_id, defender_player_id,
-    attacker_faction_id, defender_faction_id, winner_faction_id, result, logged_by, created_at, headline)
+    attacker_faction_id, defender_faction_id, winner_faction_id, logged_by, created_at, headline)
   VALUES
-    -- DarkPatron beats RogueMercenary
-    ('d1000017-0000-0000-0000-000000000000', cid, u_dp, u_rm, f_chaos, f_indie, f_chaos, 'attacker_wins',
+    ('d1000017-0000-0000-0000-000000000000', cid, u_dp, u_rm, f_chaos, f_indie, f_chaos,
      u_dp, '2026-03-07 18:00:00+00', 'The Iron Dogs are ground to powder'),
-    -- WardMaster9 beats NightPrince
-    ('d1000018-0000-0000-0000-000000000000', cid, u_wm, u_np, f_wardens, f_chaos, f_wardens, 'attacker_wins',
+    ('d1000018-0000-0000-0000-000000000000', cid, u_wm, u_np, f_wardens, f_chaos, f_wardens,
      u_wm, '2026-03-07 19:30:00+00', 'Vigilance rewarded — the Wardens hold'),
-    -- WardMaster9 beats RogueMercenary
-    ('d1000019-0000-0000-0000-000000000000', cid, u_wm, u_rm, f_wardens, f_indie, f_wardens, 'attacker_wins',
+    ('d1000019-0000-0000-0000-000000000000', cid, u_wm, u_rm, f_wardens, f_indie, f_wardens,
      u_wm, '2026-03-07 21:00:00+00', 'A disciplined volley puts the mercenaries to flight'),
-    -- HiveTyrant beats SwarmlordX
-    ('d1000020-0000-0000-0000-000000000000', cid, u_ht, u_sx, f_hive, f_hive, f_hive, 'attacker_wins',
+    ('d1000020-0000-0000-0000-000000000000', cid, u_ht, u_sx, f_hive, f_hive, f_hive,
      u_ht, '2026-03-07 22:30:00+00', 'Moloch''s tendrils coil tighter — the Devourer Strain is consumed')
   ON CONFLICT (id) DO NOTHING;
 
   -- Round 6 — 14 Mar 2026
   INSERT INTO battles (id, campaign_id, attacker_player_id, defender_player_id,
-    attacker_faction_id, defender_faction_id, winner_faction_id, result, logged_by, created_at, headline)
+    attacker_faction_id, defender_faction_id, winner_faction_id, logged_by, created_at, headline)
   VALUES
-    -- NightPrince beats HiveTyrant (HT's one loss)
-    ('d1000021-0000-0000-0000-000000000000', cid, u_np, u_ht, f_chaos, f_hive, f_chaos, 'attacker_wins',
+    ('d1000021-0000-0000-0000-000000000000', cid, u_np, u_ht, f_chaos, f_hive, f_chaos,
      u_np, '2026-03-14 18:00:00+00', 'Sorcerer Aurelius finds his first victory in the shadows'),
-    -- SwarmlordX beats NightPrince
-    ('d1000022-0000-0000-0000-000000000000', cid, u_sx, u_np, f_hive, f_chaos, f_hive, 'attacker_wins',
+    ('d1000022-0000-0000-0000-000000000000', cid, u_sx, u_np, f_hive, f_chaos, f_hive,
      u_sx, '2026-03-14 19:30:00+00', 'The Swarmlord turns the sorcerer''s victory to ash'),
-    -- HiveTyrant beats RogueMercenary
-    ('d1000023-0000-0000-0000-000000000000', cid, u_ht, u_rm, f_hive, f_indie, f_hive, 'attacker_wins',
+    ('d1000023-0000-0000-0000-000000000000', cid, u_ht, u_rm, f_hive, f_indie, f_hive,
      u_ht, '2026-03-14 21:00:00+00', 'Iron Dogs overwhelmed — the biomass feeds the fleet'),
-    -- SwarmlordX beats RogueMercenary
-    ('d1000024-0000-0000-0000-000000000000', cid, u_sx, u_rm, f_hive, f_indie, f_hive, 'attacker_wins',
+    ('d1000024-0000-0000-0000-000000000000', cid, u_sx, u_rm, f_hive, f_indie, f_hive,
      u_sx, '2026-03-14 22:30:00+00', 'A hollow victory, but the points are real')
   ON CONFLICT (id) DO NOTHING;
 
