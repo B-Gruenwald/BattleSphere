@@ -40,8 +40,9 @@ export default async function AdminUsers() {
   });
 
   // Email addresses via the auth admin API (service role required)
-  const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-  const emailMap = Object.fromEntries((authUsers || []).map(u => [u.id, u.email]));
+  const { data: authData, error: authError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  const authUsers = authData?.users ?? [];
+  const emailMap = Object.fromEntries(authUsers.map(u => [u.id, u.email]));
 
   const colHeaderStyle = {
     fontFamily: 'var(--font-display)',
@@ -72,6 +73,21 @@ export default async function AdminUsers() {
           All Users ({(profiles || []).length})
         </h1>
       </div>
+
+      {authError && (
+        <div style={{
+          marginBottom: '1.5rem',
+          padding: '0.85rem 1.25rem',
+          border: '1px solid rgba(224,90,90,0.4)',
+          background: 'rgba(224,90,90,0.07)',
+          fontSize: '0.85rem',
+          color: '#e05a5a',
+        }}>
+          ⚠ Could not load email addresses — auth.admin.listUsers failed.
+          Check that <code>SUPABASE_SERVICE_ROLE_KEY</code> is set correctly in Vercel env vars.
+          Error: {authError.message}
+        </div>
+      )}
 
       <div style={{ border: '1px solid var(--border-dim)' }}>
         {/* Table header */}
