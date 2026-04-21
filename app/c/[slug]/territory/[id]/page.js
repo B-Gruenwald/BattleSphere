@@ -210,6 +210,7 @@ export default async function TerritoryPage({ params }) {
         campaignId={campaign.id}
         territoryId={territory.id}
         initialImageUrl={territory.image_url || null}
+        initialFocalPoint={territory.image_focal_point || 'center'}
         isOrganiser={isOrganiser}
       />
 

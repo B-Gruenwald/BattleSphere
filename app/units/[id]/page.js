@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import ShareUnitButton from '@/app/components/ShareUnitButton';
+import UnitPhotosViewer from '@/app/components/UnitPhotosViewer';
 
 // ── Dynamic metadata (title, description, og:image, twitter card) ───────────
 // opengraph-image.js in this same folder supplies the og:image automatically.
@@ -103,10 +104,6 @@ export default async function UnitPortraitPage({ params }) {
     .order('is_portrait', { ascending: false })
     .order('created_at', { ascending: true });
 
-  // The first photo after sorting is the portrait (explicit or implicit first-uploaded)
-  const portraitPhoto    = photos?.[0] ?? null;
-  const additionalPhotos = (photos || []).slice(1);
-
   // Crusade records (may appear in multiple campaigns)
   const { data: crusadeRecords } = await admin
     .from('crusade_unit_records')
@@ -136,7 +133,6 @@ export default async function UnitPortraitPage({ params }) {
   }
 
   const isOwner = user?.id === army.player_id;
-  const hasPhoto = !!portraitPhoto;
 
   return (
     <div style={{ padding: '1.5rem', maxWidth: '760px', margin: '0 auto' }}>
@@ -159,46 +155,12 @@ export default async function UnitPortraitPage({ params }) {
         <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{unit.name}</span>
       </nav>
 
-      {/* Portrait photo — hero */}
-      <div style={{
-        width: '100%',
-        aspectRatio: '1 / 1',
-        overflow: 'hidden',
-        marginBottom: '1.25rem',
-        border: '1px solid var(--border-dim)',
-        background: 'var(--bg-surface)',
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        {hasPhoto ? (
-          <img
-            src={portraitPhoto.url}
-            alt={`${unit.name} — ${army.name}`}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <div style={{
-              width: '16px', height: '16px',
-              background: 'var(--gold)',
-              transform: 'rotate(45deg)',
-              margin: '0 auto 1rem',
-              opacity: 0.4,
-            }} />
-            <p style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '0.62rem',
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              color: 'var(--text-muted)',
-            }}>
-              Portrait not yet painted
-            </p>
-          </div>
-        )}
-      </div>
+      {/* Portrait hero + additional photos (client component — adds lightbox + objectPosition) */}
+      <UnitPhotosViewer
+        photos={photos || []}
+        unitName={unit.name}
+        armyName={army.name}
+      />
 
       {/* Header — name + meta */}
       <div style={{ marginBottom: '1.25rem' }}>
@@ -273,7 +235,7 @@ export default async function UnitPortraitPage({ params }) {
 
       {/* Share / actions row */}
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-        <ShareUnitButton unitId={unit.id} hasPhoto={hasPhoto} unitName={unit.name} />
+        <ShareUnitButton unitId={unit.id} hasPhoto={!!(photos?.[0])} unitName={unit.name} />
         {isOwner && (
           <Link href={`/armies/${army.id}/edit`}>
             <button className="btn-secondary" style={{ fontSize: '0.78rem' }}>Edit in Army</button>
@@ -359,40 +321,6 @@ export default async function UnitPortraitPage({ params }) {
         </div>
       )}
 
-      {/* Additional photos */}
-      {additionalPhotos.length > 0 && (
-        <div style={{ marginBottom: '1.25rem' }}>
-          <h2 style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '0.6rem',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--text-gold)',
-            marginBottom: '0.75rem',
-          }}>
-            More Photos
-          </h2>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-            gap: '0.6rem',
-          }}>
-            {additionalPhotos.map(photo => (
-              <div key={photo.id} style={{ position: 'relative', paddingBottom: '100%', overflow: 'hidden', border: '1px solid var(--border-dim)' }}>
-                <img
-                  src={photo.url}
-                  alt=""
-                  style={{
-                    position: 'absolute', inset: 0,
-                    width: '100%', height: '100%',
-                    objectFit: 'cover',
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Back link */}
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1.5rem' }}>

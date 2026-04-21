@@ -7,14 +7,16 @@ const MAX_SIZE_MB = 5;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const BUCKET = 'territory-images';
 
-export default function TerritoryImageUpload({ campaignId, territoryId, currentImageUrl, onImageChange }) {
+export default function TerritoryImageUpload({ campaignId, territoryId, currentImageUrl, currentFocalPoint, onImageChange, onFocalPointChange }) {
   const supabase = createClient();
   const fileInputRef = useRef(null);
 
-  const [uploading, setUploading]   = useState(false);
-  const [removing,  setRemoving]    = useState(false);
-  const [error,     setError]       = useState('');
-  const [preview,   setPreview]     = useState(currentImageUrl || null);
+  const [uploading,   setUploading]   = useState(false);
+  const [removing,    setRemoving]    = useState(false);
+  const [error,       setError]       = useState('');
+  const [preview,     setPreview]     = useState(currentImageUrl || null);
+  const [focalPoint,  setFocalPoint]  = useState(currentFocalPoint || 'center');
+  const [savingFocal, setSavingFocal] = useState(false);
 
   async function handleFileChange(e) {
     const file = e.target.files?.[0];
@@ -100,6 +102,25 @@ export default function TerritoryImageUpload({ campaignId, territoryId, currentI
     }
   }
 
+  async function handleFocalPoint(fp) {
+    setFocalPoint(fp); // optimistic
+    setSavingFocal(true);
+    try {
+      const { error: dbError } = await supabase
+        .from('territories')
+        .update({ image_focal_point: fp })
+        .eq('id', territoryId);
+      if (dbError) throw dbError;
+      if (onFocalPointChange) onFocalPointChange(fp);
+    } catch (err) {
+      setError(err.message || 'Could not save focal point.');
+    } finally {
+      setSavingFocal(false);
+    }
+  }
+
+  const toObjPos = (fp) => fp === 'top' ? 'center top' : fp === 'bottom' ? 'center bottom' : 'center';
+
   const inputStyle = {
     display: 'none',
   };
@@ -116,18 +137,48 @@ export default function TerritoryImageUpload({ campaignId, territoryId, currentI
     <div>
       {/* Current image preview */}
       {preview && (
-        <div style={{ marginBottom: '1rem' }}>
-          <img
-            src={preview}
-            alt="Territory"
-            style={{
-              width: '100%',
-              maxHeight: '280px',
-              objectFit: 'cover',
-              display: 'block',
-              border: '1px solid var(--border-dim)',
-            }}
-          />
+        <div style={{ marginBottom: '0.75rem' }}>
+          <div style={{ width: '100%', maxHeight: '280px', overflow: 'hidden', border: '1px solid var(--border-dim)', marginBottom: '0' }}>
+            <img
+              src={preview}
+              alt="Territory"
+              style={{
+                width: '100%',
+                maxHeight: '280px',
+                objectFit: 'cover',
+                objectPosition: toObjPos(focalPoint),
+                display: 'block',
+              }}
+            />
+          </div>
+          {/* Focal point toggle */}
+          <div style={{ display: 'flex', borderTop: 'none' }}>
+            {['top', 'center', 'bottom'].map((fp, fpIdx) => (
+              <button
+                key={fp}
+                type="button"
+                onClick={() => handleFocalPoint(fp)}
+                disabled={savingFocal || uploading || removing}
+                style={{
+                  flex: 1,
+                  background: focalPoint === fp ? 'rgba(183,140,64,0.12)' : 'none',
+                  border: '1px solid var(--border-dim)',
+                  borderTop: 'none',
+                  borderLeft: fpIdx === 0 ? '1px solid var(--border-dim)' : 'none',
+                  color: focalPoint === fp ? 'var(--text-gold)' : 'var(--text-muted)',
+                  fontSize: '0.5rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  padding: '0.3rem 0',
+                  cursor: savingFocal ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-display)',
+                  transition: 'background 0.1s, color 0.1s',
+                }}
+              >
+                {fp === 'center' ? 'Ctr' : fp.charAt(0).toUpperCase() + fp.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

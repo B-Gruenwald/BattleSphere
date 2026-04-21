@@ -7,13 +7,21 @@ const MAX_SIZE_MB = 10;
 
 // entityType: 'battle' | 'faction' | 'army-unit'
 // entityId:   the battle.id / faction.id / unit.id
-// photos:     initial array from server (each has { id, url, uploader_id, created_at, is_portrait? })
+// photos:     initial array from server (each has { id, url, uploader_id, created_at, is_portrait?, focal_point? })
 // userId:     current user's id (null if not logged in)
 // canUpload:  true if this user is allowed to add photos (battle participant / faction member)
 // canManage:  true if the user has edit rights beyond just being uploader
 //             (e.g. campaign organiser, battle logger, faction member)
-// portraitPhotoId:       (army-unit only) id of the current portrait photo, or null
+// portraitPhotoId:         (army-unit only) id of the current portrait photo, or null
 // onPortraitPhotoIdChange: (army-unit only) callback(newId) when portrait changes
+
+// Maps focal_point value → CSS object-position
+function toObjPos(fp) {
+  if (fp === 'top')    return 'center top';
+  if (fp === 'bottom') return 'center bottom';
+  return 'center';
+}
+
 export default function PhotoGallery({ photos: initialPhotos, entityType, entityId, userId, canUpload: canUploadProp, canManage, portraitPhotoId, onPortraitPhotoIdChange }) {
   const [photos, setPhotos]           = useState(initialPhotos || []);
   const [uploading, setUploading]     = useState(false);
@@ -22,6 +30,10 @@ export default function PhotoGallery({ photos: initialPhotos, entityType, entity
   const [lightbox, setLightbox]       = useState(null); // url string or null
   const [deleting, setDeleting]       = useState(null); // photo id or null
   const [settingPortrait, setSettingPortrait] = useState(null); // photo id or null
+  const [settingFocal, setSettingFocal] = useState(null); // photo id or null
+
+  // Show focal point toggles for entity types that support it
+  const showFocalPoint = canManage && (entityType === 'army-unit' || entityType === 'battle');
 
   const cloudName    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   const canUpload    = !!canUploadProp && !!userId && !!cloudName;
@@ -124,6 +136,30 @@ export default function PhotoGallery({ photos: initialPhotos, entityType, entity
     }
   }
 
+  async function handleSetFocalPoint(photo, focalPoint) {
+    if (settingFocal) return;
+    setSettingFocal(photo.id);
+    // Optimistic update — image repaint is immediate
+    setPhotos(prev => prev.map(p => p.id === photo.id ? { ...p, focal_point: focalPoint } : p));
+    try {
+      const res = await fetch('/api/photos/focal-point', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoId: photo.id, entityType, focalPoint }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        // Revert
+        setPhotos(prev => prev.map(p => p.id === photo.id ? { ...p, focal_point: photo.focal_point } : p));
+        throw new Error(d.error || 'Failed to update focal point');
+      }
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSettingFocal(null);
+    }
+  }
+
   async function handleSetPortrait(photo) {
     if (settingPortrait) return;
     setSettingPortrait(photo.id);
@@ -200,9 +236,10 @@ export default function PhotoGallery({ photos: initialPhotos, entityType, entity
           {photos.map(photo => {
             const canDel      = canManage || photo.uploader_id === userId;
             const isDeleting  = deleting === photo.id;
-            const isBusy      = isDeleting || settingPortrait === photo.id;
-            const isPortrait  = portraitPhotoId != null && photo.id === portraitPhotoId;
+            const isBusy       = isDeleting || settingPortrait === photo.id || settingFocal === photo.id;
+            const isPortrait   = portraitPhotoId != null && photo.id === portraitPhotoId;
             const showPortrait = !!onPortraitPhotoIdChange && canManage;
+            const activeFp     = photo.focal_point ?? 'center';
             return (
               <div key={photo.id} style={{ display: 'flex', flexDirection: 'column' }}>
                 {/* Image */}
@@ -214,7 +251,9 @@ export default function PhotoGallery({ photos: initialPhotos, entityType, entity
                     style={{
                       position: 'absolute', inset: 0,
                       width: '100%', height: '100%',
-                      objectFit: 'cover', cursor: 'pointer',
+                      objectFit: 'cover',
+                      objectPosition: toObjPos(activeFp),
+                      cursor: 'zoom-in',
                       border: isPortrait ? '2px solid var(--gold)' : '1px solid var(--border-dim)',
                       opacity: isBusy ? 0.35 : 1,
                       transition: 'opacity 0.15s',
@@ -273,6 +312,40 @@ export default function PhotoGallery({ photos: initialPhotos, entityType, entity
                       {settingPortrait === photo.id ? 'Setting…' : 'Set as Portrait'}
                     </button>
                   )
+                )}
+                {/* Focal point toggle */}
+                {showFocalPoint && (
+                  <div style={{ display: 'flex' }}>
+                    {['top', 'center', 'bottom'].map((fp, fpIdx) => {
+                      const isActiveFp = activeFp === fp;
+                      return (
+                        <button
+                          key={fp}
+                          onClick={() => handleSetFocalPoint(photo, fp)}
+                          disabled={!!settingFocal || isDeleting}
+                          title={`Focus: ${fp}`}
+                          style={{
+                            flex: 1,
+                            background: isActiveFp ? 'rgba(183,140,64,0.12)' : 'none',
+                            border: '1px solid var(--border-dim)',
+                            borderTop: 'none',
+                            borderLeft: fpIdx === 0 ? '1px solid var(--border-dim)' : 'none',
+                            color: isActiveFp ? 'var(--text-gold)' : 'var(--text-muted)',
+                            fontSize: '0.5rem',
+                            letterSpacing: '0.1em',
+                            textTransform: 'uppercase',
+                            padding: '0.28rem 0',
+                            cursor: settingFocal ? 'not-allowed' : 'pointer',
+                            fontFamily: 'var(--font-display)',
+                            transition: 'background 0.1s, color 0.1s',
+                            opacity: settingFocal && settingFocal !== photo.id ? 0.4 : 1,
+                          }}
+                        >
+                          {fp === 'center' ? 'Ctr' : fp.charAt(0).toUpperCase() + fp.slice(1)}
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             );

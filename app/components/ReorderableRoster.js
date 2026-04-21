@@ -47,8 +47,9 @@ export default function ReorderableRoster({ initialUnits, armyId, isOwner, photo
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {units.map((unit, idx) => {
-          const unitPhotos  = photosByUnit[unit.id] || [];
-          const firstPhoto  = unitPhotos[0] ?? null;
+          const unitPhotos    = photosByUnit[unit.id] || [];
+          // Prefer explicitly-set portrait; fall back to first uploaded photo
+          const firstPhoto    = unitPhotos.find(p => p.is_portrait) ?? unitPhotos[0] ?? null;
           const canUp   = isOwner && idx > 0;
           const canDown = isOwner && idx < units.length - 1;
 
@@ -87,7 +88,14 @@ export default function ReorderableRoster({ initialUnits, armyId, isOwner, photo
                       <img
                         src={firstPhoto.url}
                         alt=""
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        style={{
+                          width: '100%', height: '100%',
+                          objectFit: 'cover',
+                          objectPosition: firstPhoto.focal_point === 'top' ? 'center top'
+                            : firstPhoto.focal_point === 'bottom' ? 'center bottom'
+                            : 'center',
+                          display: 'block',
+                        }}
                       />
                     </div>
                   )}
