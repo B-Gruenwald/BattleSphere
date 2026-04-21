@@ -7,7 +7,18 @@ import { Analytics } from '@vercel/analytics/next';
 
 export const metadata = {
   title: 'BattleSphere',
-  description: 'Organise and track narrative wargaming campaigns',
+  description: 'Document your collection, run a club league, or build a living narrative campaign.',
+  openGraph: {
+    title: 'BattleSphere',
+    description: 'Document your collection, run a club league, or build a living narrative campaign.',
+    siteName: 'BattleSphere',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'BattleSphere',
+    description: 'Document your collection, run a club league, or build a living narrative campaign.',
+  },
 };
 
 async function NavBarServer() {
