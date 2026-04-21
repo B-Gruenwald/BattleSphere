@@ -5,20 +5,23 @@ import { useState } from 'react';
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_SIZE_MB = 10;
 
-// entityType: 'battle' | 'faction'
-// entityId:   the battle.id or faction.id
-// photos:     initial array from server (each has { id, url, uploader_id, created_at })
+// entityType: 'battle' | 'faction' | 'army-unit'
+// entityId:   the battle.id / faction.id / unit.id
+// photos:     initial array from server (each has { id, url, uploader_id, created_at, is_portrait? })
 // userId:     current user's id (null if not logged in)
 // canUpload:  true if this user is allowed to add photos (battle participant / faction member)
 // canManage:  true if the user has edit rights beyond just being uploader
 //             (e.g. campaign organiser, battle logger, faction member)
-export default function PhotoGallery({ photos: initialPhotos, entityType, entityId, userId, canUpload: canUploadProp, canManage }) {
+// portraitPhotoId:       (army-unit only) id of the current portrait photo, or null
+// onPortraitPhotoIdChange: (army-unit only) callback(newId) when portrait changes
+export default function PhotoGallery({ photos: initialPhotos, entityType, entityId, userId, canUpload: canUploadProp, canManage, portraitPhotoId, onPortraitPhotoIdChange }) {
   const [photos, setPhotos]           = useState(initialPhotos || []);
   const [uploading, setUploading]     = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
   const [uploadError, setUploadError] = useState(null);
   const [lightbox, setLightbox]       = useState(null); // url string or null
   const [deleting, setDeleting]       = useState(null); // photo id or null
+  const [settingPortrait, setSettingPortrait] = useState(null); // photo id or null
 
   const cloudName    = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   const canUpload    = !!canUploadProp && !!userId && !!cloudName;
@@ -106,11 +109,39 @@ export default function PhotoGallery({ photos: initialPhotos, entityType, entity
         const d = await res.json();
         throw new Error(d.error || 'Delete failed');
       }
-      setPhotos(prev => prev.filter(p => p.id !== photo.id));
+      setPhotos(prev => {
+        const remaining = prev.filter(p => p.id !== photo.id);
+        // If deleted photo was the portrait, update the parent with the next available photo
+        if (onPortraitPhotoIdChange && photo.id === portraitPhotoId) {
+          onPortraitPhotoIdChange(remaining[0]?.id ?? null);
+        }
+        return remaining;
+      });
     } catch (err) {
       alert(err.message);
     } finally {
       setDeleting(null);
+    }
+  }
+
+  async function handleSetPortrait(photo) {
+    if (settingPortrait) return;
+    setSettingPortrait(photo.id);
+    try {
+      const res = await fetch('/api/photos/army-unit', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoId: photo.id, unitId: entityId }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || 'Failed to set portrait');
+      }
+      onPortraitPhotoIdChange(photo.id);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSettingPortrait(null);
     }
   }
 
@@ -167,36 +198,81 @@ export default function PhotoGallery({ photos: initialPhotos, entityType, entity
           gap: '0.75rem',
         }}>
           {photos.map(photo => {
-            const canDel    = canManage || photo.uploader_id === userId;
-            const isDeleting = deleting === photo.id;
+            const canDel      = canManage || photo.uploader_id === userId;
+            const isDeleting  = deleting === photo.id;
+            const isBusy      = isDeleting || settingPortrait === photo.id;
+            const isPortrait  = portraitPhotoId != null && photo.id === portraitPhotoId;
+            const showPortrait = !!onPortraitPhotoIdChange && canManage;
             return (
-              <div key={photo.id} style={{ position: 'relative', paddingBottom: '75%', overflow: 'hidden' }}>
-                <img
-                  src={photo.url}
-                  alt=""
-                  onClick={() => setLightbox(photo.url)}
-                  style={{
-                    position: 'absolute', inset: 0,
-                    width: '100%', height: '100%',
-                    objectFit: 'cover', cursor: 'pointer',
-                    border: '1px solid var(--border-dim)',
-                    opacity: isDeleting ? 0.35 : 1,
-                    transition: 'opacity 0.15s',
-                  }}
-                />
-                {canDel && !isDeleting && (
-                  <button
-                    onClick={() => handleDelete(photo)}
-                    title="Remove photo"
+              <div key={photo.id} style={{ display: 'flex', flexDirection: 'column' }}>
+                {/* Image */}
+                <div style={{ position: 'relative', paddingBottom: '100%', overflow: 'hidden' }}>
+                  <img
+                    src={photo.url}
+                    alt=""
+                    onClick={() => setLightbox(photo.url)}
                     style={{
-                      position: 'absolute', top: '4px', right: '4px',
-                      background: 'rgba(0,0,0,0.75)', border: 'none',
-                      color: '#e05a5a', cursor: 'pointer',
-                      padding: '2px 7px', fontSize: '0.85rem', lineHeight: 1,
+                      position: 'absolute', inset: 0,
+                      width: '100%', height: '100%',
+                      objectFit: 'cover', cursor: 'pointer',
+                      border: isPortrait ? '2px solid var(--gold)' : '1px solid var(--border-dim)',
+                      opacity: isBusy ? 0.35 : 1,
+                      transition: 'opacity 0.15s',
                     }}
-                  >
-                    ×
-                  </button>
+                  />
+                  {canDel && !isBusy && (
+                    <button
+                      onClick={() => handleDelete(photo)}
+                      title="Remove photo"
+                      style={{
+                        position: 'absolute', top: '4px', right: '4px',
+                        background: 'rgba(0,0,0,0.75)', border: 'none',
+                        color: '#e05a5a', cursor: 'pointer',
+                        padding: '2px 7px', fontSize: '0.85rem', lineHeight: 1,
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                {/* Portrait button / label */}
+                {showPortrait && (
+                  isPortrait ? (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '0.3rem 0',
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '0.52rem',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      color: 'var(--text-gold)',
+                    }}>
+                      Portrait ✓
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleSetPortrait(photo)}
+                      disabled={!!settingPortrait || isDeleting}
+                      style={{
+                        background: 'none',
+                        border: '1px solid var(--border-dim)',
+                        borderTop: 'none',
+                        color: settingPortrait === photo.id ? 'var(--text-muted)' : 'var(--text-secondary)',
+                        cursor: settingPortrait ? 'not-allowed' : 'pointer',
+                        padding: '0.3rem 0',
+                        width: '100%',
+                        fontFamily: 'var(--font-display)',
+                        fontSize: '0.52rem',
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        opacity: settingPortrait && settingPortrait !== photo.id ? 0.4 : 1,
+                        transition: 'opacity 0.15s',
+                      }}
+                    >
+                      {settingPortrait === photo.id ? 'Setting…' : 'Set as Portrait'}
+                    </button>
+                  )
                 )}
               </div>
             );

@@ -38,6 +38,48 @@ export async function POST(request) {
   return NextResponse.json({ photo: data?.[0] ?? null });
 }
 
+// PATCH /api/photos/army-unit
+// Body: { photoId, unitId }
+// Sets one photo as the portrait for a unit (clears is_portrait on all others).
+export async function PATCH(request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { photoId, unitId } = await request.json();
+  if (!photoId || !unitId) {
+    return NextResponse.json({ error: 'Missing photoId or unitId' }, { status: 400 });
+  }
+
+  const admin = createAdminClient();
+
+  // Verify the photo exists and caller owns the army
+  const { data: photoRows } = await admin
+    .from('army_unit_photos')
+    .select('*, army_units(army_id, armies(player_id))')
+    .eq('id', photoId)
+    .limit(1);
+  const photo = photoRows?.[0] ?? null;
+  if (!photo) return NextResponse.json({ error: 'Photo not found' }, { status: 404 });
+  if (photo.army_units?.armies?.player_id !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  // Clear portrait flag on all photos for this unit, then set on the target
+  await admin
+    .from('army_unit_photos')
+    .update({ is_portrait: false })
+    .eq('unit_id', unitId);
+
+  const { error } = await admin
+    .from('army_unit_photos')
+    .update({ is_portrait: true })
+    .eq('id', photoId);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ success: true });
+}
+
 // DELETE /api/photos/army-unit?id=<photoId>
 // Removes a unit photo. Uploader or army owner only.
 export async function DELETE(request) {

@@ -95,14 +95,16 @@ export default async function UnitPortraitPage({ params }) {
     .limit(1);
   const profile = profileRows?.[0] ?? null;
 
-  // Photos (sorted oldest first; first one is used as the portrait)
+  // Photos — portrait first (is_portrait DESC), then oldest first as fallback
   const { data: photos } = await admin
     .from('army_unit_photos')
     .select('*')
     .eq('unit_id', unit.id)
+    .order('is_portrait', { ascending: false })
     .order('created_at', { ascending: true });
 
-  const portraitPhoto   = photos?.[0] ?? null;
+  // The first photo after sorting is the portrait (explicit or implicit first-uploaded)
+  const portraitPhoto    = photos?.[0] ?? null;
   const additionalPhotos = (photos || []).slice(1);
 
   // Crusade records (may appear in multiple campaigns)

@@ -1,5 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { createAdminClient } from '@/lib/supabase/admin';
+import fs from 'fs';
+import path from 'path';
 
 // Rendered at /units/[id]/opengraph-image and auto-injected as og:image.
 // Discord / Slack / WhatsApp / iMessage all show this in link previews.
@@ -53,6 +55,7 @@ export default async function OgImage({ params }) {
       .from('army_unit_photos')
       .select('*')
       .eq('unit_id', unit.id)
+      .order('is_portrait', { ascending: false })
       .order('created_at', { ascending: true })
       .limit(1);
     photoUrl = photos?.[0]?.url ?? null;
@@ -62,6 +65,11 @@ export default async function OgImage({ params }) {
   const armyName    = army?.name || '';
   const factionName = army?.faction_name || '';
   const squareUrl   = squareify(photoUrl, 630);
+
+  // Load Cinzel font for Satori (woff format — woff2 is not supported)
+  const cinzel400 = fs.readFileSync(path.join(process.cwd(), 'public/fonts/Cinzel-400.woff'));
+  const cinzel700 = fs.readFileSync(path.join(process.cwd(), 'public/fonts/Cinzel-700.woff'));
+  const cinzel900 = fs.readFileSync(path.join(process.cwd(), 'public/fonts/Cinzel-900.woff'));
 
   return new ImageResponse(
     (
@@ -73,7 +81,7 @@ export default async function OgImage({ params }) {
           backgroundColor: BG_VOID,
           backgroundImage: `radial-gradient(ellipse at top right, ${GOLD}22 0%, transparent 55%), linear-gradient(180deg, ${BG_VOID} 0%, ${BG_DEEP} 100%)`,
           color: TEXT_PRI,
-          fontFamily: 'serif',
+          fontFamily: 'Cinzel',
         }}
       >
         {/* LEFT: photo (or placeholder) */}
@@ -222,6 +230,11 @@ export default async function OgImage({ params }) {
     ),
     {
       ...size,
+      fonts: [
+        { name: 'Cinzel', data: cinzel400, weight: 400, style: 'normal' },
+        { name: 'Cinzel', data: cinzel700, weight: 700, style: 'normal' },
+        { name: 'Cinzel', data: cinzel900, weight: 900, style: 'normal' },
+      ],
     }
   );
 }

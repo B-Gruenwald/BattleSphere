@@ -34,11 +34,15 @@ const sectionHeadingStyle = {
 
 // ── Unit card ────────────────────────────────────────────────
 function UnitCard({ unit: initialUnit, userId, onDelete, onMoveUp, onMoveDown, isReordering }) {
-  const [unit,       setUnit]       = useState(initialUnit);
-  const [dirty,      setDirty]      = useState(false);
-  const [saving,     setSaving]     = useState(false);
-  const [deleting,   setDeleting]   = useState(false);
-  const [error,      setError]      = useState(null);
+  const [unit,            setUnit]            = useState(initialUnit);
+  const [dirty,           setDirty]           = useState(false);
+  const [saving,          setSaving]          = useState(false);
+  const [deleting,        setDeleting]        = useState(false);
+  const [error,           setError]           = useState(null);
+  // Portrait tracking: prefer explicit is_portrait flag, fall back to first photo
+  const [portraitPhotoId, setPortraitPhotoId] = useState(
+    initialUnit.photos?.find(p => p.is_portrait)?.id ?? initialUnit.photos?.[0]?.id ?? null
+  );
 
   function handleChange(e) {
     setUnit(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -207,6 +211,8 @@ function UnitCard({ unit: initialUnit, userId, onDelete, onMoveUp, onMoveDown, i
         userId={userId}
         canUpload={true}
         canManage={true}
+        portraitPhotoId={portraitPhotoId}
+        onPortraitPhotoIdChange={setPortraitPhotoId}
       />
     </div>
   );

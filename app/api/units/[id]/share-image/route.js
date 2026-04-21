@@ -1,5 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { createAdminClient } from '@/lib/supabase/admin';
+import fs from 'fs';
+import path from 'path';
 
 // Downloadable 1080x1080 branded share image for Instagram / Discord / etc.
 // URL:  /api/units/[id]/share-image
@@ -67,6 +69,7 @@ export async function GET(request, { params }) {
     .from('army_unit_photos')
     .select('*')
     .eq('unit_id', unit.id)
+    .order('is_portrait', { ascending: false })
     .order('created_at', { ascending: true })
     .limit(1);
   const photoUrl = photos?.[0]?.url ?? null;
@@ -86,6 +89,11 @@ export async function GET(request, { params }) {
                      : unitName.length > 16 ? 88
                      : 104;
 
+  // Load Cinzel font for Satori (woff format — woff2 is not supported)
+  const cinzel400 = fs.readFileSync(path.join(process.cwd(), 'public/fonts/Cinzel-400.woff'));
+  const cinzel700 = fs.readFileSync(path.join(process.cwd(), 'public/fonts/Cinzel-700.woff'));
+  const cinzel900 = fs.readFileSync(path.join(process.cwd(), 'public/fonts/Cinzel-900.woff'));
+
   const response = new ImageResponse(
     (
       <div
@@ -95,7 +103,7 @@ export async function GET(request, { params }) {
           display: 'flex',
           position: 'relative',
           backgroundColor: BG_VOID,
-          fontFamily: 'serif',
+          fontFamily: 'Cinzel',
         }}
       >
         {/* Background photo */}
@@ -216,6 +224,11 @@ export async function GET(request, { params }) {
     {
       width: 1080,
       height: 1080,
+      fonts: [
+        { name: 'Cinzel', data: cinzel400, weight: 400, style: 'normal' },
+        { name: 'Cinzel', data: cinzel700, weight: 700, style: 'normal' },
+        { name: 'Cinzel', data: cinzel900, weight: 900, style: 'normal' },
+      ],
     }
   );
 
