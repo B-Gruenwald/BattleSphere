@@ -5,6 +5,8 @@ import NavBar from './components/NavBar';
 import NewsletterOptinModal from './components/NewsletterOptinModal';
 import { Analytics } from '@vercel/analytics/next';
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://battlesphere.cc';
+
 export const metadata = {
   title: 'BattleSphere',
   description: 'Document your collection, run a club league, or build a living narrative campaign.',
@@ -13,11 +15,13 @@ export const metadata = {
     description: 'Document your collection, run a club league, or build a living narrative campaign.',
     siteName: 'BattleSphere',
     type: 'website',
+    images: [{ url: `${APP_URL}/opengraph-image`, width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'BattleSphere',
     description: 'Document your collection, run a club league, or build a living narrative campaign.',
+    images: [`${APP_URL}/opengraph-image`],
   },
 };
 
