@@ -22,7 +22,7 @@ function toObjPos(fp) {
   return 'center';
 }
 
-export default function PhotoGallery({ photos: initialPhotos, entityType, entityId, userId, canUpload: canUploadProp, canManage, portraitPhotoId, onPortraitPhotoIdChange }) {
+export default function PhotoGallery({ photos: initialPhotos, entityType, entityId, userId, canUpload: canUploadProp, canManage, portraitPhotoId: portraitPhotoIdProp, onPortraitPhotoIdChange }) {
   const [photos, setPhotos]           = useState(initialPhotos || []);
   const [uploading, setUploading]     = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
@@ -31,6 +31,8 @@ export default function PhotoGallery({ photos: initialPhotos, entityType, entity
   const [deleting, setDeleting]       = useState(null); // photo id or null
   const [settingPortrait, setSettingPortrait] = useState(null); // photo id or null
   const [settingFocal, setSettingFocal] = useState(null); // photo id or null
+  // Internal portrait tracking — initialised from prop, updated on Set as Portrait
+  const [activePortraitId, setActivePortraitId] = useState(portraitPhotoIdProp ?? null);
 
   // Show focal point toggles for entity types that support it
   const showFocalPoint = canManage && (entityType === 'army-unit' || entityType === 'battle');
@@ -123,9 +125,11 @@ export default function PhotoGallery({ photos: initialPhotos, entityType, entity
       }
       setPhotos(prev => {
         const remaining = prev.filter(p => p.id !== photo.id);
-        // If deleted photo was the portrait, update the parent with the next available photo
-        if (onPortraitPhotoIdChange && photo.id === portraitPhotoId) {
-          onPortraitPhotoIdChange(remaining[0]?.id ?? null);
+        // If deleted photo was the portrait, fall back to the next available photo
+        if (photo.id === activePortraitId) {
+          const next = remaining[0]?.id ?? null;
+          setActivePortraitId(next);
+          onPortraitPhotoIdChange?.(next);
         }
         return remaining;
       });
@@ -164,16 +168,21 @@ export default function PhotoGallery({ photos: initialPhotos, entityType, entity
     if (settingPortrait) return;
     setSettingPortrait(photo.id);
     try {
-      const res = await fetch('/api/photos/army-unit', {
+      const endpoint = entityType === 'battle' ? '/api/photos/battle' : '/api/photos/army-unit';
+      const body     = entityType === 'battle'
+        ? { photoId: photo.id, battleId: entityId }
+        : { photoId: photo.id, unitId: entityId };
+      const res = await fetch(endpoint, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ photoId: photo.id, unitId: entityId }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const d = await res.json();
         throw new Error(d.error || 'Failed to set portrait');
       }
-      onPortraitPhotoIdChange(photo.id);
+      setActivePortraitId(photo.id);
+      onPortraitPhotoIdChange?.(photo.id);
     } catch (err) {
       alert(err.message);
     } finally {
@@ -237,8 +246,8 @@ export default function PhotoGallery({ photos: initialPhotos, entityType, entity
             const canDel      = canManage || photo.uploader_id === userId;
             const isDeleting  = deleting === photo.id;
             const isBusy       = isDeleting || settingPortrait === photo.id || settingFocal === photo.id;
-            const isPortrait   = portraitPhotoId != null && photo.id === portraitPhotoId;
-            const showPortrait = !!onPortraitPhotoIdChange && canManage;
+            const isPortrait   = activePortraitId != null && photo.id === activePortraitId;
+            const showPortrait = canManage && (entityType === 'army-unit' || entityType === 'battle');
             const activeFp     = photo.focal_point ?? 'center';
             return (
               <div key={photo.id} style={{ display: 'flex', flexDirection: 'column' }}>

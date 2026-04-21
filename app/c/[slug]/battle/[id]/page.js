@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import PhotoGallery from '@/app/components/PhotoGallery';
 import AddToCampaignPanel from '@/app/components/AddToCampaignPanel';
 import ShareBattleButton from '@/app/components/ShareBattleButton';
+import BattlePortraitHero from '@/app/components/BattlePortraitHero';
 
 // ── Dynamic metadata for Discord / social previews ──────────────────────────
 export async function generateMetadata({ params }) {
@@ -140,11 +141,12 @@ export default async function BattleDetailPage({ params }) {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
 
-  // Photos
+  // Photos — portrait-flagged photo first, then oldest first as fallback
   const { data: battlePhotos } = await supabase
     .from('battle_photos')
     .select('*')
     .eq('battle_id', id)
+    .order('is_portrait', { ascending: false })
     .order('created_at', { ascending: true });
 
   // Event bonuses applied to this battle (Tier 2)
@@ -280,6 +282,9 @@ export default async function BattleDetailPage({ params }) {
           battleUrl={`${process.env.NEXT_PUBLIC_APP_URL}/c/${slug}/battle/${id}`}
         />
       </div>
+
+      {/* Portrait hero — first is_portrait photo, or first uploaded photo */}
+      <BattlePortraitHero photo={battlePhotos?.[0] ?? null} />
 
       <div style={{ borderTop: '1px solid var(--border-dim)', marginBottom: '2.5rem' }} />
 
@@ -487,6 +492,7 @@ export default async function BattleDetailPage({ params }) {
         userId={user?.id ?? null}
         canUpload={canEdit}
         canManage={canEdit}
+        portraitPhotoId={battlePhotos?.[0]?.id ?? null}
       />
 
       {/* Cross-campaign links */}
