@@ -82,7 +82,7 @@ export default async function AdminUsers() {
         </h1>
       </div>
 
-      {authError && (
+      {authError && Object.keys(emailMap).length === 0 && (
         <div style={{
           marginBottom: '1.5rem',
           padding: '0.85rem 1.25rem',
