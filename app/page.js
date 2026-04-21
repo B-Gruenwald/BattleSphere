@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
 const ARMY_DEMO_URL      = '/armies/b0e70783-09ee-4eeb-9b99-9bd425ced524';
@@ -9,7 +8,6 @@ const LEAGUE_DEMO_SLUG   = 'home-game-league-anpa6';
 export default async function HomePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (user) redirect('/dashboard');
 
   return (
     <div style={{ color: 'var(--text-primary)' }}>
