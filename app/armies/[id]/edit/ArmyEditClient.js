@@ -300,10 +300,12 @@ function AddUnitForm({ armyId, onAdd, onCancel }) {
 }
 
 // ── Cover image uploader ─────────────────────────────────────
-function CoverUpload({ currentUrl, cloudName, onUpload, disabled }) {
-  const [uploading, setUploading] = useState(false);
-  const [error,     setError]     = useState(null);
+function CoverUpload({ currentUrl, currentFocalPoint, cloudName, onUpload, onFocalPointChange, disabled }) {
+  const [uploading,  setUploading]  = useState(false);
+  const [error,      setError]      = useState(null);
   const inputRef = useRef(null);
+
+  const toObjPos = (fp) => fp === 'top' ? 'center top' : fp === 'bottom' ? 'center bottom' : 'center';
 
   async function handleFile(e) {
     const file = e.target.files?.[0];
@@ -334,8 +336,46 @@ function CoverUpload({ currentUrl, cloudName, onUpload, disabled }) {
   return (
     <div>
       {currentUrl && (
-        <div style={{ width: '100%', aspectRatio: '21/9', overflow: 'hidden', marginBottom: '0.75rem', border: '1px solid var(--border-dim)' }}>
-          <img src={currentUrl} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <div style={{ marginBottom: '0.75rem' }}>
+          <div style={{ width: '100%', aspectRatio: '21/9', overflow: 'hidden', border: '1px solid var(--border-dim)' }}>
+            <img
+              src={currentUrl}
+              alt="Cover"
+              style={{
+                width: '100%', height: '100%',
+                objectFit: 'cover',
+                objectPosition: toObjPos(currentFocalPoint),
+              }}
+            />
+          </div>
+          {/* Focal point toggle */}
+          <div style={{ display: 'flex' }}>
+            {['top', 'center', 'bottom'].map((fp, fpIdx) => (
+              <button
+                key={fp}
+                type="button"
+                onClick={() => onFocalPointChange(fp)}
+                disabled={disabled}
+                style={{
+                  flex: 1,
+                  background: currentFocalPoint === fp ? 'rgba(183,140,64,0.12)' : 'none',
+                  border: '1px solid var(--border-dim)',
+                  borderTop: 'none',
+                  borderLeft: fpIdx === 0 ? '1px solid var(--border-dim)' : 'none',
+                  color: currentFocalPoint === fp ? 'var(--text-gold)' : 'var(--text-muted)',
+                  fontSize: '0.5rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  padding: '0.3rem 0',
+                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-display)',
+                  transition: 'background 0.1s, color 0.1s',
+                }}
+              >
+                {fp === 'center' ? 'Ctr' : fp.charAt(0).toUpperCase() + fp.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {error && <p style={{ color: '#e05a5a', fontSize: '0.82rem', marginBottom: '0.5rem' }}>{error}</p>}
@@ -364,12 +404,13 @@ export default function ArmyEditClient({ army: initialArmy, initialUnits, userId
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 
   const [form, setForm] = useState({
-    name:            initialArmy.name            || '',
-    game_system:     initialArmy.game_system      || '',
-    faction_name:    initialArmy.faction_name     || '',
-    tagline:         initialArmy.tagline          || '',
-    backstory:       initialArmy.backstory        || '',
-    cover_image_url: initialArmy.cover_image_url  || '',
+    name:              initialArmy.name              || '',
+    game_system:       initialArmy.game_system        || '',
+    faction_name:      initialArmy.faction_name       || '',
+    tagline:           initialArmy.tagline            || '',
+    backstory:         initialArmy.backstory          || '',
+    cover_image_url:   initialArmy.cover_image_url    || '',
+    cover_focal_point: initialArmy.cover_focal_point  || 'center',
   });
   const [formDirty,    setFormDirty]    = useState(false);
   const [saving,       setSaving]       = useState(false);
@@ -389,6 +430,12 @@ export default function ArmyEditClient({ army: initialArmy, initialUnits, userId
 
   function handleCoverUpload(url) {
     setForm(prev => ({ ...prev, cover_image_url: url || '' }));
+    setFormDirty(true);
+    setSaveOk(false);
+  }
+
+  function handleCoverFocalPoint(fp) {
+    setForm(prev => ({ ...prev, cover_focal_point: fp }));
     setFormDirty(true);
     setSaveOk(false);
   }
@@ -567,8 +614,10 @@ export default function ArmyEditClient({ army: initialArmy, initialUnits, userId
               <label style={labelStyle}>Cover Image</label>
               <CoverUpload
                 currentUrl={form.cover_image_url}
+                currentFocalPoint={form.cover_focal_point}
                 cloudName={cloudName}
                 onUpload={handleCoverUpload}
+                onFocalPointChange={handleCoverFocalPoint}
                 disabled={saving || deleteArmy}
               />
             </div>

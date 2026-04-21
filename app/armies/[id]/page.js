@@ -80,7 +80,13 @@ export default async function ArmyPage({ params }) {
           <img
             src={army.cover_image_url}
             alt={`${army.name} cover`}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            style={{
+              width: '100%', height: '100%',
+              objectFit: 'cover',
+              objectPosition: army.cover_focal_point === 'top' ? 'center top'
+                : army.cover_focal_point === 'bottom' ? 'center bottom'
+                : 'center',
+            }}
           />
         </div>
       )}

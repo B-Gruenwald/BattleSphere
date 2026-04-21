@@ -31,7 +31,8 @@ export async function PUT(request, { params }) {
   if (body.faction_name    !== undefined) updates.faction_name    = body.faction_name?.trim() || null;
   if (body.tagline         !== undefined) updates.tagline         = body.tagline?.trim()      || null;
   if (body.backstory       !== undefined) updates.backstory       = body.backstory?.trim()    || null;
-  if (body.cover_image_url !== undefined) updates.cover_image_url = body.cover_image_url      || null;
+  if (body.cover_image_url  !== undefined) updates.cover_image_url  = body.cover_image_url      || null;
+  if (body.cover_focal_point !== undefined) updates.cover_focal_point = body.cover_focal_point || 'center';
 
   const { data, error } = await admin
     .from('armies')

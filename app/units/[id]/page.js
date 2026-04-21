@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import ShareUnitButton from '@/app/components/ShareUnitButton';
+import UnitPortraitHero from '@/app/components/UnitPortraitHero';
 import UnitPhotosViewer from '@/app/components/UnitPhotosViewer';
 
 // ── Dynamic metadata (title, description, og:image, twitter card) ───────────
@@ -155,13 +156,6 @@ export default async function UnitPortraitPage({ params }) {
         <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{unit.name}</span>
       </nav>
 
-      {/* Portrait hero + additional photos (client component — adds lightbox + objectPosition) */}
-      <UnitPhotosViewer
-        photos={photos || []}
-        unitName={unit.name}
-        armyName={army.name}
-      />
-
       {/* Header — name + meta */}
       <div style={{ marginBottom: '1.25rem' }}>
         <h1 style={{
@@ -243,6 +237,13 @@ export default async function UnitPortraitPage({ params }) {
         )}
       </div>
 
+      {/* Portrait hero */}
+      <UnitPortraitHero
+        photo={photos?.[0] ?? null}
+        unitName={unit.name}
+        armyName={army.name}
+      />
+
       {/* Description */}
       {unit.description && (
         <div style={{ border: '1px solid var(--border-dim)', padding: '1rem 1.25rem', marginBottom: '1.25rem' }}>
@@ -321,6 +322,9 @@ export default async function UnitPortraitPage({ params }) {
         </div>
       )}
 
+
+      {/* Additional photos gallery */}
+      <UnitPhotosViewer photos={(photos || []).slice(1)} />
 
       {/* Back link */}
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1.5rem' }}>
