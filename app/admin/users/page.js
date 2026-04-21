@@ -39,9 +39,19 @@ export default async function AdminUsers() {
     }
   });
 
-  // Email addresses via the auth admin API (service role required)
-  const { data: authData, error: authError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-  const authUsers = authData?.users ?? [];
+  // Email addresses via the auth admin API (service role required).
+  // Paginate in batches of 50 to avoid Supabase "Database error finding users".
+  let authUsers = [];
+  let authError = null;
+  let page = 1;
+  while (true) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 50 });
+    if (error) { authError = error; break; }
+    const batch = data?.users ?? [];
+    authUsers = authUsers.concat(batch);
+    if (batch.length < 50) break; // last page
+    page++;
+  }
   const emailMap = Object.fromEntries(authUsers.map(u => [u.id, u.email]));
 
   const colHeaderStyle = {
