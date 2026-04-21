@@ -54,6 +54,9 @@ export default async function DashboardPage() {
   const factionMap  = Object.fromEntries((allFactions || []).map(f => [f.id, f]));
   const campaignMap = Object.fromEntries(campaigns.map(c => [c.id, c]));
 
+  const AUSTRIACUS_SLUG = 'austriacus-subsector-93n4g';
+  const isAustriacusMember = campaigns.some(c => c.slug === AUSTRIACUS_SLUG);
+
   return (
     <div style={{ padding: '4rem 2rem', maxWidth: '1100px', margin: '0 auto' }}>
 
@@ -93,13 +96,16 @@ export default async function DashboardPage() {
               ))}
             </div>
           ) : (
-            <div style={{ border: '1px solid var(--border-dim)', padding: '4rem 2rem', textAlign: 'center', background: 'rgba(255,255,255,0.01)' }}>
+            <div style={{ border: '1px solid var(--border-dim)', padding: '3.5rem 2rem', textAlign: 'center', background: 'rgba(255,255,255,0.01)' }}>
               <div style={{ width: '8px', height: '8px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1.5rem', opacity: 0.4 }} />
-              <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                No armies yet.
+              <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.75rem' }}>
+                Your forces await orders
+              </p>
+              <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: 1.6 }}>
+                Build a permanent record for your army — units, photos, Crusade stats, and a public portfolio to share.
               </p>
               <Link href="/armies/new">
-                <button className="btn-primary">+ New Army</button>
+                <button className="btn-primary">Muster your first Army</button>
               </Link>
             </div>
           )}
@@ -114,21 +120,45 @@ export default async function DashboardPage() {
           </div>
 
           {campaigns.length === 0 ? (
-            <div style={{ border: '1px solid var(--border-dim)', padding: '4rem 2rem', textAlign: 'center', background: 'rgba(255,255,255,0.01)' }}>
+            <div style={{ border: '1px solid var(--border-dim)', padding: '3rem 2rem', textAlign: 'center', background: 'rgba(255,255,255,0.01)' }}>
               <div style={{ width: '8px', height: '8px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1.5rem', opacity: 0.4 }} />
               <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.75rem' }}>
                 No campaigns yet
               </p>
-              <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.95rem', marginBottom: '2rem' }}>
-                Create your first Campaign Space to get started.
+              <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.6 }}>
+                Join the Austriacus Subsector demo campaign to see the platform in action — or create your own.
               </p>
-              <Link href="/campaign/new">
-                <button className="btn-primary">Create Campaign</button>
-              </Link>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
+                <Link href={`/campaign/${AUSTRIACUS_SLUG}`}>
+                  <button className="btn-primary" style={{ background: 'var(--gold)', color: '#07070a', border: '1px solid var(--gold)', padding: '0.65rem 1.75rem', fontWeight: '700', letterSpacing: '0.1em' }}>
+                    Explore the Austriacus Subsector →
+                  </button>
+                </Link>
+                <Link href="/campaign/new" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic', textDecoration: 'none' }}>
+                  or create your own campaign
+                </Link>
+              </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {campaigns.map(c => <CampaignCard key={c.id} campaign={c} />)}
+              {!isAustriacusMember && (
+                <div style={{ border: '1px solid rgba(183,140,64,0.25)', background: 'rgba(183,140,64,0.04)', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                  <div>
+                    <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.35rem' }}>
+                      Demo Campaign
+                    </p>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                      Explore the Austriacus Subsector — a live campaign to try the platform.
+                    </p>
+                  </div>
+                  <Link href={`/campaign/${AUSTRIACUS_SLUG}`} style={{ flexShrink: 0 }}>
+                    <button className="btn-primary" style={{ background: 'var(--gold)', color: '#07070a', border: '1px solid var(--gold)', padding: '0.5rem 1.25rem', fontWeight: '700', fontSize: '0.78rem', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
+                      Join →
+                    </button>
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </div>

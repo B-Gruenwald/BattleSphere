@@ -56,6 +56,15 @@ function RegisterForm() {
             body: JSON.stringify({ optin: optinPlatform }),
           });
         } catch (_) { /* non-fatal */ }
+
+        // Send welcome email with Austriacus invite link
+        try {
+          await fetch('/api/send-welcome-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, username }),
+          });
+        } catch (_) { /* non-fatal */ }
       }
       setSuccess(true);
       setLoading(false);
