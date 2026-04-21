@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import PhotoGallery from '@/app/components/PhotoGallery';
 import AddToCampaignPanel from '@/app/components/AddToCampaignPanel';
+import ShareBattleButton from '@/app/components/ShareBattleButton';
 
 // ── Dynamic metadata for Discord / social previews ──────────────────────────
 export async function generateMetadata({ params }) {
@@ -271,6 +272,13 @@ export default async function BattleDetailPage({ params }) {
             </span>
           )}
         </div>
+      </div>
+
+      {/* Share row */}
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1.25rem', marginBottom: '1.75rem' }}>
+        <ShareBattleButton
+          battleUrl={`${process.env.NEXT_PUBLIC_APP_URL}/c/${slug}/battle/${id}`}
+        />
       </div>
 
       <div style={{ borderTop: '1px solid var(--border-dim)', marginBottom: '2.5rem' }} />
