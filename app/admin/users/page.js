@@ -39,20 +39,18 @@ export default async function AdminUsers() {
     }
   });
 
-  // Email addresses via the auth admin API (service role required).
-  // Paginate in batches of 50 to avoid Supabase "Database error finding users".
-  let authUsers = [];
+  // Email addresses — fetch individually by profile ID.
+  // We avoid listUsers() because directly SQL-inserted demo accounts can have
+  // missing auth columns that cause the bulk query to fail entirely.
+  const emailMap = {};
   let authError = null;
-  let page = 1;
-  while (true) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 50 });
-    if (error) { authError = error; break; }
-    const batch = data?.users ?? [];
-    authUsers = authUsers.concat(batch);
-    if (batch.length < 50) break; // last page
-    page++;
-  }
-  const emailMap = Object.fromEntries(authUsers.map(u => [u.id, u.email]));
+  await Promise.all(
+    userIds.map(async (id) => {
+      const { data, error } = await supabase.auth.admin.getUserById(id);
+      if (data?.user?.email) emailMap[id] = data.user.email;
+      if (error && !authError) authError = error;
+    })
+  );
 
   const colHeaderStyle = {
     fontFamily: 'var(--font-display)',
