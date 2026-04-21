@@ -126,7 +126,7 @@ export default async function DashboardPage() {
                 No campaigns yet
               </p>
               <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.6 }}>
-                Join the Austriacus Subsector demo campaign to see the platform in action — or create your own.
+                Join the Austriacus Subsector — an open narrative campaign anyone can join — or create your own.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
                 <Link href={`/campaign/${AUSTRIACUS_SLUG}`}>
@@ -146,10 +146,10 @@ export default async function DashboardPage() {
                 <div style={{ border: '1px solid rgba(183,140,64,0.25)', background: 'rgba(183,140,64,0.04)', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
                   <div>
                     <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.35rem' }}>
-                      Demo Campaign
+                      Open Narrative Campaign
                     </p>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                      Explore the Austriacus Subsector — a live campaign to try the platform.
+                      The Austriacus Subsector is open to all — join an active campaign and see the platform in action.
                     </p>
                   </div>
                   <Link href={`/campaign/${AUSTRIACUS_SLUG}`} style={{ flexShrink: 0 }}>

@@ -13,7 +13,7 @@ export async function POST(request) {
       return Response.json({ error: 'Email is required.' }, { status: 400 });
     }
 
-    // Look up an active invite code for the Austriacus Subsector demo campaign
+    // Look up an active invite code for the Austriacus Subsector open narrative campaign
     const adminSupabase = createAdminClient();
     const now = new Date().toISOString();
 
@@ -118,10 +118,10 @@ function buildWelcomeEmail({ salutation, inviteLink }) {
         Join a live campaign
       </h2>
       <p style="font-size:0.95rem; line-height:1.7; color:#c8bfa8; margin:0 0 0.75rem;">
-        To get you started, I&apos;ve set up a demo campaign called the
+        To get you started, I&apos;ve set up an open narrative campaign called the
         <a href="${AUSTRIACUS_URL}" style="color:#b78c40; text-decoration:none; border-bottom:1px solid rgba(183,140,64,0.4);">Austriacus Subsector</a>
         — a contested region of space where factions are already fighting over
-        territory. Join it, explore the map, and see how the platform works in practice.
+        territory. Anyone can join. Explore the map, pick a side, and see how the platform works in practice.
       </p>
       <div style="text-align:center; margin:1.5rem 0 2.5rem;">
         <a href="${inviteLink}"

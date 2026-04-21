@@ -149,9 +149,9 @@ export async function POST(request) {
         text-transform:uppercase;
         color:#b78c40;
         margin:0 0 0.6rem;
-      ">Step 2 — Join the demo campaign</h2>
+      ">Step 2 — Join an open narrative campaign</h2>
       <p style="font-size:0.95rem; line-height:1.7; color:#c8bfa8; margin:0 0 0.5rem;">
-        I've set up a demo campaign called the
+        I've set up an open narrative campaign called the
         <a href="${CAMPAIGN_URL}"
            style="color:#b78c40; text-decoration:none; border-bottom:1px solid rgba(183,140,64,0.4);">
           Austriacus Subsector
