@@ -15,15 +15,40 @@ const BATTLE_TYPES = [
   'Apocalypse',
 ];
 
+const ACCEPTED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_PHOTO_MB = 10;
+
+// Build a hierarchically ordered territory list: parent → its children → next parent…
+function buildTerritoryTree(territories) {
+  const roots = territories
+    .filter(t => !t.parent_id)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const result = [];
+  for (const root of roots) {
+    result.push(root);
+    const children = territories
+      .filter(t => t.parent_id === root.id)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    result.push(...children);
+  }
+  return result;
+}
+
 export default function BattleLogForm({ campaign, territories, factions, members, userId, preselectedTerritoryId }) {
   const router = useRouter();
   const supabase = createClient();
+
+  // Sorted members (alphabetical) — used in both player dropdowns
+  const sortedMembers = [...members].sort((a, b) => a.username.localeCompare(b.username));
+  // Hierarchically ordered territories
+  const sortedTerritories = buildTerritoryTree(territories);
 
   const [headline,         setHeadline]          = useState('');
   const [battleType,       setBattleType]         = useState('');
   const [scenario,         setScenario]           = useState('');
   const [territoryId,      setTerritoryId]        = useState(preselectedTerritoryId || '');
-  const [attackerPlayerId, setAttackerPlayer]     = useState('');
+  // Default the registering player to the current user
+  const [attackerPlayerId, setAttackerPlayer]     = useState(userId || '');
   const [defenderPlayerId, setDefenderPlayer]     = useState('');
   const [attackerFactionId,setAttacker]           = useState('');
   const [defenderFactionId,setDefender]           = useState('');
@@ -37,8 +62,14 @@ export default function BattleLogForm({ campaign, territories, factions, members
   const [attackerNarrative,setAttackerNarrative]  = useState('');
   const [defenderNarrative,setDefenderNarrative]  = useState('');
   const [submitting,       setSubmitting]         = useState(false);
+  const [submitLabel,      setSubmitLabel]        = useState('Record Battle');
   const [error,            setError]              = useState('');
 
+  // Pending photos: queued locally before the battle is saved
+  const [pendingPhotos,    setPendingPhotos]      = useState([]); // [{ file, previewUrl }]
+  const [photoError,       setPhotoError]         = useState('');
+
+  // Auto-fill attacker faction (also fires on mount because attackerPlayerId defaults to userId)
   useEffect(() => {
     if (attackerPlayerId) {
       const member = members.find(m => m.user_id === attackerPlayerId);
@@ -57,16 +88,71 @@ export default function BattleLogForm({ campaign, territories, factions, members
     result === 'attacker' ? attackerFactionId :
     result === 'defender' ? defenderFactionId : null;
 
+  // ── Photo queue handlers ─────────────────────────────────────────────────────
+  function handlePhotoSelect(e) {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!files.length) return;
+    setPhotoError('');
+
+    const toAdd = [];
+    for (const file of files) {
+      if (!ACCEPTED_PHOTO_TYPES.includes(file.type)) {
+        setPhotoError(`"${file.name}" is not a supported type (JPG, PNG, WebP, GIF).`);
+        return;
+      }
+      if (file.size > MAX_PHOTO_MB * 1024 * 1024) {
+        setPhotoError(`"${file.name}" exceeds the ${MAX_PHOTO_MB} MB limit.`);
+        return;
+      }
+      toAdd.push({ file, previewUrl: URL.createObjectURL(file) });
+    }
+    setPendingPhotos(prev => [...prev, ...toAdd]);
+  }
+
+  function removePendingPhoto(index) {
+    setPendingPhotos(prev => {
+      const updated = [...prev];
+      URL.revokeObjectURL(updated[index].previewUrl);
+      updated.splice(index, 1);
+      return updated;
+    });
+  }
+
+  async function uploadPhotosForBattle(battleId) {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    if (!cloudName || !pendingPhotos.length) return;
+
+    for (const { file } of pendingPhotos) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', 'battlesphere_unsigned');
+
+        const cloudRes = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          { method: 'POST', body: formData }
+        );
+        const cloudData = await cloudRes.json();
+        if (!cloudData.secure_url) continue;
+
+        await fetch('/api/photos/battle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ battleId, url: cloudData.secure_url }),
+        });
+      } catch (err) {
+        console.error('Photo upload error:', err);
+      }
+    }
+  }
+
   // ── Influence update helper ──────────────────────────────────────────────────
-  // standard : Win → winner +3, loser +1 · Draw → both +2
-  // victory  : Win → winner +1 only · Draw awards nothing
-  // off      : Skip — organiser manages influence manually
   async function updateInfluence() {
     const mode = campaign.influence_mode || 'standard';
     if (mode === 'off') return;
     if (!territoryId || !attackerFactionId || !defenderFactionId || !result) return;
 
-    // Build a map of { factionId → pointsDelta }
     const deltas = {};
     if (mode === 'standard') {
       if (result === 'attacker') {
@@ -80,13 +166,11 @@ export default function BattleLogForm({ campaign, territories, factions, members
         deltas[defenderFactionId] = 2;
       }
     } else if (mode === 'victory') {
-      // Only the winner gains +1; draws and losses award nothing.
       if (result === 'attacker') {
         deltas[attackerFactionId] = 1;
       } else if (result === 'defender') {
         deltas[defenderFactionId] = 1;
       }
-      // draw → no deltas → returns early below
     }
 
     const factionIds = Object.keys(deltas);
@@ -162,6 +246,7 @@ export default function BattleLogForm({ campaign, territories, factions, members
     }
 
     setSubmitting(true);
+    setSubmitLabel('Recording…');
 
     const { data: battle, error: insertError } = await supabase
       .from('battles')
@@ -189,11 +274,17 @@ export default function BattleLogForm({ campaign, territories, factions, members
       .select()
       .single();
 
-    if (insertError) { setError(insertError.message); setSubmitting(false); return; }
+    if (insertError) { setError(insertError.message); setSubmitting(false); setSubmitLabel('Record Battle'); return; }
 
     await updateInfluence();
     await applyEventBonuses(supabase, battle);
     await applyTerritoryCascade(supabase, battle);
+
+    // Upload any photos queued before submission
+    if (pendingPhotos.length > 0) {
+      setSubmitLabel(`Uploading ${pendingPhotos.length} photo${pendingPhotos.length > 1 ? 's' : ''}…`);
+      await uploadPhotosForBattle(battle.id);
+    }
 
     router.push(`/c/${campaign.slug}/battle/${battle.id}`);
   }
@@ -264,9 +355,9 @@ export default function BattleLogForm({ campaign, territories, factions, members
           <label style={labelStyle}>Theatre of Battle</label>
           <select value={territoryId} onChange={e => setTerritoryId(e.target.value)} style={inputStyle}>
             <option value="">— None / Unknown —</option>
-            {territories.map(t => (
+            {sortedTerritories.map(t => (
               <option key={t.id} value={t.id}>
-                {'  '.repeat(t.depth - 1)}{t.name}{t.depth > 1 ? ` (${t.type || 'sub-territory'})` : ''}
+                {'\u00a0\u00a0\u00a0\u00a0'.repeat(t.depth - 1)}{t.depth > 1 ? '↳ ' : ''}{t.name}{t.depth > 1 ? ` (${t.type || 'sub-territory'})` : ''}
               </option>
             ))}
           </select>
@@ -301,7 +392,7 @@ export default function BattleLogForm({ campaign, territories, factions, members
               <label style={labelStyle}>Registering Player <span style={{ color: '#e05a5a' }}>*</span></label>
               <select value={attackerPlayerId} onChange={e => setAttackerPlayer(e.target.value)} style={inputStyle} required>
                 <option value="">— Select player —</option>
-                {members.map(m => <option key={m.user_id} value={m.user_id}>{m.username}</option>)}
+                {sortedMembers.map(m => <option key={m.user_id} value={m.user_id}>{m.username}</option>)}
               </select>
             </div>
             <div>
@@ -341,7 +432,7 @@ export default function BattleLogForm({ campaign, territories, factions, members
               <label style={labelStyle}>Opponent <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
               <select value={defenderPlayerId} onChange={e => setDefenderPlayer(e.target.value)} style={inputStyle}>
                 <option value="">— Select player —</option>
-                {members.filter(m => m.user_id !== attackerPlayerId).map(m => (
+                {sortedMembers.filter(m => m.user_id !== attackerPlayerId).map(m => (
                   <option key={m.user_id} value={m.user_id}>{m.username}</option>
                 ))}
               </select>
@@ -426,13 +517,86 @@ export default function BattleLogForm({ campaign, territories, factions, members
         </div>
       </div>
 
+      {/* ── Battle Photos ── */}
+      <div style={sectionStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
+          <label style={labelStyle}>
+            Battle Photos <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span>
+          </label>
+          <label style={{ cursor: 'pointer' }}>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              multiple
+              style={{ display: 'none' }}
+              onChange={handlePhotoSelect}
+              disabled={submitting}
+            />
+            <span style={{
+              fontFamily: 'var(--font-display)', fontSize: '0.58rem',
+              letterSpacing: '0.1em', textTransform: 'uppercase',
+              color: submitting ? 'var(--text-muted)' : 'var(--text-gold)',
+              cursor: submitting ? 'not-allowed' : 'pointer',
+            }}>
+              + Add Photos
+            </span>
+          </label>
+        </div>
+
+        {photoError && (
+          <p style={{ color: '#e05a5a', fontSize: '0.8rem', marginBottom: '0.75rem' }}>{photoError}</p>
+        )}
+
+        {pendingPhotos.length > 0 ? (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+            gap: '0.65rem',
+          }}>
+            {pendingPhotos.map((p, i) => (
+              <div key={i} style={{ position: 'relative', paddingBottom: '100%', overflow: 'hidden' }}>
+                <img
+                  src={p.previewUrl}
+                  alt=""
+                  style={{
+                    position: 'absolute', inset: 0,
+                    width: '100%', height: '100%',
+                    objectFit: 'cover',
+                    border: '1px solid var(--border-dim)',
+                  }}
+                />
+                {!submitting && (
+                  <button
+                    type="button"
+                    onClick={() => removePendingPhoto(i)}
+                    title="Remove photo"
+                    style={{
+                      position: 'absolute', top: '4px', right: '4px',
+                      background: 'rgba(0,0,0,0.75)', border: 'none',
+                      color: '#e05a5a', cursor: 'pointer',
+                      padding: '2px 7px', fontSize: '0.85rem', lineHeight: 1,
+                    }}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>
+            No photos queued. Use "+ Add Photos" to attach images — they'll be uploaded when you record the battle.
+          </p>
+        )}
+      </div>
+
       {error && <p style={{ color: '#e05a5a', fontSize: '0.85rem', marginBottom: '1.25rem' }}>{error}</p>}
 
       <div style={{ display: 'flex', gap: '1rem' }}>
         <button type="submit" className="btn-primary" disabled={submitting} style={{ opacity: submitting ? 0.6 : 1 }}>
-          {submitting ? 'Recording…' : 'Record Battle'}
+          {submitting ? submitLabel : 'Record Battle'}
         </button>
-        <button type="button" className="btn-secondary" onClick={() => router.back()}>Cancel</button>
+        <button type="button" className="btn-secondary" onClick={() => router.back()} disabled={submitting}>Cancel</button>
       </div>
     </form>
   );
