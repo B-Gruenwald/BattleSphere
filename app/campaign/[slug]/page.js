@@ -39,11 +39,23 @@ export async function generateMetadata({ params }) {
     ? campaign.description.slice(0, 155)
     : `A ${isLeague ? 'league' : 'narrative'} wargaming campaign${campaign.setting ? ' set in ' + campaign.setting : ''} on BattleSphere.`;
 
+  const ogImageUrl = `${process.env.NEXT_PUBLIC_APP_URL}/campaign/${slug}/opengraph-image`;
+
   return {
     title,
     description: desc,
-    openGraph:   { title, description: desc, siteName: 'BattleSphere' },
-    twitter:     { card: 'summary_large_image', title, description: desc },
+    openGraph: {
+      title,
+      description: desc,
+      siteName: 'BattleSphere',
+      images: [{ url: ogImageUrl, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description: desc,
+      images: [ogImageUrl],
+    },
   };
 }
 

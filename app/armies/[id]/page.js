@@ -20,11 +20,23 @@ export async function generateMetadata({ params }) {
     ? army.description.slice(0, 155)
     : `${army.faction_name ? army.faction_name + ' army' : 'Army'} commanded by ${playerName ?? 'an unknown warlord'} · ${unitCount ?? 0} units`;
 
+  const ogImageUrl = `${process.env.NEXT_PUBLIC_APP_URL}/armies/${id}/opengraph-image`;
+
   return {
     title,
     description,
-    openGraph: { title, description, siteName: 'BattleSphere' },
-    twitter:   { card: 'summary_large_image', title, description },
+    openGraph: {
+      title,
+      description,
+      siteName: 'BattleSphere',
+      images: [{ url: ogImageUrl, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImageUrl],
+    },
   };
 }
 
