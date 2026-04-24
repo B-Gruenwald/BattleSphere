@@ -4,6 +4,30 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import ReorderableRoster from '@/app/components/ReorderableRoster';
 
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  const admin = createAdminClient();
+  const { data: armyRows } = await admin.from('armies').select('*').eq('id', id).limit(1);
+  const army = armyRows?.[0];
+  if (!army) return {};
+
+  const { data: profileRows } = await admin.from('profiles').select('username').eq('id', army.player_id).limit(1);
+  const playerName = profileRows?.[0]?.username ?? null;
+  const { count: unitCount } = await admin.from('army_units').select('*', { count: 'exact', head: true }).eq('army_id', id);
+
+  const title       = `${army.name} — BattleSphere`;
+  const description = army.description
+    ? army.description.slice(0, 155)
+    : `${army.faction_name ? army.faction_name + ' army' : 'Army'} commanded by ${playerName ?? 'an unknown warlord'} · ${unitCount ?? 0} units`;
+
+  return {
+    title,
+    description,
+    openGraph: { title, description, siteName: 'BattleSphere' },
+    twitter:   { card: 'summary_large_image', title, description },
+  };
+}
+
 export default async function ArmyPage({ params }) {
   const { id } = await params;
   const supabase  = await createClient();

@@ -26,6 +26,27 @@ const WEEKLY_UPDATE_META = {
   army_progress:  { label: 'Crusade Report',     colour: '#8a6fc7' },
 };
 
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const supabase = await createClient();
+  const { data: campaign } = await supabase
+    .from('campaigns').select('name, description, campaign_format, setting').eq('slug', slug).single();
+  if (!campaign) return {};
+
+  const isLeague = campaign.campaign_format === 'league';
+  const title    = `${campaign.name} — BattleSphere`;
+  const desc     = campaign.description
+    ? campaign.description.slice(0, 155)
+    : `A ${isLeague ? 'league' : 'narrative'} wargaming campaign${campaign.setting ? ' set in ' + campaign.setting : ''} on BattleSphere.`;
+
+  return {
+    title,
+    description: desc,
+    openGraph:   { title, description: desc, siteName: 'BattleSphere' },
+    twitter:     { card: 'summary_large_image', title, description: desc },
+  };
+}
+
 export default async function PublicCampaignPage({ params }) {
   const { slug } = await params;
   const supabase = await createClient();
