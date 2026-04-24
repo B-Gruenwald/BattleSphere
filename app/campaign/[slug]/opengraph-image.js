@@ -283,15 +283,17 @@ export default async function OgImage({ params }) {
     { data: influenceData },
     { data: warpRoutes },
     { count: memberCount },
-    { count: battleCount },
+    { data: battlesData },
   ] = await Promise.all([
     admin.from('factions').select('*').eq('campaign_id', campaign.id),
     admin.from('territories').select('*').eq('campaign_id', campaign.id).order('depth').order('created_at'),
     admin.from('territory_influence').select('faction_id, territory_id, influence_points').eq('campaign_id', campaign.id),
     admin.from('warp_routes').select('territory_a, territory_b').eq('campaign_id', campaign.id),
     admin.from('campaign_members').select('*', { count: 'exact', head: true }).eq('campaign_id', campaign.id),
-    admin.from('battles').select('*', { count: 'exact', head: true }).eq('campaign_id', campaign.id),
+    admin.from('battles').select('attacker_faction_id, defender_faction_id, winner_faction_id').eq('campaign_id', campaign.id),
   ]);
+
+  const battleCount = battlesData?.length ?? 0;
 
   const isLeague    = campaign.campaign_format === 'league';
   const campaignName = trunc(campaign.name || 'BattleSphere Campaign', 50);
@@ -406,42 +408,129 @@ export default async function OgImage({ params }) {
     );
   }
 
-  // ── NO TERRITORIES: faction-colour text card ──────────────────────────────
+  // ── NO TERRITORIES: split layout — title left, standings right ───────────
+  const standings = (factions || []).map(f => {
+    const played = (battlesData || []).filter(b => b.attacker_faction_id === f.id || b.defender_faction_id === f.id);
+    const wins   = played.filter(b => b.winner_faction_id === f.id).length;
+    const draws  = played.filter(b => b.winner_faction_id === null).length;
+    const pts    = wins * 3 + draws;
+    return { id: f.id, name: f.name, colour: f.colour || GOLD, wins, draws, pts };
+  }).sort((a, b) => b.pts - a.pts || b.wins - a.wins).slice(0, 6);
+
+  const leftNameSize = campaignName.length > 30 ? 44 : campaignName.length > 20 ? 54 : 64;
+
   return new ImageResponse(
     (
       <div style={{
-        width: 1200, height: 630, display: 'flex', flexDirection: 'column',
+        width: '100%', height: '100%', display: 'flex', flexDirection: 'row',
         backgroundColor: BG_VOID, fontFamily: 'Cinzel', color: TEXT_PRI,
-        backgroundImage: `radial-gradient(ellipse 90% 50% at 50% 100%, rgba(183,140,64,0.10) 0%, transparent 60%)`,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '28px 52px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ width: 12, height: 12, backgroundColor: GOLD, transform: 'rotate(45deg)', marginRight: 12 }} />
-            <div style={{ fontSize: 16, letterSpacing: 8, textTransform: 'uppercase', color: GOLD, fontWeight: 700 }}>BattleSphere</div>
-          </div>
-          <div style={{ fontSize: 11, letterSpacing: 4, textTransform: 'uppercase', color: GOLD, border: `1px solid ${GOLD}55`, padding: '3px 12px' }}>{formatLabel}</div>
-        </div>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 80px' }}>
-          <div style={{ fontSize: nameSize, fontWeight: 900, letterSpacing: 4, textTransform: 'uppercase', textAlign: 'center', lineHeight: 1.05, marginBottom: 24 }}>
-            {campaignName}
-          </div>
-          {factionChips.length > 0 && (
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              {factionChips.map((f, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 8, height: 8, backgroundColor: f.colour, transform: 'rotate(45deg)' }} />
-                  <div style={{ fontSize: 13, letterSpacing: 3, textTransform: 'uppercase', color: TEXT_SEC }}>{trunc(f.name, 16)}</div>
-                </div>
-              ))}
+
+        {/* ── LEFT: brand + campaign title + factions ── */}
+        <div style={{
+          width: 560, height: 630, display: 'flex', flexDirection: 'column',
+          justifyContent: 'space-between', padding: '40px 48px 32px',
+          backgroundColor: BG_DEEP,
+          backgroundImage: `radial-gradient(ellipse 120% 60% at 0% 100%, ${GOLD}14 0%, transparent 65%)`,
+        }}>
+          {/* Brand row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ width: 12, height: 12, backgroundColor: GOLD, transform: 'rotate(45deg)', marginRight: 12 }} />
+              <div style={{ fontSize: 15, letterSpacing: 7, textTransform: 'uppercase', color: GOLD, fontWeight: 700 }}>BattleSphere</div>
             </div>
-          )}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 52px 28px', borderTop: `1px solid ${BORDER_DIM}` }}>
-          <div style={{ display: 'flex', gap: 24 }}>
-            <div style={{ fontSize: 12, letterSpacing: 4, color: TEXT_MUT, textTransform: 'uppercase' }}>{`${memberCount ?? 0} Players`}</div>
-            <div style={{ fontSize: 12, letterSpacing: 4, color: TEXT_MUT, textTransform: 'uppercase' }}>{`${battleCount ?? 0} Battles`}</div>
+            <div style={{ fontSize: 10, letterSpacing: 4, textTransform: 'uppercase', color: GOLD, border: `1px solid ${GOLD}55`, padding: '4px 12px' }}>
+              {formatLabel}
+            </div>
           </div>
-          <div style={{ fontSize: 14, letterSpacing: 3, color: GOLD, fontWeight: 700 }}>battlesphere.cc</div>
+
+          {/* Campaign name + setting */}
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ fontSize: leftNameSize, fontWeight: 900, letterSpacing: 2, textTransform: 'uppercase', lineHeight: 1.0, color: TEXT_PRI, marginBottom: 14 }}>
+              {campaignName}
+            </div>
+            <div style={{ fontSize: 13, letterSpacing: 4, textTransform: 'uppercase', color: TEXT_MUT }}>
+              {setting}
+            </div>
+          </div>
+
+          {/* Faction chips + player count */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {standings.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+                {standings.map((f, i) => (
+                  <div key={`chip-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <div style={{ width: 7, height: 7, backgroundColor: f.colour, transform: 'rotate(45deg)' }} />
+                    <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: TEXT_SEC }}>
+                      {trunc(f.name, 14)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <div style={{ fontSize: 11, letterSpacing: 4, textTransform: 'uppercase', color: TEXT_MUT }}>
+              {`${memberCount ?? 0} Players · ${battleCount} Battles`}
+            </div>
+          </div>
+        </div>
+
+        {/* ── RIGHT: standings ── */}
+        <div style={{
+          width: 640, height: 630, display: 'flex', flexDirection: 'column',
+          justifyContent: 'space-between', padding: '40px 52px 32px',
+          borderLeft: `1px solid ${BORDER_DIM}`,
+        }}>
+          {/* Header */}
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ width: 10, height: 10, backgroundColor: GOLD, transform: 'rotate(45deg)', marginRight: 12, opacity: 0.8 }} />
+              <div style={{ fontSize: 12, letterSpacing: 7, textTransform: 'uppercase', color: GOLD, fontWeight: 700 }}>
+                Standings
+              </div>
+            </div>
+            <div style={{ width: '100%', height: 1, backgroundColor: BORDER_DIM }} />
+          </div>
+
+          {/* Standings rows */}
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center', gap: 0, padding: '8px 0' }}>
+            {standings.length > 0 ? standings.map((f, i) => (
+              <div key={`row-${i}`} style={{
+                display: 'flex', alignItems: 'center',
+                padding: '9px 0',
+                borderBottom: i < standings.length - 1 ? `1px solid ${BORDER_DIM}` : 'none',
+              }}>
+                {/* Rank */}
+                <div style={{ width: 26, fontSize: 11, letterSpacing: 2, color: i === 0 ? GOLD_BRT : TEXT_MUT, fontWeight: 700 }}>
+                  {`#${i + 1}`}
+                </div>
+                {/* Colour diamond */}
+                <div style={{ width: 10, height: 10, backgroundColor: f.colour, transform: 'rotate(45deg)', marginRight: 14, flexShrink: 0 }} />
+                {/* Name */}
+                <div style={{ flex: 1, fontSize: 16, letterSpacing: 3, textTransform: 'uppercase', color: i === 0 ? TEXT_PRI : TEXT_SEC }}>
+                  {trunc(f.name, 22)}
+                </div>
+                {/* W / D */}
+                <div style={{ fontSize: 11, letterSpacing: 2, color: TEXT_MUT, marginRight: 16 }}>
+                  {`${f.wins}W ${f.draws}D`}
+                </div>
+                {/* Points */}
+                <div style={{ fontSize: 18, letterSpacing: 1, color: i === 0 ? GOLD_BRT : TEXT_SEC, fontWeight: 700, minWidth: 52, textAlign: 'right' }}>
+                  {`${f.pts}pts`}
+                </div>
+              </div>
+            )) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+                <div style={{ fontSize: 14, letterSpacing: 5, textTransform: 'uppercase', color: TEXT_MUT }}>
+                  Season Not Yet Started
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 16, borderTop: `1px solid ${BORDER_DIM}` }}>
+            <div style={{ fontSize: 14, letterSpacing: 3, color: GOLD, fontWeight: 700 }}>battlesphere.cc</div>
+          </div>
         </div>
       </div>
     ),
