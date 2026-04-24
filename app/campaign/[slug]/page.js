@@ -34,7 +34,7 @@ export async function generateMetadata({ params }) {
   if (!campaign) return {};
 
   const isLeague = campaign.campaign_format === 'league';
-  const title    = `${campaign.name} — BattleSphere`;
+  const title    = `${campaign.name} — BattleSphere ${isLeague ? 'League' : 'Narrative'} Campaign`;
   const desc     = campaign.description
     ? campaign.description.slice(0, 155)
     : `A ${isLeague ? 'league' : 'narrative'} wargaming campaign${campaign.setting ? ' set in ' + campaign.setting : ''} on BattleSphere.`;

@@ -15,7 +15,7 @@ export async function generateMetadata({ params }) {
   const playerName = profileRows?.[0]?.username ?? null;
   const { count: unitCount } = await admin.from('army_units').select('*', { count: 'exact', head: true }).eq('army_id', id);
 
-  const title       = `${army.name} — BattleSphere`;
+  const title       = `${army.name} — Army Portfolio`;
   const description = army.description
     ? army.description.slice(0, 155)
     : `${army.faction_name ? army.faction_name + ' army' : 'Army'} commanded by ${playerName ?? 'an unknown warlord'} · ${unitCount ?? 0} units`;
