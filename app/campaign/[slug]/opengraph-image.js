@@ -416,7 +416,7 @@ export default async function OgImage({ params }) {
     const pts    = wins * 3 + draws;
     // Pre-build all strings — no raw numbers as JSX children
     return {
-      rankLabel:  `#${standings.length + 1}`,  // placeholder, recomputed below
+      rankLabel:  '',  // filled in after sort below
       nameLabel:  trunc(f.name, 20),
       statsLabel: `${wins}W  ${draws}D`,
       ptsLabel:   `${pts}pts`,
