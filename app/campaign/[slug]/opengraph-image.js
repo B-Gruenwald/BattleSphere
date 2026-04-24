@@ -446,7 +446,7 @@ export default async function OgImage({ params }) {
 
           {/* Campaign name + setting */}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: leftNameSize, fontWeight: 900, letterSpacing: 2, textTransform: 'uppercase', lineHeight: 1.0, color: TEXT_PRI, marginBottom: 14 }}>
+            <div style={{ fontSize: leftNameSize, fontWeight: 900, letterSpacing: 2, textTransform: 'uppercase', lineHeight: 1.05, color: TEXT_PRI, marginBottom: 14 }}>
               {campaignName}
             </div>
             <div style={{ fontSize: 13, letterSpacing: 4, textTransform: 'uppercase', color: TEXT_MUT }}>
@@ -455,14 +455,14 @@ export default async function OgImage({ params }) {
           </div>
 
           {/* Faction chips + player count */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             {standings.length > 0 ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-                {standings.map((f, i) => (
-                  <div key={`chip-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <div style={{ width: 7, height: 7, backgroundColor: f.colour, transform: 'rotate(45deg)' }} />
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+                {standings.slice(0, 4).map((f, i) => (
+                  <div key={`chip-${i}`} style={{ display: 'flex', alignItems: 'center', marginRight: 14 }}>
+                    <div style={{ width: 7, height: 7, backgroundColor: f.colour, transform: 'rotate(45deg)', marginRight: 7 }} />
                     <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: TEXT_SEC }}>
-                      {trunc(f.name, 14)}
+                      {trunc(f.name, 12)}
                     </div>
                   </div>
                 ))}
@@ -492,15 +492,14 @@ export default async function OgImage({ params }) {
           </div>
 
           {/* Standings rows */}
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center', gap: 0, padding: '8px 0' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center', padding: '8px 0' }}>
             {standings.length > 0 ? standings.map((f, i) => (
               <div key={`row-${i}`} style={{
-                display: 'flex', alignItems: 'center',
-                padding: '9px 0',
-                borderBottom: i < standings.length - 1 ? `1px solid ${BORDER_DIM}` : 'none',
+                display: 'flex', alignItems: 'center', padding: '9px 0',
+                borderTop: i > 0 ? `1px solid ${BORDER_DIM}` : '0px solid transparent',
               }}>
                 {/* Rank */}
-                <div style={{ width: 26, fontSize: 11, letterSpacing: 2, color: i === 0 ? GOLD_BRT : TEXT_MUT, fontWeight: 700 }}>
+                <div style={{ width: 30, fontSize: 11, letterSpacing: 2, color: i === 0 ? GOLD_BRT : TEXT_MUT, fontWeight: 700 }}>
                   {`#${i + 1}`}
                 </div>
                 {/* Colour diamond */}
@@ -510,12 +509,14 @@ export default async function OgImage({ params }) {
                   {trunc(f.name, 22)}
                 </div>
                 {/* W / D */}
-                <div style={{ fontSize: 11, letterSpacing: 2, color: TEXT_MUT, marginRight: 16 }}>
+                <div style={{ fontSize: 11, letterSpacing: 2, color: TEXT_MUT, marginRight: 20 }}>
                   {`${f.wins}W ${f.draws}D`}
                 </div>
-                {/* Points */}
-                <div style={{ fontSize: 18, letterSpacing: 1, color: i === 0 ? GOLD_BRT : TEXT_SEC, fontWeight: 700, minWidth: 52, textAlign: 'right' }}>
-                  {`${f.pts}pts`}
+                {/* Points — fixed-width wrapper so it aligns */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', width: 60 }}>
+                  <div style={{ fontSize: 18, letterSpacing: 1, color: i === 0 ? GOLD_BRT : TEXT_SEC, fontWeight: 700 }}>
+                    {`${f.pts}p`}
+                  </div>
                 </div>
               </div>
             )) : (
