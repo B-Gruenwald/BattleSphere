@@ -438,8 +438,8 @@ export default async function OgImage({ params }) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 52px 28px', borderTop: `1px solid ${BORDER_DIM}` }}>
           <div style={{ display: 'flex', gap: 24 }}>
-            <div style={{ fontSize: 12, letterSpacing: 4, color: TEXT_MUT, textTransform: 'uppercase' }}>{memberCount ?? 0} Players</div>
-            <div style={{ fontSize: 12, letterSpacing: 4, color: TEXT_MUT, textTransform: 'uppercase' }}>{battleCount ?? 0} Battles</div>
+            <div style={{ fontSize: 12, letterSpacing: 4, color: TEXT_MUT, textTransform: 'uppercase' }}>{`${memberCount ?? 0} Players`}</div>
+            <div style={{ fontSize: 12, letterSpacing: 4, color: TEXT_MUT, textTransform: 'uppercase' }}>{`${battleCount ?? 0} Battles`}</div>
           </div>
           <div style={{ fontSize: 14, letterSpacing: 3, color: GOLD, fontWeight: 700 }}>battlesphere.cc</div>
         </div>
