@@ -408,45 +408,50 @@ export default async function OgImage({ params }) {
     );
   }
 
-  // ── NO TERRITORIES: split layout — title left, standings right ───────────
+  // ── NO TERRITORIES: text card with standings ─────────────────────────────
   const standings = (factions || []).map(f => {
     const played = (battlesData || []).filter(b => b.attacker_faction_id === f.id || b.defender_faction_id === f.id);
     const wins   = played.filter(b => b.winner_faction_id === f.id).length;
     const draws  = played.filter(b => b.winner_faction_id === null).length;
     const pts    = wins * 3 + draws;
-    return { id: f.id, name: f.name, colour: f.colour || GOLD, wins, draws, pts };
-  }).sort((a, b) => b.pts - a.pts || b.wins - a.wins).slice(0, 6);
-
-  const leftNameSize = campaignName.length > 30 ? 44 : campaignName.length > 20 ? 54 : 64;
+    // Pre-build all strings — no raw numbers as JSX children
+    return {
+      rankLabel:  `#${standings.length + 1}`,  // placeholder, recomputed below
+      nameLabel:  trunc(f.name, 20),
+      statsLabel: `${wins}W  ${draws}D`,
+      ptsLabel:   `${pts}pts`,
+      colour:     f.colour || GOLD,
+      pts,
+      wins,
+    };
+  }).sort((a, b) => b.pts - a.pts || b.wins - a.wins).slice(0, 5)
+    .map((f, i) => ({ ...f, rankLabel: `#${i + 1}` }));
 
   return new ImageResponse(
     (
       <div style={{
-        width: '100%', height: '100%', display: 'flex', flexDirection: 'row',
+        width: 1200, height: 630, display: 'flex', flexDirection: 'column',
         backgroundColor: BG_VOID, fontFamily: 'Cinzel', color: TEXT_PRI,
+        backgroundImage: `radial-gradient(ellipse 90% 50% at 50% 100%, rgba(183,140,64,0.10) 0%, transparent 60%)`,
       }}>
 
-        {/* ── LEFT: brand + campaign title + factions ── */}
-        <div style={{
-          width: 560, height: 630, display: 'flex', flexDirection: 'column',
-          justifyContent: 'space-between', padding: '40px 48px 32px',
-          backgroundColor: BG_DEEP,
-          backgroundImage: `radial-gradient(ellipse 120% 60% at 0% 100%, ${GOLD}14 0%, transparent 65%)`,
-        }}>
-          {/* Brand row */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ width: 12, height: 12, backgroundColor: GOLD, transform: 'rotate(45deg)', marginRight: 12 }} />
-              <div style={{ fontSize: 15, letterSpacing: 7, textTransform: 'uppercase', color: GOLD, fontWeight: 700 }}>BattleSphere</div>
-            </div>
-            <div style={{ fontSize: 10, letterSpacing: 4, textTransform: 'uppercase', color: GOLD, border: `1px solid ${GOLD}55`, padding: '4px 12px' }}>
-              {formatLabel}
-            </div>
+        {/* Top bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '30px 56px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ width: 12, height: 12, backgroundColor: GOLD, transform: 'rotate(45deg)', marginRight: 12 }} />
+            <div style={{ fontSize: 16, letterSpacing: 8, textTransform: 'uppercase', color: GOLD, fontWeight: 700 }}>BattleSphere</div>
           </div>
+          <div style={{ fontSize: 11, letterSpacing: 4, textTransform: 'uppercase', color: GOLD, border: `1px solid ${GOLD}55`, padding: '3px 12px' }}>
+            {formatLabel}
+          </div>
+        </div>
 
-          {/* Campaign name + setting */}
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: leftNameSize, fontWeight: 900, letterSpacing: 2, textTransform: 'uppercase', lineHeight: 1.05, color: TEXT_PRI, marginBottom: 14 }}>
+        {/* Centre: name left, standings right */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', padding: '0 56px' }}>
+
+          {/* Left: campaign name */}
+          <div style={{ width: 460, display: 'flex', flexDirection: 'column', paddingRight: 52 }}>
+            <div style={{ fontSize: nameSize, fontWeight: 900, letterSpacing: 3, textTransform: 'uppercase', lineHeight: 1.05, color: TEXT_PRI, marginBottom: 16 }}>
               {campaignName}
             </div>
             <div style={{ fontSize: 13, letterSpacing: 4, textTransform: 'uppercase', color: TEXT_MUT }}>
@@ -454,84 +459,42 @@ export default async function OgImage({ params }) {
             </div>
           </div>
 
-          {/* Faction chips + player count */}
+          {/* Divider */}
+          <div style={{ width: 1, height: 320, backgroundColor: BORDER_DIM, marginRight: 52 }} />
+
+          {/* Right: standings */}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 18 }}>
+              <div style={{ width: 8, height: 8, backgroundColor: GOLD, transform: 'rotate(45deg)', marginRight: 10, opacity: 0.8 }} />
+              <div style={{ fontSize: 11, letterSpacing: 6, textTransform: 'uppercase', color: GOLD, fontWeight: 700 }}>Standings</div>
+            </div>
             {standings.length > 0 ? (
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
-                {standings.slice(0, 4).map((f, i) => (
-                  <div key={`chip-${i}`} style={{ display: 'flex', alignItems: 'center', marginRight: 14 }}>
-                    <div style={{ width: 7, height: 7, backgroundColor: f.colour, transform: 'rotate(45deg)', marginRight: 7 }} />
-                    <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: TEXT_SEC }}>
-                      {trunc(f.name, 12)}
-                    </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {standings.map((f, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, letterSpacing: 1, color: i === 0 ? GOLD_BRT : TEXT_MUT, fontWeight: 700, width: 28 }}>{f.rankLabel}</div>
+                    <div style={{ width: 9, height: 9, backgroundColor: f.colour, transform: 'rotate(45deg)', marginRight: 12, flexShrink: 0 }} />
+                    <div style={{ fontSize: 15, letterSpacing: 3, textTransform: 'uppercase', color: i === 0 ? TEXT_PRI : TEXT_SEC, width: 220 }}>{f.nameLabel}</div>
+                    <div style={{ fontSize: 11, letterSpacing: 2, color: TEXT_MUT, width: 80 }}>{f.statsLabel}</div>
+                    <div style={{ fontSize: 16, letterSpacing: 1, color: i === 0 ? GOLD_BRT : TEXT_SEC, fontWeight: 700 }}>{f.ptsLabel}</div>
                   </div>
                 ))}
               </div>
-            ) : null}
-            <div style={{ fontSize: 11, letterSpacing: 4, textTransform: 'uppercase', color: TEXT_MUT }}>
-              {`${memberCount ?? 0} Players · ${battleCount} Battles`}
-            </div>
-          </div>
-        </div>
-
-        {/* ── RIGHT: standings ── */}
-        <div style={{
-          width: 640, height: 630, display: 'flex', flexDirection: 'column',
-          justifyContent: 'space-between', padding: '40px 52px 32px',
-          borderLeft: `1px solid ${BORDER_DIM}`,
-        }}>
-          {/* Header */}
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
-              <div style={{ width: 10, height: 10, backgroundColor: GOLD, transform: 'rotate(45deg)', marginRight: 12, opacity: 0.8 }} />
-              <div style={{ fontSize: 12, letterSpacing: 7, textTransform: 'uppercase', color: GOLD, fontWeight: 700 }}>
-                Standings
-              </div>
-            </div>
-            <div style={{ width: '100%', height: 1, backgroundColor: BORDER_DIM }} />
-          </div>
-
-          {/* Standings rows */}
-          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center', padding: '8px 0' }}>
-            {standings.length > 0 ? standings.map((f, i) => (
-              <div key={`row-${i}`} style={{
-                display: 'flex', alignItems: 'center', padding: '9px 0',
-                borderTop: i > 0 ? `1px solid ${BORDER_DIM}` : '0px solid transparent',
-              }}>
-                {/* Rank */}
-                <div style={{ width: 30, fontSize: 11, letterSpacing: 2, color: i === 0 ? GOLD_BRT : TEXT_MUT, fontWeight: 700 }}>
-                  {`#${i + 1}`}
-                </div>
-                {/* Colour diamond */}
-                <div style={{ width: 10, height: 10, backgroundColor: f.colour, transform: 'rotate(45deg)', marginRight: 14, flexShrink: 0 }} />
-                {/* Name */}
-                <div style={{ flex: 1, fontSize: 16, letterSpacing: 3, textTransform: 'uppercase', color: i === 0 ? TEXT_PRI : TEXT_SEC }}>
-                  {trunc(f.name, 22)}
-                </div>
-                {/* W / D */}
-                <div style={{ fontSize: 11, letterSpacing: 2, color: TEXT_MUT, marginRight: 20 }}>
-                  {`${f.wins}W ${f.draws}D`}
-                </div>
-                {/* Points — fixed-width wrapper so it aligns */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', width: 60 }}>
-                  <div style={{ fontSize: 18, letterSpacing: 1, color: i === 0 ? GOLD_BRT : TEXT_SEC, fontWeight: 700 }}>
-                    {`${f.pts}p`}
-                  </div>
-                </div>
-              </div>
-            )) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-                <div style={{ fontSize: 14, letterSpacing: 5, textTransform: 'uppercase', color: TEXT_MUT }}>
-                  Season Not Yet Started
-                </div>
+            ) : (
+              <div style={{ fontSize: 13, letterSpacing: 4, textTransform: 'uppercase', color: TEXT_MUT }}>
+                Season Not Yet Started
               </div>
             )}
           </div>
+        </div>
 
-          {/* Footer */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 16, borderTop: `1px solid ${BORDER_DIM}` }}>
-            <div style={{ fontSize: 14, letterSpacing: 3, color: GOLD, fontWeight: 700 }}>battlesphere.cc</div>
+        {/* Bottom bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 56px 28px', borderTop: `1px solid ${BORDER_DIM}` }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div style={{ fontSize: 12, letterSpacing: 4, color: TEXT_MUT, textTransform: 'uppercase', marginRight: 28 }}>{`${memberCount ?? 0} Players`}</div>
+            <div style={{ fontSize: 12, letterSpacing: 4, color: TEXT_MUT, textTransform: 'uppercase' }}>{`${battleCount} Battles`}</div>
           </div>
+          <div style={{ fontSize: 14, letterSpacing: 3, color: GOLD, fontWeight: 700 }}>battlesphere.cc</div>
         </div>
       </div>
     ),
