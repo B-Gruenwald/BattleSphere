@@ -85,16 +85,63 @@ export async function reverseInfluence(supabase, battle, mode = 'standard') {
 }
 
 /**
+ * Determine the influence state of a territory for the Tier 2 event condition.
+ *
+ * Returns an object with three mutually exclusive boolean flags:
+ *   isNeutral          — no rows, all zero, or multiple factions tied at the top
+ *   winnerDominant     — the winning faction holds sole highest influence
+ *   winnerNotDominant  — a different faction holds sole highest influence
+ *
+ * All three flags are false when:
+ *   - The battle is a draw (no winner) AND the territory is not neutral
+ *     (one faction leads but there's no winner to compare against).
+ *
+ * @param {Array}       allInfluence     Rows from territory_influence for this territory
+ * @param {string|null} winnerFactionId  The winning faction, or null for a draw
+ */
+function computeInfluenceStateFlags(allInfluence, winnerFactionId) {
+  if (!allInfluence || allInfluence.length === 0) {
+    return { isNeutral: true, winnerDominant: false, winnerNotDominant: false };
+  }
+
+  const maxPoints = Math.max(...allInfluence.map(r => r.influence_points));
+  if (maxPoints === 0) {
+    return { isNeutral: true, winnerDominant: false, winnerNotDominant: false };
+  }
+
+  const leaders = allInfluence.filter(r => r.influence_points === maxPoints);
+  if (leaders.length > 1) {
+    // Tied at the top — treat as neutral
+    return { isNeutral: true, winnerDominant: false, winnerNotDominant: false };
+  }
+
+  // One faction leads
+  if (!winnerFactionId) {
+    // Draw — no winner, so winner-relative states cannot apply
+    return { isNeutral: false, winnerDominant: false, winnerNotDominant: false };
+  }
+
+  if (leaders[0].faction_id === winnerFactionId) {
+    return { isNeutral: false, winnerDominant: true, winnerNotDominant: false };
+  }
+
+  return { isNeutral: false, winnerDominant: false, winnerNotDominant: true };
+}
+
+/**
  * Apply event-linked influence bonuses for a freshly logged battle.
  *
  * Fetches all active events for the campaign that have influence_bonus set,
- * checks each against the battle's territory / battle_type / factions (AND
- * logic — a null condition means "any"), and for each match:
+ * checks each against the battle's territory / battle_type / factions /
+ * influence_state (AND logic — a null condition means "any"), and for each match:
  *   - Adds the flat bonus to territory_influence for BOTH factions
  *   - Writes a row to battle_event_bonuses for later reversal
  *   - Accumulates the total XP bonus to write back onto the battle record
  *
  * Only fires when the battle has a territory (influence needs a target).
+ *
+ * IMPORTANT: This function must be called BEFORE base influence is applied so
+ * that the influence state check reflects the pre-battle territory state.
  */
 export async function applyEventBonuses(supabase, battle) {
   if (!battle.territory_id || !battle.attacker_faction_id || !battle.defender_faction_id) return;
@@ -109,12 +156,23 @@ export async function applyEventBonuses(supabase, battle) {
 
   if (!events || events.length === 0) return;
 
+  // ── Influence state check (bonus_influence_states condition) ──────────────
+  // Fetch ALL factions' influence on this territory so we can determine who
+  // is dominant. This must be called before base influence is written.
+  const { data: allTerritoryInfluence } = await supabase
+    .from('territory_influence')
+    .select('faction_id, influence_points')
+    .eq('territory_id', battle.territory_id);
+
+  const stateFlags = computeInfluenceStateFlags(allTerritoryInfluence, battle.winner_faction_id);
+
   // Filter to events whose conditions all match this battle.
   // AND logic across condition types; OR within each type (any one value matches).
   const matchingEvents = events.filter(ev => {
-    const territories = ev.bonus_territory_ids;
-    const battleTypes = ev.bonus_battle_types;
-    const factionIds  = ev.bonus_faction_ids;
+    const territories     = ev.bonus_territory_ids;
+    const battleTypes     = ev.bonus_battle_types;
+    const factionIds      = ev.bonus_faction_ids;
+    const influenceStates = ev.bonus_influence_states;
 
     if (territories && territories.length > 0) {
       if (!territories.includes(battle.territory_id)) return false;
@@ -127,6 +185,14 @@ export async function applyEventBonuses(supabase, battle) {
         factionIds.includes(battle.attacker_faction_id) ||
         factionIds.includes(battle.defender_faction_id);
       if (!involvesFaction) return false;
+    }
+    // Influence state condition — OR within the selected states
+    if (influenceStates && influenceStates.length > 0) {
+      const matches =
+        (influenceStates.includes('neutral')             && stateFlags.isNeutral)        ||
+        (influenceStates.includes('winner_dominant')     && stateFlags.winnerDominant)    ||
+        (influenceStates.includes('winner_not_dominant') && stateFlags.winnerNotDominant);
+      if (!matches) return false;
     }
     return true;
   });

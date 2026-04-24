@@ -105,11 +105,12 @@ export default function EventForm({
 
   // ── Influence bonus state ────────────────────────────────────────────────────
   const hasExistingBonus = existingEvent?.influence_bonus != null;
-  const [bonusEnabled,       setBonusEnabled]       = useState(hasExistingBonus);
-  const [influenceBonus,     setInfluenceBonus]     = useState(existingEvent?.influence_bonus ?? 1);
-  const [bonusTerritoryIds,  setBonusTerritoryIds]  = useState(existingEvent?.bonus_territory_ids ?? []);
-  const [bonusBattleTypes,   setBonusBattleTypes]   = useState(existingEvent?.bonus_battle_types  ?? []);
-  const [bonusFactionIds,    setBonusFactionIds]    = useState(existingEvent?.bonus_faction_ids   ?? []);
+  const [bonusEnabled,          setBonusEnabled]          = useState(hasExistingBonus);
+  const [influenceBonus,        setInfluenceBonus]        = useState(existingEvent?.influence_bonus ?? 1);
+  const [bonusTerritoryIds,     setBonusTerritoryIds]     = useState(existingEvent?.bonus_territory_ids    ?? []);
+  const [bonusBattleTypes,      setBonusBattleTypes]      = useState(existingEvent?.bonus_battle_types     ?? []);
+  const [bonusFactionIds,       setBonusFactionIds]       = useState(existingEvent?.bonus_faction_ids      ?? []);
+  const [bonusInfluenceStates,  setBonusInfluenceStates]  = useState(existingEvent?.bonus_influence_states ?? []);
 
   // ── Territory Cascade state ───────────────────────────────────────────────
   const hasExistingCascade = existingEvent?.cascade_bonus != null;
@@ -138,10 +139,11 @@ export default function EventForm({
       starts_at:          startsAt || null,
       ends_at:            endsAt || null,
       // Influence bonus — null out all fields when bonus is disabled
-      influence_bonus:     bonusEnabled ? (parseInt(influenceBonus) || 1) : null,
-      bonus_territory_ids: bonusEnabled && bonusTerritoryIds.length > 0 ? bonusTerritoryIds : null,
-      bonus_battle_types:  bonusEnabled && bonusBattleTypes.length  > 0 ? bonusBattleTypes  : null,
-      bonus_faction_ids:   bonusEnabled && bonusFactionIds.length   > 0 ? bonusFactionIds   : null,
+      influence_bonus:          bonusEnabled ? (parseInt(influenceBonus) || 1) : null,
+      bonus_territory_ids:      bonusEnabled && bonusTerritoryIds.length    > 0 ? bonusTerritoryIds    : null,
+      bonus_battle_types:       bonusEnabled && bonusBattleTypes.length     > 0 ? bonusBattleTypes     : null,
+      bonus_faction_ids:        bonusEnabled && bonusFactionIds.length      > 0 ? bonusFactionIds      : null,
+      bonus_influence_states:   bonusEnabled && bonusInfluenceStates.length > 0 ? bonusInfluenceStates : null,
       // Territory Cascade — null out all fields when cascade is disabled
       cascade_bonus:        cascadeEnabled ? (parseInt(cascadeBonus) || 1) : null,
       cascade_territory_id: cascadeEnabled && cascadeTerritoryId ? cascadeTerritoryId : null,
@@ -397,7 +399,7 @@ export default function EventForm({
             </div>
 
             {/* Faction condition */}
-            <div style={{ marginBottom: '0.5rem' }}>
+            <div style={{ marginBottom: '1.25rem' }}>
               <label style={{ ...labelStyle, fontSize: '0.55rem' }}>
                 Faction Involved{bonusFactionIds.length > 0 ? ` (${bonusFactionIds.length} selected)` : ' — any'}
               </label>
@@ -418,6 +420,48 @@ export default function EventForm({
                     }}>
                       <span style={{ width: '8px', height: '8px', background: f.colour, display: 'inline-block', flexShrink: 0 }} />
                       {f.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Influence State condition */}
+            <div style={{ marginBottom: '0.5rem' }}>
+              <label style={{ ...labelStyle, fontSize: '0.55rem' }}>
+                Territory Influence State{bonusInfluenceStates.length > 0 ? ` (${bonusInfluenceStates.length} selected)` : ' — any'}
+              </label>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '0.6rem' }}>
+                Checked at the moment the battle is recorded, before base influence is applied.
+                Neutral = no faction has a lead (no influence yet, or factions tied at the top).
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {[
+                  { value: 'neutral',             label: 'Neutral Territory',   desc: 'No faction leads — uncontested or tied at top' },
+                  { value: 'winner_dominant',      label: 'Winner Dominant',     desc: 'The winning faction already holds the most influence here' },
+                  { value: 'winner_not_dominant',  label: 'Winner Not Dominant', desc: 'A rival faction holds more influence than the winner' },
+                ].map(opt => {
+                  const selected = bonusInfluenceStates.includes(opt.value);
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      title={opt.desc}
+                      onClick={() =>
+                        setBonusInfluenceStates(prev =>
+                          selected ? prev.filter(v => v !== opt.value) : [...prev, opt.value]
+                        )
+                      }
+                      style={{
+                        padding: '0.3rem 0.65rem',
+                        background: selected ? 'rgba(183,140,64,0.12)' : 'var(--bg-raised)',
+                        border: `1px solid ${selected ? 'rgba(183,140,64,0.5)' : 'var(--border-subtle)'}`,
+                        color: selected ? 'var(--text-gold)' : 'var(--text-secondary)',
+                        fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.1em',
+                        textTransform: 'uppercase', cursor: 'pointer',
+                      }}
+                    >
+                      {opt.label}
                     </button>
                   );
                 })}

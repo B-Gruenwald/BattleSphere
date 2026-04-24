@@ -276,8 +276,10 @@ export default function BattleLogForm({ campaign, territories, factions, members
 
     if (insertError) { setError(insertError.message); setSubmitting(false); setSubmitLabel('Record Battle'); return; }
 
-    await updateInfluence();
+    // applyEventBonuses must run BEFORE updateInfluence so the influence state
+    // check reflects the pre-battle territory state (not yet modified by base influence).
     await applyEventBonuses(supabase, battle);
+    await updateInfluence();
     await applyTerritoryCascade(supabase, battle);
 
     // Upload any photos queued before submission

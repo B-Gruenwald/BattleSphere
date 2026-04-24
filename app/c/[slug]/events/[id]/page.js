@@ -81,6 +81,15 @@ export default async function EventDetailPage({ params }) {
     ? ev.bonus_faction_ids.map(fid => factions?.find(f => f.id === fid)).filter(Boolean)
     : null;
 
+  const INFLUENCE_STATE_LABELS = {
+    neutral:             'Neutral Territory',
+    winner_dominant:     'Winner Dominant',
+    winner_not_dominant: 'Winner Not Dominant',
+  };
+  const bonusInfluenceStateLabels = ev.bonus_influence_states?.length
+    ? ev.bonus_influence_states.map(s => INFLUENCE_STATE_LABELS[s] ?? s)
+    : null;
+
   // Territory Cascade
   const hasCascade = ev.cascade_bonus != null && ev.cascade_territory_id != null;
   const cascadeTerritoryName = hasCascade
@@ -266,6 +275,24 @@ export default async function EventDetailPage({ params }) {
                 </div>
               ) : (
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Any faction</span>
+              )}
+            </div>
+
+            {/* Influence State */}
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', minWidth: '90px', paddingTop: '0.1rem' }}>
+                Influence State
+              </span>
+              {bonusInfluenceStateLabels && bonusInfluenceStateLabels.length > 0 ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                  {bonusInfluenceStateLabels.map((label, i) => (
+                    <span key={i} style={{ padding: '0.2rem 0.55rem', background: 'var(--bg-raised)', border: '1px solid var(--border-subtle)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Any state</span>
               )}
             </div>
 

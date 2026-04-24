@@ -177,9 +177,11 @@ export async function POST(request) {
   const newBattle = newBattleRows?.[0];
   if (!newBattle) return Response.json({ error: 'Insert failed.' }, { status: 500 });
 
-  // Apply influence + event bonuses + territory cascade for the target campaign
-  await applyBaseInfluence(supabase, newBattle, campaign);
+  // Apply influence + event bonuses + territory cascade for the target campaign.
+  // applyEventBonuses must run BEFORE applyBaseInfluence so the influence state
+  // check reflects the pre-battle territory state.
   await applyEventBonuses(supabase, newBattle);
+  await applyBaseInfluence(supabase, newBattle, campaign);
   await applyTerritoryCascade(supabase, newBattle);
 
   return Response.json({
