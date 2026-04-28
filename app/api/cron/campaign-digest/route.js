@@ -37,8 +37,12 @@ export async function GET(request) {
   const eligible = (profiles || []).filter(p => {
     const days = FREQUENCY_DAYS[p.digest_frequency];
     if (!days) return false;
-    if (!p.last_digest_sent_at) return true; // never sent
-    const lastSent = new Date(p.last_digest_sent_at);
+    // Use profile creation date as the baseline for users who have never been sent a digest.
+    // This prevents first-queued content from firing immediately — they get their first
+    // digest on the next scheduled Friday once their frequency threshold has elapsed.
+    const baseline = p.last_digest_sent_at ?? p.created_at;
+    if (!baseline) return false;
+    const lastSent = new Date(baseline);
     const diffDays = (now - lastSent) / (1000 * 60 * 60 * 24);
     return diffDays >= days;
   });
