@@ -146,13 +146,17 @@ function computeInfluenceStateFlags(allInfluence, winnerFactionId) {
 export async function applyEventBonuses(supabase, battle) {
   if (!battle.territory_id || !battle.attacker_faction_id || !battle.defender_faction_id) return;
 
-  // Fetch active events with a bonus configured
+  // Fetch active events with a bonus configured.
+  // Also filter by date: exclude events that haven't started yet or have already ended.
+  const now = new Date().toISOString();
   const { data: events } = await supabase
     .from('campaign_events')
     .select('*')
     .eq('campaign_id', battle.campaign_id)
     .eq('status', 'active')
-    .not('influence_bonus', 'is', null);
+    .not('influence_bonus', 'is', null)
+    .or(`starts_at.is.null,starts_at.lte.${now}`)
+    .or(`ends_at.is.null,ends_at.gte.${now}`);
 
   if (!events || events.length === 0) return;
 
@@ -268,13 +272,17 @@ export async function applyTerritoryCascade(supabase, battle) {
   if (!battle.territory_id || !battle.campaign_id) return;
 
   // Fetch active events with a cascade configured.
+  // Also filter by date: exclude events that haven't started yet or have already ended.
+  const now = new Date().toISOString();
   const { data: events } = await supabase
     .from('campaign_events')
     .select('*')
     .eq('campaign_id', battle.campaign_id)
     .eq('status', 'active')
     .not('cascade_bonus', 'is', null)
-    .not('cascade_territory_id', 'is', null);
+    .not('cascade_territory_id', 'is', null)
+    .or(`starts_at.is.null,starts_at.lte.${now}`)
+    .or(`ends_at.is.null,ends_at.gte.${now}`);
 
   if (!events || events.length === 0) return;
 

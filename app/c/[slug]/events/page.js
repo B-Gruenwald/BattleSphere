@@ -56,9 +56,20 @@ export default async function EventsPage({ params }) {
   const isOrganiser = campaign.organiser_id === user.id
     || ['organiser', 'admin'].includes(myMembership?.role);
 
-  const sorted = [...(events || [])].sort(
-    (a, b) => (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3)
-  );
+  // Compute effective status: an event that is still marked 'active' but whose
+  // ends_at is in the past should display (and sort) as 'resolved'.
+  function effectiveStatus(ev) {
+    if (ev.status === 'resolved') return 'resolved';
+    if (ev.ends_at && new Date(ev.ends_at) < new Date()) return 'resolved';
+    if (ev.status === 'upcoming') return 'upcoming';
+    // 'active' — check starts_at hasn't been set to a future date
+    if (ev.starts_at && new Date(ev.starts_at) > new Date()) return 'upcoming';
+    return 'active';
+  }
+
+  const sorted = [...(events || [])]
+    .map(ev => ({ ...ev, _effectiveStatus: effectiveStatus(ev) }))
+    .sort((a, b) => (STATUS_ORDER[a._effectiveStatus] ?? 3) - (STATUS_ORDER[b._effectiveStatus] ?? 3));
 
   function resolveNames(ids, list) {
     if (!ids || ids.length === 0) return null;
@@ -101,7 +112,7 @@ export default async function EventsPage({ params }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {sorted.map(ev => {
-            const statusColour = STATUS_COLOURS[ev.status] ?? 'var(--text-muted)';
+            const statusColour = STATUS_COLOURS[ev._effectiveStatus] ?? 'var(--text-muted)';
             const date = new Date(ev.created_at).toLocaleDateString('en-GB', {
               day: 'numeric', month: 'short', year: 'numeric',
             });
@@ -134,7 +145,7 @@ export default async function EventsPage({ params }) {
               >
                 <div style={{
                   padding: '1.5rem 1.75rem',
-                  background: ev.status === 'active' ? 'rgba(183,140,64,0.04)' : 'transparent',
+                  background: ev._effectiveStatus === 'active' ? 'rgba(183,140,64,0.04)' : 'transparent',
                   border: '1px solid var(--border-dim)',
                   cursor: 'pointer',
                   transition: 'background 0.15s',
@@ -164,7 +175,7 @@ export default async function EventsPage({ params }) {
                           color: statusColour, border: `1px solid ${statusColour}40`,
                           padding: '0.15rem 0.5rem', flexShrink: 0,
                         }}>
-                          {ev.status}
+                          {ev._effectiveStatus}
                         </span>
                         {hasBonus && (
                           <span style={{

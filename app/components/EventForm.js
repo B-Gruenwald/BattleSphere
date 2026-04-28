@@ -96,9 +96,16 @@ export default function EventForm({
   const [body,               setBody]               = useState(existingEvent?.body || '');
   const [eventType,          setEventType]          = useState(existingEvent?.event_type || 'narrative');
   const [status,             setStatus]             = useState(existingEvent?.status || 'active');
-  const [startsAt,           setStartsAt]           = useState(
-    existingEvent?.starts_at ? existingEvent.starts_at.slice(0, 16) : ''
-  );
+  const [startsAt,           setStartsAt]           = useState(() => {
+    if (existingEvent?.starts_at) return existingEvent.starts_at.slice(0, 16);
+    if (!existingEvent) {
+      // New event: default to current local date/time
+      const d = new Date();
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      return d.toISOString().slice(0, 16);
+    }
+    return ''; // Editing an event that had no start date set
+  });
   const [endsAt,             setEndsAt]             = useState(
     existingEvent?.ends_at ? existingEvent.ends_at.slice(0, 16) : ''
   );
