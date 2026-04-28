@@ -16,12 +16,13 @@ export default async function AnnouncementsPage() {
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).limit(1);
   if (!profile?.[0]?.is_admin) redirect('/dashboard');
 
-  // Fetch existing announcements newest first
+  // Fetch existing announcements in display order (sort_order ASC, then created_at ASC as tiebreaker)
   const adminClient = createAdminClient();
   const { data: announcements } = await adminClient
     .from('platform_announcements')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
 
   // Count opted-in users (for context)
   const { count: optinCount } = await adminClient

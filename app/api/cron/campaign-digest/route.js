@@ -55,7 +55,8 @@ export async function GET(request) {
   const { data: allAnnouncements } = await supabase
     .from('platform_announcements')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
 
   let sent = 0;
   const errors = [];
@@ -199,6 +200,22 @@ function buildSubject(campaignSections, platformItems) {
   return 'Your BattleSphere Digest';
 }
 
+// ── Body formatter ───────────────────────────────────────────────────────────
+// Converts **bold** markdown and blank-line paragraph breaks into HTML.
+// Existing HTML tags (e.g. <a href>) are passed through unchanged.
+function renderBody(text) {
+  if (!text) return '';
+  const processed = text
+    .replace(/\*\*(.*?)\*\*/gs, '<strong>$1</strong>')
+    .replace(/__(.*?)__/gs, '<strong>$1</strong>');
+  return processed
+    .split(/\n\n+/)
+    .map(para =>
+      `<p style="margin:0 0 10px; font-size:14px; color:#2d2d3d; line-height:1.5;">${para.replace(/\n/g, '<br>')}</p>`
+    )
+    .join('');
+}
+
 // ── HTML builder ─────────────────────────────────────────────────────────────
 function buildDigestHtml({ profile, platformItems, campaignSections, totalCount, now }) {
   const dateStr = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -233,9 +250,10 @@ function buildDigestHtml({ profile, platformItems, campaignSections, totalCount,
                 What&apos;s new on BattleSphere
               </p>
               ${platformItems.map(a => `
-                <p style="margin:0 0 10px; font-size:14px; color:#2d2d3d; line-height:1.5;">
-                  <strong>${a.title}.</strong> ${a.body}
-                </p>
+                <div style="margin:0 0 18px;">
+                  ${a.title ? `<p style="margin:0 0 4px; font-size:14px; font-weight:bold; color:#1a1a2e; line-height:1.4;">${a.title}</p>` : ''}
+                  ${renderBody(a.body)}
+                </div>
               `).join('')}
             </td>
           </tr>
