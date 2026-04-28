@@ -49,38 +49,10 @@ export default async function SuperAdminOverview() {
     .from('battles')
     .select('*', { count: 'exact', head: true });
 
-  // Army Portfolios
-  const { data: armies } = await supabase
+  // Army count for stat card
+  const { count: totalArmies } = await supabase
     .from('armies')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  const armyOwnerIds = [...new Set((armies || []).map(a => a.user_id).filter(Boolean))];
-
-  const { data: armyOwnerProfiles } = armyOwnerIds.length > 0
-    ? await supabase.from('profiles').select('id, username').in('id', armyOwnerIds)
-    : { data: [] };
-
-  // All units — just need army_id + created_at for counting
-  const { data: allUnits } = await supabase
-    .from('army_units')
-    .select('army_id, created_at');
-
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const cutoff = thirtyDaysAgo.toISOString();
-
-  // Per-army unit counts
-  const unitCountMap = {};
-  const recentUnitCountMap = {};
-  (allUnits || []).forEach(u => {
-    unitCountMap[u.army_id] = (unitCountMap[u.army_id] || 0) + 1;
-    if (u.created_at >= cutoff) {
-      recentUnitCountMap[u.army_id] = (recentUnitCountMap[u.army_id] || 0) + 1;
-    }
-  });
-
-  const armyOwnerMap = Object.fromEntries((armyOwnerProfiles || []).map(p => [p.id, p]));
+    .select('*', { count: 'exact', head: true });
 
   // Build lookup maps
   const profileMap = Object.fromEntries((organiserProfiles || []).map(p => [p.id, p]));
@@ -161,7 +133,7 @@ export default async function SuperAdminOverview() {
         {statCard('Total Campaigns', (campaigns || []).length)}
         {statCard('Registered Users', totalUsers)}
         {statCard('Battles Logged', totalBattles)}
-        {statCard('Army Portfolios', (armies || []).length)}
+        {statCard('Army Portfolios', totalArmies)}
       </div>
 
       {/* Campaigns table */}
@@ -255,98 +227,6 @@ export default async function SuperAdminOverview() {
                       textDecoration: 'none',
                     }}>
                       Visit ↗
-                    </Link>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-
-      {/* Army Portfolios table */}
-      <div style={{ marginTop: '3rem' }}>
-        <h2 style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: '0.64rem',
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: 'var(--text-gold)',
-          marginBottom: '1.25rem',
-        }}>
-          Army Portfolios ({(armies || []).length})
-        </h2>
-
-        <div style={{ border: '1px solid var(--border-dim)' }}>
-          {/* Table header */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '2fr 1.2fr 100px 140px 130px 80px',
-            gap: '1rem',
-            padding: '0.7rem 1.25rem',
-            borderBottom: '1px solid var(--border-dim)',
-            background: 'rgba(255,255,255,0.02)',
-          }}>
-            {['Army', 'Owner', 'Units', 'New (30 days)', 'Created', ''].map(colHeader)}
-          </div>
-
-          {(armies || []).length === 0 ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-              No army portfolios yet.
-            </div>
-          ) : (
-            (armies || []).map(a => {
-              const owner = armyOwnerMap[a.user_id];
-              const unitCount = unitCountMap[a.id] || 0;
-              const recentCount = recentUnitCountMap[a.id] || 0;
-              const created = new Date(a.created_at).toLocaleDateString('en-GB', {
-                day: 'numeric', month: 'short', year: 'numeric',
-              });
-
-              return (
-                <div key={a.id} style={{
-                  display: 'grid',
-                  gridTemplateColumns: '2fr 1.2fr 100px 140px 130px 80px',
-                  gap: '1rem',
-                  padding: '0.9rem 1.25rem',
-                  borderBottom: '1px solid var(--border-dim)',
-                  alignItems: 'center',
-                }}>
-                  <div>
-                    <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.15rem' }}>
-                      {a.name}
-                    </div>
-                    {a.faction && (
-                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                        {a.faction}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                    {owner?.username ?? '—'}
-                  </div>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                    {unitCount}
-                  </div>
-                  <div style={{ fontSize: '0.9rem', textAlign: 'center' }}>
-                    {recentCount > 0
-                      ? <span style={{ color: 'var(--text-gold)', fontWeight: '600' }}>+{recentCount}</span>
-                      : <span style={{ color: 'var(--text-muted)' }}>—</span>
-                    }
-                  </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    {created}
-                  </div>
-                  <div>
-                    <Link href={`/armies/${a.id}`} style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '0.54rem',
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase',
-                      color: 'var(--text-gold)',
-                      textDecoration: 'none',
-                    }}>
-                      View ↗
                     </Link>
                   </div>
                 </div>
