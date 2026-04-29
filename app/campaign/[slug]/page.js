@@ -48,7 +48,7 @@ export async function generateMetadata({ params }) {
       title,
       description: desc,
       siteName: 'BattleSphere',
-      images: [{ url: ogImageUrl, width: 1200, height: 630, type: 'image/png', alt: title }],
+      images: [{ url: ogImageUrl, width: 800, height: 419, type: 'image/png', alt: title }],
     },
     twitter: {
       card: 'summary_large_image',

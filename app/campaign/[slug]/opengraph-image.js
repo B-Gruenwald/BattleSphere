@@ -9,7 +9,7 @@ import path from 'path';
 
 export const runtime     = 'nodejs';
 export const alt         = 'BattleSphere Campaign';
-export const size        = { width: 1200, height: 630 };
+export const size        = { width: 800, height: 419 };
 export const contentType = 'image/png';
 
 // ── Brand palette ────────────────────────────────────────────────────────────
@@ -188,7 +188,7 @@ function buildMapElements(territories, factions, warpRoutes, influenceData, W, H
     if (t.x_pos == null) continue;
     const domId = dominantFactionId(t, normalized, influenceData);
     const col   = domId ? (factionColour[domId] || NEUTRAL_COL) : NEUTRAL_COL;
-    const cx = sx(t.x_pos), cy = sy(t.y_pos), r = 6;
+    const cx = sx(t.x_pos), cy = sy(t.y_pos), r = 4;
     els.push(
       <div key={`sn-${t.id}`} style={{
         position: 'absolute', display: 'flex',
@@ -205,7 +205,7 @@ function buildMapElements(territories, factions, warpRoutes, influenceData, W, H
     const domId = dominantFactionId(t, normalized, influenceData);
     const col   = domId ? (factionColour[domId] || NEUTRAL_COL) : NEUTRAL_COL;
     const cx = sx(t.x_pos), cy = sy(t.y_pos);
-    const sz = 20; // half-size of the rotated square → diamond
+    const sz = 13; // half-size of the rotated square → diamond
 
     // Glow halo
     els.push(
@@ -229,13 +229,13 @@ function buildMapElements(territories, factions, warpRoutes, influenceData, W, H
       }} />
     );
     // Name label
-    const lw = 130;
+    const lw = 87;
     els.push(
       <div key={`lb-${t.id}`} style={{
         position: 'absolute', display: 'flex',
-        left: cx - lw / 2, top: cy + sz + 10,
+        left: cx - lw / 2, top: cy + sz + 7,
         width: lw, justifyContent: 'center',
-        fontSize: 11, color: 'rgba(232,224,208,0.82)',
+        fontSize: 7, color: 'rgba(232,224,208,0.82)',
         fontFamily: 'Cinzel', textTransform: 'uppercase',
         letterSpacing: 1, lineHeight: 1,
       }}>
@@ -270,8 +270,8 @@ export default async function OgImage({ params }) {
 
   if (!campaign) {
     return new ImageResponse(
-      <div style={{ width: 1200, height: 630, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: BG_VOID, fontFamily: 'Cinzel' }}>
-        <div style={{ fontSize: 32, letterSpacing: 8, textTransform: 'uppercase', color: GOLD }}>BattleSphere</div>
+      <div style={{ width: 800, height: 419, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: BG_VOID, fontFamily: 'Cinzel' }}>
+        <div style={{ fontSize: 21, letterSpacing: 5, textTransform: 'uppercase', color: GOLD }}>BattleSphere</div>
       </div>,
       { ...size, ...fontOptions }
     );
@@ -302,7 +302,7 @@ export default async function OgImage({ params }) {
   const topTerrs     = (territories || []).filter(t => !t.parent_id);
   const hasTerritories = topTerrs.length > 0;
   const factionChips   = (factions || []).slice(0, 5);
-  const nameSize = campaignName.length > 35 ? 40 : campaignName.length > 22 ? 50 : 60;
+  const nameSize = campaignName.length > 35 ? 27 : campaignName.length > 22 ? 33 : 40;
 
   // Theme background colour
   const THEME_BG = {
@@ -316,90 +316,90 @@ export default async function OgImage({ params }) {
   // ── WITH MAP ─────────────────────────────────────────────────────────────
   if (hasTerritories) {
     const mapEls = buildMapElements(
-      territories || [], factions || [], warpRoutes || [], influenceData || [], 1200, 630
+      territories || [], factions || [], warpRoutes || [], influenceData || [], 800, 419
     );
 
     return new ImageResponse(
       (
-        <div style={{ width: 1200, height: 630, display: 'flex', position: 'relative', backgroundColor: mapBg, fontFamily: 'Cinzel', color: TEXT_PRI, overflow: 'hidden' }}>
+        <div style={{ width: 800, height: 419, display: 'flex', position: 'relative', backgroundColor: mapBg, fontFamily: 'Cinzel', color: TEXT_PRI, overflow: 'hidden' }}>
 
           {/* ── Map layer ── */}
           {/* Grid: CSS repeating gradients */}
           <div style={{
-            position: 'absolute', display: 'flex', top: 0, left: 0, width: 1200, height: 630,
+            position: 'absolute', display: 'flex', top: 0, left: 0, width: 800, height: 419,
             backgroundImage: `linear-gradient(rgba(183,140,64,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(183,140,64,0.05) 1px, transparent 1px)`,
-            backgroundSize: '50px 33px',
+            backgroundSize: '33px 22px',
           }} />
           {/* Territory nodes, routes, labels */}
           {mapEls}
 
           {/* ── Top gradient ── */}
           <div style={{
-            position: 'absolute', display: 'flex', top: 0, left: 0, width: 1200, height: 130,
+            position: 'absolute', display: 'flex', top: 0, left: 0, width: 800, height: 87,
             backgroundImage: `linear-gradient(180deg, rgba(6,6,8,0.95) 0%, transparent 100%)`,
           }} />
 
           {/* ── Bottom gradient ── */}
           <div style={{
-            position: 'absolute', display: 'flex', bottom: 0, left: 0, width: 1200, height: 240,
+            position: 'absolute', display: 'flex', bottom: 0, left: 0, width: 800, height: 160,
             backgroundImage: `linear-gradient(0deg, rgba(6,6,8,0.97) 0%, rgba(6,6,8,0.82) 55%, transparent 100%)`,
           }} />
 
           {/* ── Top bar: brand + format ── */}
           <div style={{
-            position: 'absolute', display: 'flex', top: 0, left: 0, width: 1200,
-            alignItems: 'center', justifyContent: 'space-between', padding: '26px 48px 0',
+            position: 'absolute', display: 'flex', top: 0, left: 0, width: 800,
+            alignItems: 'center', justifyContent: 'space-between', padding: '17px 32px 0',
           }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ width: 11, height: 11, backgroundColor: GOLD, transform: 'rotate(45deg)', marginRight: 11 }} />
-              <div style={{ fontSize: 15, letterSpacing: 8, textTransform: 'uppercase', color: GOLD, fontWeight: 700 }}>BattleSphere</div>
+              <div style={{ width: 7, height: 7, backgroundColor: GOLD, transform: 'rotate(45deg)', marginRight: 7 }} />
+              <div style={{ fontSize: 10, letterSpacing: 5, textTransform: 'uppercase', color: GOLD, fontWeight: 700 }}>BattleSphere</div>
             </div>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <div style={{ fontSize: 11, letterSpacing: 4, textTransform: 'uppercase', color: GOLD, border: `1px solid ${GOLD}55`, padding: '3px 12px' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div style={{ fontSize: 7, letterSpacing: 3, textTransform: 'uppercase', color: GOLD, border: `1px solid ${GOLD}55`, padding: '2px 8px' }}>
                 {formatLabel}
               </div>
-              <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: TEXT_MUT }}>{setting}</div>
+              <div style={{ fontSize: 7, letterSpacing: 2, textTransform: 'uppercase', color: TEXT_MUT }}>{setting}</div>
             </div>
           </div>
 
           {/* ── Bottom: factions + campaign name + stats ── */}
           <div style={{
-            position: 'absolute', display: 'flex', bottom: 0, left: 0, width: 1200,
-            flexDirection: 'column', padding: '0 48px 26px',
+            position: 'absolute', display: 'flex', bottom: 0, left: 0, width: 800,
+            flexDirection: 'column', padding: '0 32px 17px',
           }}>
             {/* Faction chips */}
             {factionChips.length > 0 && (
-              <div style={{ display: 'flex', gap: 14, marginBottom: 12, alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 9, marginBottom: 8, alignItems: 'center' }}>
                 {factionChips.map((f, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <div style={{ width: 8, height: 8, backgroundColor: f.colour, transform: 'rotate(45deg)', flexShrink: 0 }} />
-                    <div style={{ fontSize: 11, letterSpacing: 3, textTransform: 'uppercase', color: TEXT_MUT }}>{trunc(f.name, 18)}</div>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <div style={{ width: 5, height: 5, backgroundColor: f.colour, transform: 'rotate(45deg)', flexShrink: 0 }} />
+                    <div style={{ fontSize: 7, letterSpacing: 2, textTransform: 'uppercase', color: TEXT_MUT }}>{trunc(f.name, 18)}</div>
                   </div>
                 ))}
                 {(factions || []).length > 5 && (
-                  <div style={{ fontSize: 11, color: TEXT_MUT }}>+{(factions || []).length - 5} more</div>
+                  <div style={{ fontSize: 7, color: TEXT_MUT }}>{`+${(factions || []).length - 5} more`}</div>
                 )}
               </div>
             )}
             {/* Campaign name */}
-            <div style={{ fontSize: nameSize, fontWeight: 900, letterSpacing: 3, textTransform: 'uppercase', color: TEXT_PRI, lineHeight: 1.0, marginBottom: 14 }}>
+            <div style={{ fontSize: nameSize, fontWeight: 900, letterSpacing: 2, textTransform: 'uppercase', color: TEXT_PRI, lineHeight: 1.0, marginBottom: 9 }}>
               {campaignName}
             </div>
             {/* Stats row */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
                 {[
                   `${memberCount ?? 0} ${(memberCount ?? 0) === 1 ? 'Player' : 'Players'}`,
                   ...(!isLeague ? [`${topTerrs.length} ${topTerrs.length === 1 ? 'Territory' : 'Territories'}`] : []),
                   `${battleCount ?? 0} ${(battleCount ?? 0) === 1 ? 'Battle' : 'Battles'}`,
                 ].map((label, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <div style={{ width: 5, height: 5, backgroundColor: GOLD, transform: 'rotate(45deg)', opacity: 0.6 }} />
-                    <div style={{ fontSize: 12, letterSpacing: 4, color: TEXT_MUT, textTransform: 'uppercase' }}>{label}</div>
+                  <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                    <div style={{ width: 4, height: 4, backgroundColor: GOLD, transform: 'rotate(45deg)', opacity: 0.6 }} />
+                    <div style={{ fontSize: 8, letterSpacing: 3, color: TEXT_MUT, textTransform: 'uppercase' }}>{label}</div>
                   </div>
                 ))}
               </div>
-              <div style={{ fontSize: 13, letterSpacing: 3, color: GOLD, fontWeight: 700 }}>battlesphere.cc</div>
+              <div style={{ fontSize: 9, letterSpacing: 2, color: GOLD, fontWeight: 700 }}>battlesphere.cc</div>
             </div>
           </div>
         </div>
@@ -430,58 +430,58 @@ export default async function OgImage({ params }) {
   return new ImageResponse(
     (
       <div style={{
-        width: 1200, height: 630, display: 'flex', flexDirection: 'column',
+        width: 800, height: 419, display: 'flex', flexDirection: 'column',
         backgroundColor: BG_VOID, fontFamily: 'Cinzel', color: TEXT_PRI,
         backgroundImage: `radial-gradient(ellipse 90% 50% at 50% 100%, rgba(183,140,64,0.10) 0%, transparent 60%)`,
       }}>
 
         {/* Top bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '30px 56px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 37px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ width: 12, height: 12, backgroundColor: GOLD, transform: 'rotate(45deg)', marginRight: 12 }} />
-            <div style={{ fontSize: 16, letterSpacing: 8, textTransform: 'uppercase', color: GOLD, fontWeight: 700 }}>BattleSphere</div>
+            <div style={{ width: 8, height: 8, backgroundColor: GOLD, transform: 'rotate(45deg)', marginRight: 8 }} />
+            <div style={{ fontSize: 11, letterSpacing: 5, textTransform: 'uppercase', color: GOLD, fontWeight: 700 }}>BattleSphere</div>
           </div>
-          <div style={{ fontSize: 11, letterSpacing: 4, textTransform: 'uppercase', color: GOLD, border: `1px solid ${GOLD}55`, padding: '3px 12px' }}>
+          <div style={{ fontSize: 7, letterSpacing: 3, textTransform: 'uppercase', color: GOLD, border: `1px solid ${GOLD}55`, padding: '2px 8px' }}>
             {formatLabel}
           </div>
         </div>
 
         {/* Centre: name left, standings right */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', padding: '0 56px' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', padding: '0 37px' }}>
 
           {/* Left: campaign name */}
-          <div style={{ width: 460, display: 'flex', flexDirection: 'column', paddingRight: 52 }}>
-            <div style={{ fontSize: nameSize, fontWeight: 900, letterSpacing: 3, textTransform: 'uppercase', lineHeight: 1.05, color: TEXT_PRI, marginBottom: 16 }}>
+          <div style={{ width: 307, display: 'flex', flexDirection: 'column', paddingRight: 35 }}>
+            <div style={{ fontSize: nameSize, fontWeight: 900, letterSpacing: 2, textTransform: 'uppercase', lineHeight: 1.05, color: TEXT_PRI, marginBottom: 11 }}>
               {campaignName}
             </div>
-            <div style={{ fontSize: 13, letterSpacing: 4, textTransform: 'uppercase', color: TEXT_MUT }}>
+            <div style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: TEXT_MUT }}>
               {setting}
             </div>
           </div>
 
           {/* Divider */}
-          <div style={{ width: 1, height: 320, backgroundColor: BORDER_DIM, marginRight: 52 }} />
+          <div style={{ width: 1, height: 213, backgroundColor: BORDER_DIM, marginRight: 35 }} />
 
           {/* Right: standings */}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 18 }}>
-              <div style={{ width: 8, height: 8, backgroundColor: GOLD, transform: 'rotate(45deg)', marginRight: 10, opacity: 0.8 }} />
-              <div style={{ fontSize: 11, letterSpacing: 6, textTransform: 'uppercase', color: GOLD, fontWeight: 700 }}>Standings</div>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ width: 5, height: 5, backgroundColor: GOLD, transform: 'rotate(45deg)', marginRight: 7, opacity: 0.8 }} />
+              <div style={{ fontSize: 7, letterSpacing: 4, textTransform: 'uppercase', color: GOLD, fontWeight: 700 }}>Standings</div>
             </div>
             {standings.length > 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {standings.map((f, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
-                    <div style={{ fontSize: 11, letterSpacing: 1, color: i === 0 ? GOLD_BRT : TEXT_MUT, fontWeight: 700, width: 28 }}>{f.rankLabel}</div>
-                    <div style={{ width: 9, height: 9, backgroundColor: f.colour, transform: 'rotate(45deg)', marginRight: 12, flexShrink: 0 }} />
-                    <div style={{ fontSize: 15, letterSpacing: 3, textTransform: 'uppercase', color: i === 0 ? TEXT_PRI : TEXT_SEC, width: 220 }}>{f.nameLabel}</div>
-                    <div style={{ fontSize: 11, letterSpacing: 2, color: TEXT_MUT, width: 80 }}>{f.statsLabel}</div>
-                    <div style={{ fontSize: 16, letterSpacing: 1, color: i === 0 ? GOLD_BRT : TEXT_SEC, fontWeight: 700 }}>{f.ptsLabel}</div>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ fontSize: 7, letterSpacing: 1, color: i === 0 ? GOLD_BRT : TEXT_MUT, fontWeight: 700, width: 19 }}>{f.rankLabel}</div>
+                    <div style={{ width: 6, height: 6, backgroundColor: f.colour, transform: 'rotate(45deg)', marginRight: 8, flexShrink: 0 }} />
+                    <div style={{ fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: i === 0 ? TEXT_PRI : TEXT_SEC, width: 147 }}>{f.nameLabel}</div>
+                    <div style={{ fontSize: 7, letterSpacing: 1, color: TEXT_MUT, width: 53 }}>{f.statsLabel}</div>
+                    <div style={{ fontSize: 11, letterSpacing: 1, color: i === 0 ? GOLD_BRT : TEXT_SEC, fontWeight: 700 }}>{f.ptsLabel}</div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={{ fontSize: 13, letterSpacing: 4, textTransform: 'uppercase', color: TEXT_MUT }}>
+              <div style={{ fontSize: 9, letterSpacing: 3, textTransform: 'uppercase', color: TEXT_MUT }}>
                 Season Not Yet Started
               </div>
             )}
@@ -489,12 +489,12 @@ export default async function OgImage({ params }) {
         </div>
 
         {/* Bottom bar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 56px 28px', borderTop: `1px solid ${BORDER_DIM}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 37px 19px', borderTop: `1px solid ${BORDER_DIM}` }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ fontSize: 12, letterSpacing: 4, color: TEXT_MUT, textTransform: 'uppercase', marginRight: 28 }}>{`${memberCount ?? 0} Players`}</div>
-            <div style={{ fontSize: 12, letterSpacing: 4, color: TEXT_MUT, textTransform: 'uppercase' }}>{`${battleCount} Battles`}</div>
+            <div style={{ fontSize: 8, letterSpacing: 3, color: TEXT_MUT, textTransform: 'uppercase', marginRight: 19 }}>{`${memberCount ?? 0} Players`}</div>
+            <div style={{ fontSize: 8, letterSpacing: 3, color: TEXT_MUT, textTransform: 'uppercase' }}>{`${battleCount} Battles`}</div>
           </div>
-          <div style={{ fontSize: 14, letterSpacing: 3, color: GOLD, fontWeight: 700 }}>battlesphere.cc</div>
+          <div style={{ fontSize: 9, letterSpacing: 2, color: GOLD, fontWeight: 700 }}>battlesphere.cc</div>
         </div>
       </div>
     ),

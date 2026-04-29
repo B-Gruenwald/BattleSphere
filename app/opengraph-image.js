@@ -7,7 +7,7 @@ import path from 'path';
 
 export const runtime     = 'nodejs';
 export const alt         = 'BattleSphere — Narrative Campaign Platform';
-export const size        = { width: 1200, height: 630 };
+export const size        = { width: 800, height: 419 };
 export const contentType = 'image/png';
 
 const BG_VOID    = '#0a0a0f';
@@ -34,52 +34,33 @@ export default async function OgImage() {
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: BG_VOID,
-          // Gold aurora from top-centre + faint crimson ember bottom-left
           backgroundImage: [
             `radial-gradient(ellipse 110% 55% at 50% -5%, ${GOLD}30 0%, transparent 60%)`,
             `radial-gradient(ellipse 55% 40% at 8% 100%, #8b1a1a22 0%, transparent 55%)`,
             `linear-gradient(180deg, ${BG_DEEP} 0%, ${BG_VOID} 100%)`,
           ].join(', '),
           fontFamily: 'Cinzel',
-          padding: '64px 100px',
+          padding: '43px 67px',
           position: 'relative',
         }}
       >
 
         {/* ── Diamond cap ornament ─────────────────────────────── */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 20,
-            marginBottom: 44,
-          }}
-        >
-          {/* Left rule */}
-          <div style={{ width: 120, height: 1, backgroundColor: GOLD, opacity: 0.28 }} />
-          {/* Diamond */}
-          <div
-            style={{
-              width: 14,
-              height: 14,
-              backgroundColor: GOLD,
-              transform: 'rotate(45deg)',
-              opacity: 0.9,
-            }}
-          />
-          {/* Right rule */}
-          <div style={{ width: 120, height: 1, backgroundColor: GOLD, opacity: 0.28 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 29 }}>
+          <div style={{ width: 80, height: 1, backgroundColor: GOLD, opacity: 0.28 }} />
+          <div style={{ width: 9, height: 9, backgroundColor: GOLD, transform: 'rotate(45deg)', opacity: 0.9 }} />
+          <div style={{ width: 80, height: 1, backgroundColor: GOLD, opacity: 0.28 }} />
         </div>
 
         {/* ── Main title ───────────────────────────────────────── */}
         <div
           style={{
-            fontSize: 104,
+            fontSize: 69,
             fontWeight: 900,
-            letterSpacing: 14,
+            letterSpacing: 9,
             textTransform: 'uppercase',
             color: TEXT_PRI,
-            marginBottom: 32,
+            marginBottom: 21,
             lineHeight: 1,
           }}
         >
@@ -87,25 +68,10 @@ export default async function OgImage() {
         </div>
 
         {/* ── Gold divider ─────────────────────────────────────── */}
-        <div
-          style={{
-            width: 560,
-            height: 1,
-            backgroundColor: GOLD,
-            opacity: 0.30,
-            marginBottom: 36,
-          }}
-        />
+        <div style={{ width: 373, height: 1, backgroundColor: GOLD, opacity: 0.30, marginBottom: 24 }} />
 
-        {/* ── Tagline — three natural clauses ──────────────────── */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
+        {/* ── Tagline ──────────────────────────────────────────── */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
           {[
             'Document your collection,',
             'run a club league,',
@@ -114,9 +80,9 @@ export default async function OgImage() {
             <div
               key={i}
               style={{
-                fontSize: 26,
+                fontSize: 17,
                 fontWeight: 400,
-                letterSpacing: 3,
+                letterSpacing: 2,
                 color: i === 2 ? GOLD_BRT : TEXT_SEC,
                 textAlign: 'center',
               }}
@@ -127,31 +93,12 @@ export default async function OgImage() {
         </div>
 
         {/* ── Bottom ornament + domain ──────────────────────────── */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 20,
-            marginTop: 48,
-          }}
-        >
-          {/* Left rule */}
-          <div style={{ width: 80, height: 1, backgroundColor: GOLD, opacity: 0.22 }} />
-          {/* Domain */}
-          <div
-            style={{
-              fontSize: 16,
-              fontWeight: 700,
-              letterSpacing: 5,
-              textTransform: 'uppercase',
-              color: GOLD,
-              opacity: 0.75,
-            }}
-          >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginTop: 32 }}>
+          <div style={{ width: 53, height: 1, backgroundColor: GOLD, opacity: 0.22 }} />
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', color: GOLD, opacity: 0.75 }}>
             battlesphere.cc
           </div>
-          {/* Right rule */}
-          <div style={{ width: 80, height: 1, backgroundColor: GOLD, opacity: 0.22 }} />
+          <div style={{ width: 53, height: 1, backgroundColor: GOLD, opacity: 0.22 }} />
         </div>
 
       </div>
