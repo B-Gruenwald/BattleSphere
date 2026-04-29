@@ -7,7 +7,6 @@ import UnitPortraitHero from '@/app/components/UnitPortraitHero';
 import UnitPhotosViewer from '@/app/components/UnitPhotosViewer';
 
 // ── Dynamic metadata (title, description, og:image, twitter card) ───────────
-// opengraph-image.js in this same folder supplies the og:image automatically.
 export async function generateMetadata({ params }) {
   const { id } = await params;
   const admin  = createAdminClient();
@@ -44,6 +43,8 @@ export async function generateMetadata({ params }) {
     ? rawDesc.slice(0, 197).trimEnd() + '…'
     : rawDesc;
 
+  const ogImageUrl = `${process.env.NEXT_PUBLIC_APP_URL}/units/${id}/opengraph-image`;
+
   return {
     title,
     description,
@@ -52,11 +53,13 @@ export async function generateMetadata({ params }) {
       description,
       type:      'article',
       siteName:  'BattleSphere',
+      images: [{ url: ogImageUrl, width: 1200, height: 630, type: 'image/png', alt: title }],
     },
     twitter: {
       card:        'summary_large_image',
       title,
       description,
+      images: [ogImageUrl],
     },
   };
 }
