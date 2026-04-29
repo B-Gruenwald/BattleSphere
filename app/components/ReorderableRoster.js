@@ -56,53 +56,61 @@ export default function ReorderableRoster({ initialUnits, armyId, isOwner, photo
           return (
             <div key={unit.id} style={{ border: '1px solid var(--border-dim)', display: 'flex', alignItems: 'stretch' }}>
 
+              {/* Portrait thumbnail — left edge, full-height square */}
+              {firstPhoto ? (
+                <div
+                  onClick={() => setLightbox(firstPhoto.url)}
+                  title="View photo"
+                  style={{
+                    width: '100px', flexShrink: 0,
+                    overflow: 'hidden', cursor: 'zoom-in',
+                    borderRight: '1px solid var(--border-dim)',
+                  }}
+                >
+                  <img
+                    src={firstPhoto.url}
+                    alt=""
+                    style={{
+                      width: '100%', height: '100%',
+                      objectFit: 'cover',
+                      objectPosition: firstPhoto.focal_point === 'top' ? 'center top'
+                        : firstPhoto.focal_point === 'bottom' ? 'center bottom'
+                        : 'center',
+                      display: 'block',
+                    }}
+                  />
+                </div>
+              ) : (
+                /* No photo: narrow placeholder so layout stays consistent */
+                <div style={{
+                  width: '4px', flexShrink: 0,
+                  background: 'var(--border-dim)',
+                }} />
+              )}
+
               {/* Content area */}
-              <div style={{ flex: 1, padding: '1rem 1.25rem' }}>
+              <div style={{ flex: 1, padding: '0.85rem 1rem', overflow: 'hidden' }}>
 
-                {/* Header row: name + type + thumbnail */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: unit.description ? '0.5rem' : 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem', flexWrap: 'wrap' }}>
-                    <h3 style={{ fontSize: '0.95rem', fontWeight: '700', letterSpacing: '0.04em', color: 'var(--text-primary)' }}>
-                      <Link
-                        href={`/units/${unit.id}`}
-                        style={{ color: 'inherit', textDecoration: 'none', borderBottom: '1px dotted var(--border-subtle)' }}
-                        title="View unit portrait"
-                      >
-                        {unit.name}
-                      </Link>
-                    </h3>
-                    {unit.unit_type && (
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                        {unit.unit_type}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* First-photo thumbnail — inline in header row */}
-                  {firstPhoto && (
-                    <div
-                      onClick={() => setLightbox(firstPhoto.url)}
-                      title="View photo"
-                      style={{ width: '44px', height: '44px', flexShrink: 0, overflow: 'hidden', cursor: 'zoom-in', border: '1px solid var(--border-dim)' }}
+                {/* Name + type */}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.6rem', flexWrap: 'wrap', marginBottom: unit.description ? '0.4rem' : 0 }}>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: '700', letterSpacing: '0.04em', color: 'var(--text-primary)' }}>
+                    <Link
+                      href={`/units/${unit.id}`}
+                      style={{ color: 'inherit', textDecoration: 'none', borderBottom: '1px dotted var(--border-subtle)' }}
+                      title="View unit portrait"
                     >
-                      <img
-                        src={firstPhoto.url}
-                        alt=""
-                        style={{
-                          width: '100%', height: '100%',
-                          objectFit: 'cover',
-                          objectPosition: firstPhoto.focal_point === 'top' ? 'center top'
-                            : firstPhoto.focal_point === 'bottom' ? 'center bottom'
-                            : 'center',
-                          display: 'block',
-                        }}
-                      />
-                    </div>
+                      {unit.name}
+                    </Link>
+                  </h3>
+                  {unit.unit_type && (
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                      {unit.unit_type}
+                    </span>
                   )}
                 </div>
 
                 {unit.description && (
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0 }}>
                     {unit.description}
                   </p>
                 )}
