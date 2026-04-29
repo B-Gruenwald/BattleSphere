@@ -81,10 +81,11 @@ export default function ReorderableRoster({ initialUnits, armyId, isOwner, photo
                   />
                 </div>
               ) : (
-                /* No photo: narrow placeholder so layout stays consistent */
+                /* No photo: same width as photo column so rows stay aligned */
                 <div style={{
-                  width: '4px', flexShrink: 0,
-                  background: 'var(--border-dim)',
+                  width: '100px', flexShrink: 0,
+                  borderRight: '1px solid var(--border-dim)',
+                  background: 'rgba(255,255,255,0.01)',
                 }} />
               )}
 
