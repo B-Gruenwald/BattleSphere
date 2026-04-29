@@ -55,7 +55,17 @@ export default async function EventDetailPage({ params }) {
     .single();
   const isOrganiser = campaign.organiser_id === user.id
     || ['organiser', 'admin'].includes(myMembership?.role);
-  const statusColour = STATUS_COLOURS[ev.status] ?? 'var(--text-muted)';
+
+  // Compute effective status (mirrors the logic in the events list page)
+  function effectiveStatus(ev) {
+    if (ev.status === 'resolved') return 'resolved';
+    if (ev.ends_at && new Date(ev.ends_at) < new Date()) return 'resolved';
+    if (ev.status === 'upcoming') return 'upcoming';
+    if (ev.starts_at && new Date(ev.starts_at) > new Date()) return 'upcoming';
+    return 'active';
+  }
+  const evStatus = effectiveStatus(ev);
+  const statusColour = STATUS_COLOURS[evStatus] ?? 'var(--text-muted)';
 
   const createdDate = new Date(ev.created_at).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'long', year: 'numeric',
@@ -120,7 +130,7 @@ export default async function EventDetailPage({ params }) {
           border: `1px solid ${statusColour}50`,
           padding: '0.2rem 0.6rem',
         }}>
-          {ev.status}
+          {evStatus}
         </span>
         <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
           {TYPE_LABELS[ev.event_type] ?? ev.event_type}

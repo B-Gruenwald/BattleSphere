@@ -109,6 +109,10 @@ export default function EventForm({
   const [endsAt,             setEndsAt]             = useState(
     existingEvent?.ends_at ? existingEvent.ends_at.slice(0, 16) : ''
   );
+  // Guards: when editing, require the organiser to explicitly enable date fields
+  // before they can be changed — prevents accidental overwrite via browser date-picker.
+  const [startsAtEnabled,    setStartsAtEnabled]    = useState(!isEditing || !!existingEvent?.starts_at);
+  const [endsAtEnabled,      setEndsAtEnabled]      = useState(!isEditing || !!existingEvent?.ends_at);
 
   // ── Influence bonus state ────────────────────────────────────────────────────
   const hasExistingBonus = existingEvent?.influence_bonus != null;
@@ -143,8 +147,8 @@ export default function EventForm({
       body:               body.trim() || null,
       event_type:         eventType,
       status,
-      starts_at:          startsAt || null,
-      ends_at:            endsAt || null,
+      starts_at:          startsAtEnabled ? (startsAt || null) : null,
+      ends_at:            endsAtEnabled   ? (endsAt   || null) : null,
       // Influence bonus — null out all fields when bonus is disabled
       influence_bonus:          bonusEnabled ? (parseInt(influenceBonus) || 1) : null,
       bonus_territory_ids:      bonusEnabled && bonusTerritoryIds.length    > 0 ? bonusTerritoryIds    : null,
@@ -250,22 +254,84 @@ export default function EventForm({
       {/* Start / End dates */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
         <div>
-          <label style={labelStyle}>Starts At (optional)</label>
-          <input
-            type="datetime-local"
-            value={startsAt}
-            onChange={e => setStartsAt(e.target.value)}
-            style={inputStyle}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
+            <label style={{ ...labelStyle, marginBottom: 0 }}>Starts At</label>
+            {isEditing && (
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !startsAtEnabled;
+                  setStartsAtEnabled(next);
+                  if (!next) setStartsAt('');
+                }}
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.5rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: startsAtEnabled ? 'var(--text-muted)' : 'var(--text-gold)',
+                  background: 'transparent',
+                  border: '1px solid var(--border-subtle)',
+                  padding: '0.15rem 0.45rem',
+                  cursor: 'pointer',
+                }}
+              >
+                {startsAtEnabled ? 'Clear' : 'Set date'}
+              </button>
+            )}
+          </div>
+          {startsAtEnabled ? (
+            <input
+              type="datetime-local"
+              value={startsAt}
+              onChange={e => setStartsAt(e.target.value)}
+              style={inputStyle}
+            />
+          ) : (
+            <div style={{ ...inputStyle, color: 'var(--text-muted)', fontStyle: 'italic', display: 'flex', alignItems: 'center' }}>
+              No start date set
+            </div>
+          )}
         </div>
         <div>
-          <label style={labelStyle}>Ends At (optional)</label>
-          <input
-            type="datetime-local"
-            value={endsAt}
-            onChange={e => setEndsAt(e.target.value)}
-            style={inputStyle}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
+            <label style={{ ...labelStyle, marginBottom: 0 }}>Ends At</label>
+            {isEditing && (
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !endsAtEnabled;
+                  setEndsAtEnabled(next);
+                  if (!next) setEndsAt('');
+                }}
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.5rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: endsAtEnabled ? 'var(--text-muted)' : 'var(--text-gold)',
+                  background: 'transparent',
+                  border: '1px solid var(--border-subtle)',
+                  padding: '0.15rem 0.45rem',
+                  cursor: 'pointer',
+                }}
+              >
+                {endsAtEnabled ? 'Clear' : 'Set date'}
+              </button>
+            )}
+          </div>
+          {endsAtEnabled ? (
+            <input
+              type="datetime-local"
+              value={endsAt}
+              onChange={e => setEndsAt(e.target.value)}
+              style={inputStyle}
+            />
+          ) : (
+            <div style={{ ...inputStyle, color: 'var(--text-muted)', fontStyle: 'italic', display: 'flex', alignItems: 'center' }}>
+              No end date set
+            </div>
+          )}
         </div>
       </div>
 
