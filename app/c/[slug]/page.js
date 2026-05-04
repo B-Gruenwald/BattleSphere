@@ -18,6 +18,7 @@ export default async function CampaignDashboard({ params }) {
   const supabase  = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
+  const now = new Date().toISOString();
 
   // ── Campaign ──────────────────────────────────────────────
   const { data: campaign } = await supabase
@@ -48,7 +49,9 @@ export default async function CampaignDashboard({ params }) {
     .select('*', { count: 'exact', head: true }).eq('campaign_id', campaign.id);
   const { count: activeEventCount } = await supabase.from('campaign_events')
     .select('*', { count: 'exact', head: true })
-    .eq('campaign_id', campaign.id).eq('status', 'active');
+    .eq('campaign_id', campaign.id).eq('status', 'active')
+    .or(`ends_at.is.null,ends_at.gt.${now}`)
+    .or(`starts_at.is.null,starts_at.lte.${now}`);
 
   // ── All battles (faction standings + player XP) ───────────
   const { data: allBattles } = await supabase
@@ -57,10 +60,13 @@ export default async function CampaignDashboard({ params }) {
     .eq('campaign_id', campaign.id);
 
   // ── Active + upcoming events (events strip) ───────────────
+  // Exclude events past their ends_at, even if DB status is still 'active'.
+  // Exclude events whose starts_at is in the future only if status is not 'upcoming'.
   const { data: activeEvents } = await supabase
     .from('campaign_events').select('*')
     .eq('campaign_id', campaign.id)
     .in('status', ['active', 'upcoming'])
+    .or(`ends_at.is.null,ends_at.gt.${now}`)
     .order('created_at', { ascending: false })
     .limit(8);
 
@@ -304,7 +310,9 @@ export default async function CampaignDashboard({ params }) {
           </div>
           <div className="events-grid">
             {activeEvents.map(ev => {
-              const isActive = ev.status === 'active';
+              // Treat as active only if status is 'active' AND starts_at has passed (or is unset)
+              const isActive = ev.status === 'active' &&
+                (!ev.starts_at || ev.starts_at <= now);
               const statusColour = isActive ? '#4caf75' : STATUS_COLOURS.upcoming;
               const endWeek = ev.end_week ?? ev.week_end ?? null;
               return (
