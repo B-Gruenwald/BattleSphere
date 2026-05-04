@@ -3,11 +3,13 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
 /**
- * Supabase auth callback — exchanges the one-time code in the confirmation
- * email for a real session, then redirects the user into the app.
+ * Supabase auth callback — exchanges the one-time code for a real session,
+ * then redirects the user into the app.
  *
- * Supabase sends confirmation emails to:
- *   https://battle-sphere-topaz.vercel.app/auth/callback?code=...&next=/dashboard
+ * Also handles first-time Discord OAuth sign-ups:
+ *   - Sets username from Discord's 'name' field if profile has none
+ *   - Applies default newsletter preferences
+ *   - Fires the welcome email
  */
 export async function GET(request) {
   const requestUrl = new URL(request.url);
@@ -35,13 +37,63 @@ export async function GET(request) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
-      // Exchange failed — redirect to login with an error hint
       const url = new URL('/login', requestUrl.origin);
       url.searchParams.set('error', 'confirmation_failed');
       return NextResponse.redirect(url);
     }
+
+    // ── New Discord user setup ───────────────────────────────────────────────
+    // Check if this is a brand-new Discord sign-up (created within the last
+    // 3 minutes — reliably distinguishes first login from returning users).
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const isDiscord = user?.app_metadata?.provider === 'discord';
+      const isNew = user?.created_at &&
+        (Date.now() - new Date(user.created_at).getTime()) < 3 * 60 * 1000;
+
+      if (user && isDiscord && isNew) {
+        // Discord puts the username in user_metadata.name (or full_name)
+        const discordName =
+          user.user_metadata?.name ||
+          user.user_metadata?.full_name ||
+          null;
+
+        // Set username on profile if the trigger left it null
+        if (discordName) {
+          await supabase
+            .from('profiles')
+            .update({ username: discordName })
+            .eq('id', user.id)
+            .is('username', null);
+        }
+
+        // Apply default newsletter preferences (only if never set before)
+        await supabase
+          .from('profiles')
+          .update({
+            optin_platform_news:    true,
+            optin_campaign_digests: true,
+            digest_frequency:       'weekly',
+          })
+          .eq('id', user.id)
+          .is('optin_platform_news', null);
+
+        // Fire welcome email — non-blocking, errors are swallowed
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin;
+        fetch(`${appUrl}/api/send-welcome-email`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            email:    user.email,
+            username: discordName || user.email,
+          }),
+        }).catch(() => {});
+      }
+    } catch (_) {
+      // Non-fatal — never block the redirect because of setup errors
+    }
+    // ────────────────────────────────────────────────────────────────────────
   }
 
-  // Successful — send the user to dashboard (or wherever they were headed)
   return NextResponse.redirect(new URL(next, requestUrl.origin));
 }
