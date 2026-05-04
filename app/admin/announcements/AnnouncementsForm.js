@@ -102,6 +102,16 @@ export default function AnnouncementsForm({ announcements: initial, authorId }) 
     return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   }
 
+  // Compute the next Friday (UTC) the digest cron will run
+  function nextDigestFriday() {
+    const now = new Date();
+    const day = now.getUTCDay(); // 0=Sun … 5=Fri … 6=Sat
+    const daysUntilFriday = day === 5 ? 7 : (5 - day + 7) % 7;
+    const next = new Date(now);
+    next.setUTCDate(now.getUTCDate() + daysUntilFriday);
+    return next.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  }
+
   return (
     <div>
       {/* ── Formatting guide ── */}
@@ -256,8 +266,34 @@ export default function AnnouncementsForm({ announcements: initial, authorId }) 
                     }}>
                       {a.body}
                     </div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-                      Queued {formatDate(a.created_at)}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.2rem' }}>
+                      <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                        Queued {formatDate(a.created_at)}
+                      </span>
+                      {a.sent_at ? (
+                        <span style={{
+                          fontSize: '0.7rem',
+                          fontWeight: '600',
+                          color: '#6dbf7e',
+                          background: 'rgba(109,191,126,0.1)',
+                          border: '1px solid rgba(109,191,126,0.3)',
+                          padding: '0.15rem 0.5rem',
+                          letterSpacing: '0.04em',
+                        }}>
+                          ✓ Sent {formatDate(a.sent_at)}
+                        </span>
+                      ) : (
+                        <span style={{
+                          fontSize: '0.7rem',
+                          color: 'var(--text-gold)',
+                          background: 'rgba(183,140,64,0.08)',
+                          border: '1px solid rgba(183,140,64,0.25)',
+                          padding: '0.15rem 0.5rem',
+                          letterSpacing: '0.04em',
+                        }}>
+                          Pending — next digest {nextDigestFriday()}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <button

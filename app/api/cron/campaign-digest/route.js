@@ -60,6 +60,7 @@ export async function GET(request) {
 
   let sent = 0;
   const errors = [];
+  const sentAnnouncementIds = new Set(); // track which announcements go out
 
   for (const profile of eligible) {
     try {
@@ -176,10 +177,22 @@ export async function GET(request) {
         .update({ last_digest_sent_at: now.toISOString() })
         .eq('id', profile.id);
 
+      // Track which announcements were included in this send
+      for (const a of platformItems) sentAnnouncementIds.add(a.id);
+
       sent++;
     } catch (err) {
       errors.push({ userId: profile.id, error: err.message });
     }
+  }
+
+  // Stamp sent_at on any announcements that went out for the first time
+  if (sentAnnouncementIds.size > 0) {
+    await supabase
+      .from('platform_announcements')
+      .update({ sent_at: now.toISOString() })
+      .in('id', [...sentAnnouncementIds])
+      .is('sent_at', null);
   }
 
   console.log(`campaign-digest cron: sent=${sent}, errors=${errors.length}`);
