@@ -288,6 +288,29 @@ export default function BattleLogForm({ campaign, territories, factions, members
       await uploadPhotosForBattle(battle.id);
     }
 
+    // Discord notification — fire-and-forget, never blocks navigation
+    const attackerFaction = factions.find(f => f.id === attackerFactionId);
+    const defenderFaction = factions.find(f => f.id === defenderFactionId);
+    const territory       = territories.find(t => t.id === territoryId);
+    fetch('/api/discord/notify', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        type:             'battle',
+        campaignId:       campaign.id,
+        campaignSlug:     campaign.slug,
+        battleId:         battle.id,
+        headline:         headline.trim() || null,
+        attackerName:     attackerFaction?.name ?? 'Unknown',
+        defenderName:     defenderFaction?.name ?? 'Unknown',
+        winnerFactionId:  winnerFactionId  || null,
+        attackerFactionId,
+        attackerScore:    attackerScore ? parseInt(attackerScore) : 0,
+        defenderScore:    defenderScore ? parseInt(defenderScore) : 0,
+        territoryName:    territory?.name ?? null,
+      }),
+    }).catch(() => {});
+
     router.push(`/c/${campaign.slug}/battle/${battle.id}`);
   }
 

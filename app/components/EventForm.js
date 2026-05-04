@@ -183,6 +183,20 @@ export default function EventForm({
       return;
     }
 
+    // Discord notification for new events only (not edits)
+    if (!isEditing) {
+      fetch('/api/discord/notify', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          type:        'event',
+          campaignId:  campaign.id,
+          campaignSlug: campaign.slug,
+          event:       result.data,
+        }),
+      }).catch(() => {});
+    }
+
     router.push(`/c/${campaign.slug}/events/${result.data.id}`);
     router.refresh();
   }

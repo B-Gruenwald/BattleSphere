@@ -40,6 +40,14 @@ export default function AdminCampaignSettings({ campaign, slug }) {
   const [saved,         setSaved]         = useState(false);
   const [error,         setError]         = useState('');
 
+  // Discord webhook state
+  const [webhookUrl,     setWebhookUrl]    = useState(campaign.discord_webhook_url || '');
+  const [webhookSaving,  setWebhookSaving] = useState(false);
+  const [webhookSaved,   setWebhookSaved]  = useState(false);
+  const [webhookError,   setWebhookError]  = useState('');
+  const [webhookTesting, setWebhookTesting] = useState(false);
+  const [webhookTestMsg, setWebhookTestMsg] = useState('');
+
   // Rename modal state
   const [pendingSetting,  setPendingSetting]  = useState(null);
   const [showRenameModal, setShowRenameModal] = useState(false);
@@ -157,6 +165,41 @@ export default function AdminCampaignSettings({ campaign, slug }) {
     setRenaming(false);
     setShowRenameModal(false);
     setPendingSetting(null);
+  }
+
+  async function saveWebhook() {
+    setWebhookSaving(true);
+    setWebhookSaved(false);
+    setWebhookError('');
+    const { error: err } = await supabase
+      .from('campaigns')
+      .update({ discord_webhook_url: webhookUrl.trim() || null })
+      .eq('id', campaign.id);
+    setWebhookSaving(false);
+    if (err) {
+      setWebhookError(err.message);
+    } else {
+      setWebhookSaved(true);
+      setTimeout(() => setWebhookSaved(false), 3000);
+    }
+  }
+
+  async function testWebhook() {
+    setWebhookTesting(true);
+    setWebhookTestMsg('');
+    try {
+      const res = await fetch('/api/discord/notify', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ type: 'test', campaignId: campaign.id, campaignSlug: slug }),
+      });
+      const data = await res.json();
+      setWebhookTestMsg(data.ok ? '✓ Test message sent — check your channel!' : (data.reason || 'Something went wrong'));
+    } catch (_) {
+      setWebhookTestMsg('Could not reach the server.');
+    }
+    setWebhookTesting(false);
+    setTimeout(() => setWebhookTestMsg(''), 5000);
   }
 
   const inputStyle = {
@@ -351,6 +394,70 @@ export default function AdminCampaignSettings({ campaign, slug }) {
             <span style={{ color: '#e05a5a', fontSize: '0.82rem' }}>{error}</span>
           )}
         </div>
+      </div>
+
+      {/* ── Discord Integration ──────────────────────────────────────────── */}
+      <div style={{ marginTop: '2.5rem', paddingTop: '2rem', borderTop: '1px solid var(--border-dim)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
+          {/* Discord blurple dot */}
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#5865F2', flexShrink: 0 }} />
+          <p style={{
+            fontFamily: 'var(--font-display)', fontSize: '0.52rem',
+            letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)',
+            margin: 0,
+          }}>
+            Discord Integration
+          </p>
+        </div>
+        <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+          Post battle results, new bulletin dispatches, and campaign events to a Discord channel automatically.
+          Paste a Discord webhook URL below — you can create one in your server under <em>Channel Settings → Integrations → Webhooks</em>.
+        </p>
+
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <input
+            type="url"
+            value={webhookUrl}
+            onChange={e => setWebhookUrl(e.target.value)}
+            placeholder="https://discord.com/api/webhooks/…"
+            style={{ ...inputStyle, flex: '1 1 300px', fontSize: '1rem' }}
+            onFocus={e => e.target.style.borderColor = '#5865F2'}
+            onBlur={e => e.target.style.borderColor = 'var(--border-dim)'}
+          />
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={saveWebhook}
+            disabled={webhookSaving}
+            style={{ opacity: webhookSaving ? 0.5 : 1, whiteSpace: 'nowrap' }}
+          >
+            {webhookSaving ? 'Saving…' : 'Save'}
+          </button>
+          {webhookUrl.trim() && (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={testWebhook}
+              disabled={webhookTesting}
+              style={{ opacity: webhookTesting ? 0.5 : 1, whiteSpace: 'nowrap' }}
+            >
+              {webhookTesting ? 'Sending…' : 'Send test'}
+            </button>
+          )}
+        </div>
+
+        {webhookSaved && (
+          <p style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-gold)' }}>✓ Webhook saved</p>
+        )}
+        {webhookError && (
+          <p style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#e05a5a' }}>{webhookError}</p>
+        )}
+        {webhookTestMsg && (
+          <p style={{
+            marginTop: '0.5rem', fontSize: '0.8rem',
+            color: webhookTestMsg.startsWith('✓') ? 'var(--text-gold)' : '#e05a5a',
+          }}>{webhookTestMsg}</p>
+        )}
       </div>
     </>
   );

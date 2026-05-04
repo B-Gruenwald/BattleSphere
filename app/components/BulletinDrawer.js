@@ -121,6 +121,12 @@ export default function BulletinDrawer({
       setLiveDispatch(data);
       setIsEditing(false);
       setIsNewDispatch(false);
+      // Discord notification for new dispatch
+      fetch('/api/discord/notify', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ type: 'bulletin', campaignId, campaignSlug, dispatch: data }),
+      }).catch(() => {});
 
     } else if (liveDispatch?.id) {
       // UPDATE existing dispatch
@@ -162,6 +168,12 @@ export default function BulletinDrawer({
       if (error) { setSaveError(error.message); return; }
       setLiveDispatch(data);
       setIsEditing(false);
+      // Discord notification for first-ever dispatch
+      fetch('/api/discord/notify', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ type: 'bulletin', campaignId, campaignSlug, dispatch: data }),
+      }).catch(() => {});
     }
   }
 
