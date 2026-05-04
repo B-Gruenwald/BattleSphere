@@ -56,6 +56,10 @@ export default async function EventDetailPage({ params }) {
     .single();
   const isOrganiser = campaign.organiser_id === user.id
     || ['organiser', 'admin'].includes(myMembership?.role);
+  const isMember = !!myMembership;
+
+  // Logged-in non-members land on the public campaign page
+  if (!isMember && !isOrganiser) redirect(`/campaign/${slug}`);
 
   // Compute effective status (mirrors the logic in the events list page)
   function effectiveStatus(ev) {

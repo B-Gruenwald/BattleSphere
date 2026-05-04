@@ -171,6 +171,9 @@ export default async function CampaignDashboard({ params }) {
     || ['organiser', 'admin'].includes(myMembership?.role);
   const isMember = !!myMembership;
 
+  // Logged-in users who aren't campaign members also land on the public page
+  if (!isMember && !isOrganiser) redirect(`/campaign/${slug}`);
+
   // ── Current act label (stats bar) ────────────────────────
   const { data: currentBulletinRows } = await supabase
     .from('bulletin_dispatches').select('act_label')
