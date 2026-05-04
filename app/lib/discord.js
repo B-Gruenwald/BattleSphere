@@ -66,19 +66,29 @@ export function buildBulletinEmbed({ dispatch, campaignName, campaignSlug }) {
   const title   = dispatch.title
     ? `Dispatch #${dispatch.dispatch_number} — ${dispatch.title}`
     : `Dispatch #${dispatch.dispatch_number}`;
-  const excerpt = dispatch.body
-    ? dispatch.body.replace(/\[\[.*?\]\]/g, '').replace(/##\s?/g, '').slice(0, 220).trimEnd() +
-      (dispatch.body.length > 220 ? '…' : '')
-    : null;
+
+  // Strip wiki-style [[Target|Display]] links → keep display text only,
+  // then strip ## headings. Matches the digest email's excerpt() behaviour.
+  const cleaned = dispatch.body
+    ? dispatch.body
+        .replace(/\[\[([^\]]*)\]\]/g, (_, inner) => {
+          const parts = inner.split('|');
+          return parts[parts.length - 1];   // keep the label after the pipe
+        })
+        .replace(/##\s?/g, '')
+    : '';
+  const excerpt = cleaned.length > 220
+    ? cleaned.slice(0, 220).trimEnd() + '…'
+    : cleaned || null;
 
   return {
     embeds: [{
-      title:     `📋 ${title}`,
+      title:       `📋 ${title}`,
       description: excerpt || null,
-      color:     GOLD,
-      url:       `${APP_URL}/campaign/${campaignSlug}`,
-      footer:    { text: `BattleSphere · ${campaignName}` },
-      timestamp: new Date().toISOString(),
+      color:       GOLD,
+      url:         `${APP_URL}/c/${campaignSlug}`,   // private dashboard, not public page
+      footer:      { text: `BattleSphere · ${campaignName}` },
+      timestamp:   new Date().toISOString(),
     }],
   };
 }

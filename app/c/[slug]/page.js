@@ -17,7 +17,8 @@ export default async function CampaignDashboard({ params }) {
   const { slug } = await params;
   const supabase  = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  // Non-logged-in users (e.g. clicking a Discord link) land on the public page
+  if (!user) redirect(`/campaign/${slug}`);
   const now = new Date().toISOString();
 
   // ── Campaign ──────────────────────────────────────────────
