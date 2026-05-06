@@ -36,7 +36,8 @@ export async function generateMetadata({ params }) {
     : `${attackerName} vs ${defenderName} — ${campaign.name}`;
 
   const description = `${resultText} · ${attackerName} vs ${defenderName}`
-    + (battle.narrative ? ` · "${battle.narrative.slice(0, 80)}…"` : '');
+    + (battle.narrative ? ` · "${battle.narrative.slice(0, 80)}…"` : '')
+    + ` — ${campaign.name} on BattleSphere.`;
 
   const ogImageUrl = `${process.env.NEXT_PUBLIC_APP_URL}/c/${slug}/battle/${id}/opengraph-image`;
 

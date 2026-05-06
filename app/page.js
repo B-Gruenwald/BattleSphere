@@ -1,6 +1,20 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 
+// ── Structured data for search engines ──────────────────────────────────────
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'BattleSphere',
+  url: 'https://www.battlesphere.cc',
+  description:
+    'Free narrative campaign platform for Warhammer 40,000, Age of Sigmar, and tabletop wargaming. Track Crusade rosters, run map-based campaigns, log battles, and showcase your painted armies.',
+  applicationCategory: 'GameApplication',
+  operatingSystem: 'Web',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  audience: { '@type': 'Audience', audienceType: 'Wargamers, tabletop hobbyists, Warhammer 40k players, Age of Sigmar players' },
+};
+
 const ARMY_DEMO_URL      = '/armies/b0e70783-09ee-4eeb-9b99-9bd425ced524';
 const CAMPAIGN_DEMO_SLUG = 'austriacus-subsector-93n4g';
 const LEAGUE_DEMO_SLUG   = 'home-game-league-anpa6';
@@ -11,6 +25,10 @@ export default async function HomePage() {
 
   return (
     <div style={{ color: 'var(--text-primary)' }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
       {/* ══ MASTHEAD ══════════════════════════════════════════════════════════
           Horizontal band: brand left, one-line pitch + CTAs right.
@@ -90,12 +108,12 @@ export default async function HomePage() {
               fontSize: '0.9rem',
               fontStyle: 'italic',
               color: 'var(--text-secondary)',
-              maxWidth: '340px',
+              maxWidth: '360px',
               lineHeight: 1.55,
               margin: 0,
             }}>
-              Document your collection, run a club league,
-              or build a living narrative campaign.
+              Run Warhammer 40k Crusade campaigns, track Age of Sigmar
+              narrative play, manage your club league — free, forever.
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', flexShrink: 0 }}>
               <Link href="/register">
@@ -154,7 +172,7 @@ export default async function HomePage() {
               marginBottom: '0.85rem',
               opacity: 0.85,
             }}>
-              For the collector &amp; Crusade player
+              For the 40k Crusade &amp; AoS collector
             </div>
 
             <h2 style={{
@@ -178,7 +196,8 @@ export default async function HomePage() {
               flex: 1,
             }}>
               Build a portfolio for your painted force. Give every unit its own portrait page,
-              track your Crusade roster, and share a link that looks the part.
+              track your Warhammer 40k Crusade roster or Age of Sigmar warband,
+              and share a link that looks the part.
               No group required — you can start tonight, on your own.
             </p>
 
@@ -327,7 +346,8 @@ export default async function HomePage() {
             }}>
               Build a living world your group fights over. Interactive maps, territorial
               control, campaign events, a growing chronicle — everything you need to turn
-              a series of games into a story your group will still be talking about.
+              a Warhammer 40k sector war or Age of Sigmar realm campaign into a story
+              your group will still be talking about.
             </p>
 
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>

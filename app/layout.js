@@ -7,21 +7,28 @@ import { Analytics } from '@vercel/analytics/next';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://battlesphere.cc';
 
+const SITE_TITLE       = 'BattleSphere — Warhammer 40k & Age of Sigmar Campaign Tracker';
+const SITE_DESCRIPTION = 'Free narrative campaign platform for Warhammer 40,000, Age of Sigmar, and tabletop wargaming. Track Crusade rosters, run map-based campaigns, log battles, and showcase your painted armies.';
+
 export const metadata = {
-  title: 'BattleSphere',
-  description: 'Document your collection, run a club league, or build a living narrative campaign.',
+  title: {
+    default:  SITE_TITLE,
+    template: '%s · BattleSphere',
+  },
+  description: SITE_DESCRIPTION,
+  metadataBase: new URL(APP_URL),
   openGraph: {
-    title: 'BattleSphere',
-    description: 'Document your collection, run a club league, or build a living narrative campaign.',
-    siteName: 'BattleSphere',
-    type: 'website',
-    images: [{ url: `${APP_URL}/opengraph-image`, width: 1200, height: 630 }],
+    title:       SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    siteName:    'BattleSphere',
+    type:        'website',
+    images: [{ url: `${APP_URL}/opengraph-image`, width: 800, height: 419 }],
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'BattleSphere',
-    description: 'Document your collection, run a club league, or build a living narrative campaign.',
-    images: [`${APP_URL}/opengraph-image`],
+    card:        'summary_large_image',
+    title:       SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images:      [`${APP_URL}/opengraph-image`],
   },
 };
 

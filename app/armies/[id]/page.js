@@ -18,7 +18,7 @@ export async function generateMetadata({ params }) {
   const title       = `${army.name} — Army Portfolio`;
   const description = army.description
     ? army.description.slice(0, 155)
-    : `${army.faction_name ? army.faction_name + ' army' : 'Army'} commanded by ${playerName ?? 'an unknown warlord'} · ${unitCount ?? 0} units`;
+    : `${army.faction_name ? army.faction_name + ' wargaming army' : 'Wargaming army'} on BattleSphere, commanded by ${playerName ?? 'an unknown warlord'}. ${unitCount ?? 0} units with Crusade records, battle history, and photo galleries.`;
 
   const ogImageUrl = `${process.env.NEXT_PUBLIC_APP_URL}/armies/${id}/opengraph-image`;
 

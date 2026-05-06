@@ -38,7 +38,7 @@ export async function generateMetadata({ params }) {
 
   // Prefer the unit's own description; fall back to a sensible default.
   const rawDesc = unit.description || army?.tagline ||
-    `A unit from ${army?.name || 'a BattleSphere army'}${army?.faction_name ? ` (${army.faction_name})` : ''}.`;
+    `${unit.name} — a${army?.faction_name ? ' ' + army.faction_name : ''} unit from ${army?.name || 'a BattleSphere army'}. View Crusade records, battle history, and photos on BattleSphere.`;
   const description = rawDesc.length > 200
     ? rawDesc.slice(0, 197).trimEnd() + '…'
     : rawDesc;

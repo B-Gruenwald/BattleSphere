@@ -37,7 +37,7 @@ export async function generateMetadata({ params }) {
   const title    = `${campaign.name} — BattleSphere ${isLeague ? 'League' : 'Narrative'} Campaign`;
   const desc     = campaign.description
     ? campaign.description.slice(0, 155)
-    : `A ${isLeague ? 'league' : 'narrative'} wargaming campaign${campaign.setting ? ' set in ' + campaign.setting : ''} on BattleSphere.`;
+    : `A ${isLeague ? 'wargaming league' : 'narrative wargaming campaign'}${campaign.setting ? ' set in ' + campaign.setting : ''} on BattleSphere — track battles, territorial control, and chronicle your war's history.`;
 
   const ogImageUrl = `${process.env.NEXT_PUBLIC_APP_URL}/campaign/${slug}/opengraph-image`;
 
