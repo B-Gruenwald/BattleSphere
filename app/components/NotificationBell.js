@@ -17,10 +17,11 @@ function timeAgo(dateStr) {
 }
 
 export default function NotificationBell() {
-  const [open,    setOpen]    = useState(false);
-  const [notifs,  setNotifs]  = useState([]);
-  const [unread,  setUnread]  = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [open,          setOpen]          = useState(false);
+  const [notifs,        setNotifs]        = useState([]);
+  const [unread,        setUnread]        = useState(0);
+  const [loading,       setLoading]       = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState({});
   const dropRef = useRef(null);
 
   const fetchNotifs = useCallback(async () => {
@@ -46,6 +47,24 @@ export default function NotificationBell() {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+
+  // Recalculate dropdown position whenever it opens so it never goes off-screen
+  useEffect(() => {
+    if (!open || !dropRef.current) return;
+    const rect      = dropRef.current.getBoundingClientRect();
+    const vw        = window.innerWidth;
+    const PADDING   = 8; // min gap from screen edge
+    const dropWidth = Math.min(360, vw - PADDING * 2);
+    // Prefer right-aligned with the bell; clamp so left edge stays on screen
+    const idealLeft = rect.right - dropWidth;
+    const left      = Math.max(PADDING, idealLeft);
+    setDropdownStyle({
+      position: 'fixed',
+      top:      rect.bottom + 6,
+      left,
+      width:    dropWidth,
+    });
+  }, [open]);
 
   async function markAllRead() {
     if (!unread) return;
@@ -111,11 +130,13 @@ export default function NotificationBell() {
       {/* ── Dropdown ────────────────────────────────────────────────────────── */}
       {open && (
         <div style={{
-          position: 'absolute', top: 'calc(100% + 0.5rem)', right: 0,
-          width: 'min(360px, calc(100vw - 1rem))',
-          background: 'var(--bg-raised)',
-          border: '1px solid var(--border-subtle)', borderRadius: '8px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5)', zIndex: 1000, overflow: 'hidden',
+          ...dropdownStyle,
+          background:   'var(--bg-raised)',
+          border:       '1px solid var(--border-subtle)',
+          borderRadius: '8px',
+          boxShadow:    '0 8px 32px rgba(0,0,0,0.5)',
+          zIndex:       1000,
+          overflow:     'hidden',
         }}>
 
           {/* Header */}
