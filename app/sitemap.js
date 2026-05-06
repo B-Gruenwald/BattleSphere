@@ -8,66 +8,68 @@ export default async function sitemap() {
 
   // ── 1. Static pages ──────────────────────────────────────────────────────
   const staticUrls = [
-    { url: APP_URL,               lastModified: now, changeFrequency: 'weekly', priority: 1.0 },
+    { url: APP_URL,                lastModified: now, changeFrequency: 'weekly', priority: 1.0 },
     { url: `${APP_URL}/campaigns`, lastModified: now, changeFrequency: 'daily',  priority: 0.9 },
     { url: `${APP_URL}/armies`,    lastModified: now, changeFrequency: 'daily',  priority: 0.9 },
   ];
 
   // ── 2. Public campaign pages ─────────────────────────────────────────────
-  const { data: campaigns } = await admin
-    .from('campaigns')
-    .select('slug, updated_at');
-
-  const campaignUrls = (campaigns || []).map(c => ({
-    url:             `${APP_URL}/campaign/${c.slug}`,
-    lastModified:    c.updated_at || now,
-    changeFrequency: 'daily',
-    priority:        0.8,
-  }));
+  let campaignUrls = [];
+  try {
+    const { data: campaigns } = await admin.from('campaigns').select('*');
+    campaignUrls = (campaigns || []).map(c => ({
+      url:             `${APP_URL}/campaign/${c.slug}`,
+      lastModified:    c.updated_at || now,
+      changeFrequency: 'daily',
+      priority:        0.8,
+    }));
+  } catch (_) {}
 
   // ── 3. Public army portfolio pages ───────────────────────────────────────
-  const { data: armies } = await admin
-    .from('armies')
-    .select('id, updated_at')
-    .eq('is_public', true);
-
-  const armyUrls = (armies || []).map(a => ({
-    url:             `${APP_URL}/armies/${a.id}`,
-    lastModified:    a.updated_at || now,
-    changeFrequency: 'weekly',
-    priority:        0.6,
-  }));
+  let armyUrls = [];
+  let armyIds  = [];
+  try {
+    const { data: armies } = await admin.from('armies').select('*').eq('is_public', true);
+    armyIds   = (armies || []).map(a => a.id);
+    armyUrls  = (armies || []).map(a => ({
+      url:             `${APP_URL}/armies/${a.id}`,
+      lastModified:    a.updated_at || now,
+      changeFrequency: 'weekly',
+      priority:        0.6,
+    }));
+  } catch (_) {}
 
   // ── 4. Unit portrait pages (from public armies only) ─────────────────────
-  const armyIds = (armies || []).map(a => a.id);
   let unitUrls = [];
   if (armyIds.length > 0) {
-    const { data: units } = await admin
-      .from('army_units')
-      .select('id, updated_at')
-      .in('army_id', armyIds);
-
-    unitUrls = (units || []).map(u => ({
-      url:             `${APP_URL}/units/${u.id}`,
-      lastModified:    u.updated_at || now,
-      changeFrequency: 'weekly',
-      priority:        0.5,
-    }));
+    try {
+      const { data: units } = await admin.from('army_units').select('*').in('army_id', armyIds);
+      unitUrls = (units || []).map(u => ({
+        url:             `${APP_URL}/units/${u.id}`,
+        lastModified:    u.updated_at || now,
+        changeFrequency: 'weekly',
+        priority:        0.5,
+      }));
+    } catch (_) {}
   }
 
   // ── 5. Battle record pages ───────────────────────────────────────────────
-  const { data: battles } = await admin
-    .from('battles')
-    .select('id, updated_at, campaigns(slug)');
+  // Two separate queries to avoid join issues
+  let battleUrls = [];
+  try {
+    const { data: campaigns } = await admin.from('campaigns').select('*');
+    const slugMap = Object.fromEntries((campaigns || []).map(c => [c.id, c.slug]));
 
-  const battleUrls = (battles || [])
-    .filter(b => b.campaigns?.slug)
-    .map(b => ({
-      url:             `${APP_URL}/c/${b.campaigns.slug}/battle/${b.id}`,
-      lastModified:    b.updated_at || now,
-      changeFrequency: 'monthly',
-      priority:        0.4,
-    }));
+    const { data: battles } = await admin.from('battles').select('*');
+    battleUrls = (battles || [])
+      .filter(b => slugMap[b.campaign_id])
+      .map(b => ({
+        url:             `${APP_URL}/c/${slugMap[b.campaign_id]}/battle/${b.id}`,
+        lastModified:    b.updated_at || now,
+        changeFrequency: 'monthly',
+        priority:        0.4,
+      }));
+  } catch (_) {}
 
   return [
     ...staticUrls,
