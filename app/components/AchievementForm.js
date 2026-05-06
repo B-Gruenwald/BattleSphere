@@ -94,6 +94,23 @@ export default function AchievementForm({ campaign, factions, members, memberPro
       return;
     }
 
+    // Notify the player recipient — fire-and-forget
+    if (recipientType === 'player' && playerId) {
+      fetch('/api/notifications/create', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientId: playerId,
+          type:        'achievement_awarded',
+          title:       `Achievement unlocked: ${title.trim()}`,
+          body:        description.trim()
+            ? `"${description.trim()}" — awarded in ${campaign.name}.`
+            : `Awarded in ${campaign.name}. Glory to your forces.`,
+          link: `/c/${campaign.slug}/player/${playerId}`,
+        }),
+      }).catch(() => {});
+    }
+
     router.push(`/c/${campaign.slug}/achievements`);
     router.refresh();
   }

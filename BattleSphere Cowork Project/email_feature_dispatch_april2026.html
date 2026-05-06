@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BattleSphere — Feature Dispatch (April 2026 mockup)</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px 20px;
+      background: #e8e8e8;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    .preview-label {
+      text-align: center;
+      font-size: 11px;
+      color: #888;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .note {
+      background: #fff8e1;
+      border-left: 3px solid #f0b429;
+      padding: 12px 16px;
+      font-size: 12px;
+      color: #555;
+      margin: 0 auto 24px;
+      max-width: 600px;
+      line-height: 1.6;
+    }
+    .note strong { color: #333; }
+  </style>
+</head>
+<body>
+
+  <p class="preview-label">↓ Email preview — 600px wide, as it appears in inbox ↓</p>
+
+  <p class="note">
+    <strong>⚠ One placeholder:</strong> The Army Portfolio "View demo army" link uses
+    <code>[DEMO_ARMY_URL]</code> — replace with the actual URL of the demo army linked from
+    the landing page before sending.
+  </p>
+
+  <!-- ============================================================
+       EMAIL STARTS HERE
+       All styles are inline for email-client compatibility.
+       Max width 600px, table-based layout.
+  ============================================================ -->
+  <table width="600" cellpadding="0" cellspacing="0" border="0"
+         style="margin: 0 auto; background: #ffffff; border-radius: 6px;
+                overflow: hidden; box-shadow: 0 2px 16px rgba(0,0,0,0.12);">
+
+    <!-- ── HEADER ── -->
+    <tr>
+      <td style="background: #0f0f1a; padding: 28px 36px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td>
+              <span style="font-family: Georgia, 'Times New Roman', serif;
+                           font-size: 22px; font-weight: bold;
+                           letter-spacing: 0.12em; color: #c9a84c;
+                           text-transform: uppercase;">
+                BattleSphere
+              </span>
+            </td>
+            <td align="right" style="vertical-align: bottom;">
+              <span style="font-size: 11px; color: #7a7a9a;
+                           letter-spacing: 0.06em; text-transform: uppercase;">
+                Platform Dispatch
+              </span>
+            </td>
+          </tr>
+        </table>
+        <div style="height: 1px; background: #c9a84c; margin-top: 16px; opacity: 0.4;"></div>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 12px;">
+          <tr>
+            <td style="font-size: 13px; color: #9898b8;">
+              April 2026
+            </td>
+            <td align="right" style="font-size: 12px; color: #5a5a7a;">
+              Three new capabilities
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- ── INTRO ── -->
+    <tr>
+      <td style="padding: 36px 36px 0;">
+
+        <!-- Diamond ornament -->
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; opacity: 0.35;">
+          <div style="flex: 1; height: 1px; background: #c9a84c;"></div>
+          <div style="width: 5px; height: 5px; background: #c9a84c; transform: rotate(45deg);"></div>
+          <div style="flex: 1; height: 1px; background: #c9a84c;"></div>
+        </div>
+
+        <p style="margin: 0 0 6px; font-size: 11px; font-weight: bold;
+                  letter-spacing: 0.16em; text-transform: uppercase; color: #a07830;">
+          Commander
+        </p>
+        <h1 style="margin: 0 0 20px; font-family: Georgia, 'Times New Roman', serif;
+                   font-size: 24px; font-weight: bold; color: #1a1a2e;
+                   line-height: 1.3; letter-spacing: 0.02em;">
+          The forge has been busy.<br/>Three new capabilities are now live.
+        </h1>
+        <p style="margin: 0 0 20px; font-size: 15px; color: #2d2d3d; line-height: 1.7;">
+          Since launch, you have asked for broader formats, richer events, and a way to
+          document the armies that fight these wars. We listened. All three are now live
+          on BattleSphere — and each one is available in every campaign today.
+        </p>
+      </td>
+    </tr>
+
+    <!-- ════════════════════════════════════════════════
+         FEATURE 1 — LEAGUE CAMPAIGN MANAGEMENT
+    ════════════════════════════════════════════════ -->
+    <tr>
+      <td style="padding: 28px 36px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td>
+              <div style="height: 1px; background: #e0d4b0; margin-bottom: 22px;"></div>
+              <p style="margin: 0 0 6px; font-size: 10px; font-weight: bold;
+                        letter-spacing: 0.16em; text-transform: uppercase; color: #a07830;">
+                New — Format
+              </p>
+              <h2 style="margin: 0 0 14px; font-family: Georgia, 'Times New Roman', serif;
+                         font-size: 20px; font-weight: bold; color: #1a1a2e; line-height: 1.3;">
+                League Campaign Management
+              </h2>
+              <p style="margin: 0 0 16px; font-size: 14px; color: #2d2d3d; line-height: 1.7;">
+                Not every campaign needs a map and a frontline. Some groups prefer a structured
+                competitive league — a fixed season of games, a clean standings table, and a
+                single champion at the end. BattleSphere now supports both.
+              </p>
+              <p style="margin: 0 0 16px; font-size: 14px; color: #2d2d3d; line-height: 1.7;">
+                When you create a League campaign, BattleSphere replaces the map with a live
+                league table: wins, draws, losses, and points, updated automatically as results
+                are logged. Everything else — battle records, chronicles, player profiles, faction
+                standing — carries over exactly as you know it.
+              </p>
+
+              <!-- Quote / callout -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background: #f7f4ee; border-left: 3px solid #c9a84c;
+                            border-radius: 3px; margin-bottom: 18px;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <p style="margin: 0; font-size: 14px; color: #2d2d3d; line-height: 1.6;
+                              font-style: italic;">
+                      "Create your campaign, choose League format, invite your players.
+                      The table builds itself from the first result you log."
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <a href="https://www.battlesphere.cc/campaign/home-game-league-anpa6"
+                 style="display: inline-block; padding: 11px 24px;
+                        background: #0f0f1a; color: #c9a84c;
+                        font-size: 11px; font-weight: bold;
+                        letter-spacing: 0.12em; text-transform: uppercase;
+                        text-decoration: none; border-radius: 2px; margin-bottom: 4px;">
+                View the demo league →
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- ════════════════════════════════════════════════
+         FEATURE 2 — CAMPAIGN EVENTS
+    ════════════════════════════════════════════════ -->
+    <tr>
+      <td style="padding: 28px 36px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td>
+              <div style="height: 1px; background: #e0d4b0; margin-bottom: 22px;"></div>
+              <p style="margin: 0 0 6px; font-size: 10px; font-weight: bold;
+                        letter-spacing: 0.16em; text-transform: uppercase; color: #a07830;">
+                New — Narrative Campaigns
+              </p>
+              <h2 style="margin: 0 0 14px; font-family: Georgia, 'Times New Roman', serif;
+                         font-size: 20px; font-weight: bold; color: #1a1a2e; line-height: 1.3;">
+                Dynamic Campaign Events
+              </h2>
+              <p style="margin: 0 0 16px; font-size: 14px; color: #2d2d3d; line-height: 1.7;">
+                A campaign without stakes is just a scoreboard. Events are how the organiser
+                makes every game matter. Post a campaign event — a sudden offensive, a warp storm,
+                a desperate last stand — and define exactly what it means on the map.
+              </p>
+              <p style="margin: 0 0 16px; font-size: 14px; color: #2d2d3d; line-height: 1.7;">
+                Events can now carry mechanical weight. Attach a bonus that fires automatically
+                when a qualifying battle is logged while the event is active — based on which
+                territory was contested, which battle type was played, or which faction was
+                involved. Stack conditions freely.
+              </p>
+              <p style="margin: 0 0 16px; font-size: 14px; color: #2d2d3d; line-height: 1.7;">
+                Go further with a Territory Cascade: designate a key world as the trigger.
+                When a faction conquers it, the bonus cascades instantly to every star system
+                connected by warp route — rewarding strategic ambition without manual bookkeeping.
+              </p>
+
+              <!-- Quote / callout -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background: #f7f4ee; border-left: 3px solid #c9a84c;
+                            border-radius: 3px; margin-bottom: 18px;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <p style="margin: 0; font-size: 14px; color: #2d2d3d; line-height: 1.6;
+                              font-style: italic;">
+                      "The Council has declared a Crusade. Every battle fought in the outer
+                      systems now carries double influence — and one key world will decide
+                      who holds the entire rimward flank."
+                    </p>
+                    <p style="margin: 8px 0 0; font-size: 12px; color: #888;">
+                      — The kind of event you can now post in minutes.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <a href="https://www.battlesphere.cc/campaign/austriacus-subsector-93n4g"
+                 style="display: inline-block; padding: 11px 24px;
+                        background: #0f0f1a; color: #c9a84c;
+                        font-size: 11px; font-weight: bold;
+                        letter-spacing: 0.12em; text-transform: uppercase;
+                        text-decoration: none; border-radius: 2px; margin-bottom: 4px;">
+                See events in the Austriacus Subsector →
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- ════════════════════════════════════════════════
+         FEATURE 3 — ARMY PORTFOLIO
+    ════════════════════════════════════════════════ -->
+    <tr>
+      <td style="padding: 28px 36px 0;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td>
+              <div style="height: 1px; background: #e0d4b0; margin-bottom: 22px;"></div>
+              <p style="margin: 0 0 6px; font-size: 10px; font-weight: bold;
+                        letter-spacing: 0.16em; text-transform: uppercase; color: #a07830;">
+                New — For Every Player
+              </p>
+              <h2 style="margin: 0 0 14px; font-family: Georgia, 'Times New Roman', serif;
+                         font-size: 20px; font-weight: bold; color: #1a1a2e; line-height: 1.3;">
+                Army Portfolio
+              </h2>
+              <p style="margin: 0 0 16px; font-size: 14px; color: #2d2d3d; line-height: 1.7;">
+                Campaigns are fought by armies, and armies deserve a record of their own.
+                Every player on BattleSphere can now build a public Army Portfolio — a home
+                for the force behind the battles, independent of any single campaign.
+              </p>
+              <p style="margin: 0 0 16px; font-size: 14px; color: #2d2d3d; line-height: 1.7;">
+                Add your units, upload photos, and write a portrait for each model. If you
+                play Crusade-style campaigns, your unit's XP, battle honours, kills, and
+                upgrades are tracked automatically and displayed right on the unit's page.
+                Share a unit link and a rich preview card appears in Discord — photo, name,
+                faction, and record.
+              </p>
+              <p style="margin: 0 0 16px; font-size: 14px; color: #2d2d3d; line-height: 1.7;">
+                Your Portfolio is yours to keep. The armies grow between campaigns; the
+                record follows them wherever they fight next.
+              </p>
+
+              <!-- Quote / callout -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background: #f7f4ee; border-left: 3px solid #c9a84c;
+                            border-radius: 3px; margin-bottom: 18px;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <p style="margin: 0; font-size: 14px; color: #2d2d3d; line-height: 1.6;
+                              font-style: italic;">
+                      Your armies. Your miniatures. A permanent record — long after the campaign ends.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Two CTAs side by side -->
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding-right: 10px;">
+                    <a href="[DEMO_ARMY_URL]"
+                       style="display: inline-block; padding: 11px 24px;
+                              background: #0f0f1a; color: #c9a84c;
+                              font-size: 11px; font-weight: bold;
+                              letter-spacing: 0.12em; text-transform: uppercase;
+                              text-decoration: none; border-radius: 2px;">
+                      View a demo army →
+                    </a>
+                  </td>
+                  <td>
+                    <a href="https://www.battlesphere.cc/armies/new"
+                       style="display: inline-block; padding: 11px 24px;
+                              background: #c9a84c; color: #07070a;
+                              font-size: 11px; font-weight: bold;
+                              letter-spacing: 0.12em; text-transform: uppercase;
+                              text-decoration: none; border-radius: 2px;">
+                      Muster your army →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- ── CLOSING NOTE ── -->
+    <tr>
+      <td style="padding: 36px 36px 0;">
+        <div style="height: 1px; background: #e8e8e8; margin-bottom: 24px;"></div>
+
+        <!-- Diamond ornament -->
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; opacity: 0.35;">
+          <div style="flex: 1; height: 1px; background: #c9a84c;"></div>
+          <div style="width: 5px; height: 5px; background: #c9a84c; transform: rotate(45deg);"></div>
+          <div style="flex: 1; height: 1px; background: #c9a84c;"></div>
+        </div>
+
+        <p style="margin: 0 0 14px; font-size: 14px; color: #555; line-height: 1.7;">
+          These three additions make BattleSphere something more flexible than it was at launch:
+          a platform for any format your group plays, with tools for every kind of organiser and
+          every kind of player. More is coming.
+        </p>
+        <p style="margin: 0 0 14px; font-size: 14px; color: #555; line-height: 1.7;">
+          If you have been waiting to start a campaign — or restart one — now is a good time.
+        </p>
+        <p style="margin: 0; font-size: 14px; color: #555; line-height: 1.7;">
+          — Benjamin
+        </p>
+      </td>
+    </tr>
+
+    <!-- ── MAIN CTA ── -->
+    <tr>
+      <td style="padding: 28px 36px 0; text-align: center;">
+        <a href="https://www.battlesphere.cc"
+           style="display: inline-block; padding: 14px 36px;
+                  background: #c9a84c; color: #07070a;
+                  font-size: 12px; font-weight: bold;
+                  letter-spacing: 0.14em; text-transform: uppercase;
+                  text-decoration: none; border-radius: 2px;">
+          Go to BattleSphere →
+        </a>
+      </td>
+    </tr>
+
+    <!-- ── SPACER ── -->
+    <tr><td style="height: 36px;"></td></tr>
+
+    <!-- ── FOOTER ── -->
+    <tr>
+      <td style="background: #f5f5f5; padding: 24px 36px;
+                 border-top: 1px solid #e8e8e8;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="font-size: 12px; color: #888; line-height: 1.7;">
+              You&apos;re receiving this because you opted into BattleSphere platform updates.<br />
+              <a href="https://www.battlesphere.cc/profile/notifications"
+                 style="color: #c9a84c; text-decoration: none;">
+                Manage notification preferences
+              </a>
+              &nbsp;·&nbsp;
+              <a href="https://www.battlesphere.cc/unsubscribe?token=XXXXX"
+                 style="color: #888; text-decoration: none;">
+                Unsubscribe
+              </a>
+            </td>
+            <td align="right" style="vertical-align: top;">
+              <span style="font-family: Georgia, 'Times New Roman', serif;
+                           font-size: 13px; color: #c9a84c; letter-spacing: 0.1em;">
+                BS
+              </span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+  </table>
+  <!-- EMAIL ENDS HERE -->
+
+</body>
+</html>

@@ -20,6 +20,7 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { createNotificationForMany } from '@/app/lib/notifications';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -74,7 +75,7 @@ export async function GET(request) {
   // Fetch all campaigns (include created_at for catch-up window)
   const { data: campaigns, error: campErr } = await supabase
     .from('campaigns')
-    .select('id, name, created_at');
+    .select('id, name, slug, created_at');
 
   if (campErr) {
     return Response.json({ error: `campaigns query failed: ${campErr.message}` }, { status: 500 });
@@ -294,7 +295,10 @@ async function processCampaign(supabase, campaign, weekStart, weekEnd, isCatchUp
   };
 
   if (!dryRun) {
-    if (hobbyContent.length > 0) {
+    const hasHobby = hobbyContent.length > 0;
+    const hasArmy  = armyContent.length  > 0;
+
+    if (hasHobby) {
       const { error } = await supabase
         .from('chronicle_weekly_updates')
         .upsert(
@@ -311,7 +315,7 @@ async function processCampaign(supabase, campaign, weekStart, weekEnd, isCatchUp
       if (error) summary.errors.push(`hobby upsert: ${error.message}`);
     }
 
-    if (armyContent.length > 0) {
+    if (hasArmy) {
       const { error } = await supabase
         .from('chronicle_weekly_updates')
         .upsert(
@@ -326,6 +330,27 @@ async function processCampaign(supabase, campaign, weekStart, weekEnd, isCatchUp
           { onConflict: 'campaign_id,update_type,week_start' },
         );
       if (error) summary.errors.push(`army upsert: ${error.message}`);
+    }
+
+    // ── In-app notifications for all campaign members ──────────────────────
+    // Only fire if at least one report type was generated this week
+    if (hasHobby || hasArmy) {
+      const { data: members } = await supabase
+        .from('campaign_members')
+        .select('user_id')
+        .eq('campaign_id', cid);
+
+      const memberIds = (members ?? []).map(m => m.user_id).filter(Boolean);
+
+      if (memberIds.length > 0) {
+        const reportTypes = [hasHobby && 'Hobby', hasArmy && 'Crusade'].filter(Boolean).join(' & ');
+        await createNotificationForMany(memberIds, {
+          type:  'weekly_report',
+          title: `Weekly ${reportTypes} Report — ${campaign.name}`,
+          body:  'Your weekly campaign update is ready. See which commanders deployed forces and earned battle honours.',
+          link:  `/c/${campaign.slug ?? cid}/chronicle`,
+        });
+      }
     }
   }
 

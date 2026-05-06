@@ -9,143 +9,96 @@
 
 ## What was built this session
 
-### 1. Bulletin Drawer — New Dispatch + Delete flows
+### 1. Full Newsletter System (two-tier, unified digest)
 
-**`app/components/BulletinDrawer.js`** received major additions:
+**Database** — `BattleSphere Cowork Project/migration_newsletter.sql` (already run ✓):
+- Added to `profiles`: `optin_platform_news`, `optin_campaign_digests`, `digest_frequency`, `last_digest_sent_at`
+- Added to `campaign_members`: `include_in_digest`
+- Created `platform_announcements` table (admin queues platform-level news)
+- Created `campaign_digest_messages` table (organiser queues campaign messages)
+- RLS policies on both new tables
 
-- **"+ New Dispatch" button** — appears in the bulletin panel footer (organiser/admin only, only when a current dispatch already exists). Clicking it opens the drawer with a blank form and auto-increments `dispatch_number`. On save, it sets the old dispatch to `is_current = false`, inserts the new one as `is_current = true`, and prepends the old dispatch to the "Previous Dispatches" accordion immediately (no page reload needed).
+**`lib/resendAudience.js`** — utility to sync email with Resend Audience (silently no-ops if `RESEND_AUDIENCE_ID` not set)
 
-- **"Delete Dispatch" button** — appears at the bottom of the edit form, red-bordered, only for existing dispatches (not when creating a new one). Uses `window.confirm()` before deleting. On deletion, the most recent previous dispatch (if any) is promoted to `is_current = true`.
+**`app/components/NewsletterOptinModal.js`** — centre modal for existing users who never opted in:
+- 'use client', self-fetches on mount via Supabase browser client
+- Shows if `optin_platform_news == null || optin_campaign_digests == null` (uses `==` not `===` — critical, Supabase returns `undefined` for new columns)
+- Two independent toggle rows for platform news vs campaign updates
+- Frequency selector (weekly / fortnightly / monthly) shown when either optin is on
+- "Save preferences" → writes to profiles + calls sync-audience API
+- "Not now" → saves `false` for both, shows "you can change this in /profile/notifications", closes after 4.5s
+- No dismiss-on-overlay-click
+- Added to `app/layout.js` so it runs everywhere (before `<main>`)
 
-New state variables added: `isNewDispatch`, `deleting`, `livePreviousDispatches`.
+**`app/register/page.js`** — added newsletter opt-in to registration form:
+- State: `optinCampaigns`, `optinPlatform`, `digestFrequency` (all pre-ticked)
+- Two checkboxes + frequency button row inserted between password field and submit
+- After sign-up, updates profiles row with optin values + calls sync-audience API
 
-`handleSave()` now has three paths:
-1. `isNewDispatch && liveDispatch?.id` → UPDATE old to `is_current=false`, INSERT new
-2. `liveDispatch?.id` → UPDATE existing (standard edit)
-3. else → INSERT first-ever dispatch
+**`app/profile/notifications/page.js`** + **`NotificationPreferencesForm.js`** — /profile/notifications preferences page:
+- Server page fetches profile + campaign memberships
+- Client form: toggle for platform news, toggle for campaign digests, per-campaign `include_in_digest` toggle, frequency button group
+- Saves to profiles + campaign_members + calls sync-audience
 
-Previous dispatches accordion now uses `livePreviousDispatches` state so it updates instantly on new dispatch or delete, without a page reload.
+**`app/components/OrganiserDigestMessage.js`** — organiser queues campaign digest messages (no "send now" to prevent spam):
+- Max 400 chars, shows char count
+- Lists queued messages with Remove button
+- Messages are included in any digest where `created_at > last_digest_sent_at`
 
----
+**`app/c/[slug]/admin/page.js`** — added "Campaign Digest" section for organiser message queue
 
-### 2. Faction auto-links in bulletin text — gold colour
+**`app/admin/announcements/page.js`** + **`AnnouncementsForm.js`** — admin-only page for Benjamin to queue platform announcements. Accessible from admin overview page via "Platform Announcements →" button.
 
-**`app/globals.css`** — `.bulletin-faction-link` changed from `var(--text-primary)` to `var(--text-gold)`, hover changes to `var(--gold-bright)` with a stronger `border-bottom`. Territory links remain the default subtle style; faction links are now visually distinct and gold.
+**`app/admin/page.js`** — added auth guard (redirect if not admin) + "Platform Announcements →" link
 
----
+**`app/api/newsletter/sync-audience/route.js`** — auth-required POST endpoint, calls syncResendAudience with user's email and optin bool
 
-### 3. "Log a Battle" button — always-visible in global nav
+**`app/api/cron/campaign-digest/route.js`** — daily digest cron:
+- Secured with `Authorization: Bearer CRON_SECRET` header
+- Fetches eligible profiles (both optins considered, frequency threshold elapsed)
+- Gets user email via `supabase.auth.admin.getUserById(profile.id)` (profiles table has no email column — must use admin API)
+- Collects platform announcements + per-campaign sections (org messages, bulletins, events) since `last_digest_sent_at`
+- Skips send if nothing to report
+- Sends via Resend, updates `last_digest_sent_at`
+- Returns `{ sent, errors }`
 
-Moved the "Log a Battle" button out of `CampaignNavLinks` (which lives inside `site-nav__desktop` and is hidden on mobile behind the burger menu) into the global `NavBar.js`, where it sits next to the BattleSphere wordmark.
-
-**`app/components/NavBar.js`** changes:
-- Added `import { usePathname } from 'next/navigation'`
-- Added `import PublicCampaignNavCTA from './PublicCampaignNavCTA'`
-- Uses `usePathname()` to extract `campaignSlug` from `/c/[slug]/...` paths
-- Uses `usePathname()` to extract `publicCampaignSlug` from `/campaign/[slug]/...` paths
-- Left side of nav is now a flex row:
-  ```jsx
-  <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-    <Link href="/" className="site-nav__logo">BattleSphere</Link>
-    {user && campaignSlug && (
-      <Link href={`/c/${campaignSlug}/battle/new`}>
-        <button className="btn-primary nav-log-battle">+ Log a Battle</button>
-      </Link>
-    )}
-    {publicCampaignSlug && (
-      <PublicCampaignNavCTA slug={publicCampaignSlug} />
-    )}
-  </div>
-  ```
-- The button is **never** inside the mobile dropdown — always visible.
-
-**`app/globals.css`** — Added `.nav-log-battle` class:
-```css
-.nav-log-battle {
-  padding: 0.35rem 0.85rem;
-  font-size: 0.55rem;
-}
+**`vercel.json`** — created at project root to register cron:
+```json
+{ "crons": [{ "path": "/api/cron/campaign-digest", "schedule": "0 8 * * *" }] }
 ```
+Cron visible in Vercel → Settings → Cron Jobs. No trigger button on Hobby plan — test via browser console fetch with CRON_SECRET.
 
-**`app/components/CampaignNavLinks.js`** — Removed the "Log Battle" button from both desktop and mobile sections, removed unused `LOG_BTN_STYLE` constant.
-
----
-
-### 4. Public campaign page — full overhaul
-
-**`app/campaign/[slug]/page.js`** redesigned from scratch to mirror the member dashboard layout.
-
-New layout (top to bottom):
-1. Thin "◆ Public Campaign Page" banner at the very top. If the current user is already a member, shows "Go to Campaign Dashboard →" link in the banner.
-2. **Hero row** — BulletinPanel (left) + CampaignMap (right) with "Full Map →" link
-3. **Events strip** — active/upcoming events, same as dashboard
-4. **Stats bar** — Factions · Players · Battles · Territories · Active Events · Current Act
-5. **Bottom row** — 3 columns:
-   - Faction Standings with links to `/c/[slug]/faction/[id]`
-   - Player Standings (XP)
-   - Chronicle (recent battles + events + achievements, with links)
-
-No "Join" CTA on the page itself — access request is handled entirely via the global nav CTA (see section 5).
-
-Data fetched: factions, territories, influence, warpRoutes, allBattles, activeEvents, recentBattles, recentEvents, recentAchievements, members, profiles, bulletin.
+**Email designs** (approved):
+- `BattleSphere Cowork Project/email_digest_mockup.html` — dark header, white body, gold accents, "Current Events" section (not "Upcoming Events" — no events pipeline yet)
+- `BattleSphere Cowork Project/email_campaign_launch_mockup.html` — campaign launch email, same styling
 
 ---
 
-### 5. "Request Access" CTA — always-visible in global nav
+### 2. Campaign Launch Email — sent to all 12 users
 
-**`app/components/PublicCampaignNavCTA.js`** — New `'use client'` component shown in the global nav bar when the visitor is on a `/campaign/[slug]` page.
+**`app/api/admin/send-campaign-launch/route.js`** — admin-only POST with three modes:
+- `{ testEmail: '...' }` → test send to single address
+- `{ emails: ['...', '...'] }` → targeted resend to specific addresses (for fixing rate-limit failures)
+- `{ sendToAll: true }` → sends to all users (paginated, 1000/page)
 
-Fetches its own state on mount via the Supabase browser client. States:
+600ms delay between sends to respect Resend free tier (2 emails/sec). Fetches usernames from profiles for personalised greeting. Subject: "The Campaign for the Austriacus Subsector has begun".
 
-| State | What renders |
-|---|---|
-| `loading` / `rejected` | Nothing (null) |
-| `member` | "Campaign Dashboard →" gold button → `/c/${slug}` |
-| `pending` | "⏳ Request Pending" text badge |
-| `email-form` (not logged in) | "Request Access" button; clicking opens a dropdown card with email input → POST `/api/request-access`; on success shows "✓ Invite sent — check your inbox" |
-| `can-request` (logged in, no request) | "Request to Join" button → POST `/api/join-request` → transitions to `pending` |
+**Email deliverability fix** — email was landing in spam on GMX. Root causes:
+1. Missing SPF record: added `v=spf1 include:_spf.resend.com ~all` TXT on `@` in Cloudflare
+2. Duplicate `_dmarc` record: deleted the duplicate
+3. DKIM was already present
 
-Outside-click handler closes the email dropdown.
-
-**`app/api/request-access/route.js`** — New public API route:
-- Accepts `{ email, campaignSlug, campaignId, campaignName }`
-- Uses `createAdminClient()` (service role, bypasses RLS) to find an active non-revoked, non-expired invite code from `campaign_invite_codes`
-- Builds `inviteLink = ${APP_URL}/join/${code}` (falls back to `${APP_URL}/register` if no active code)
-- Sends campaign-specific onboarding email via Resend with registration link + invite link
-- No auth check — fully public endpoint
-
----
-
-### 6. Faction + territory detail pages made public
-
-**`app/c/[slug]/faction/[id]/page.js`** — Removed `if (!user) redirect('/login')` guard and `redirect` import. Unauthenticated visitors can view faction detail pages. `isOrganiser` defaults to `false`.
-
-**`app/c/[slug]/territory/[id]/page.js`** — Same change: removed auth redirect.
-
-These pages already had public-friendly RLS on their core data tables.
-
----
-
-### 7. SQL migration — bulletin public read
-
-**`BattleSphere Cowork Project/migration_bulletin_public_read.sql`** — Must be run manually in the Supabase SQL editor:
-
-```sql
-create policy "Public can view bulletins"
-  on bulletin_dispatches for select
-  using (true);
-```
-
-Until this is run, the BulletinPanel on the public campaign page will show an empty/placeholder state.
+After fixes, email landed in inbox. All 12 users received the campaign launch email.
 
 ---
 
 ## Pending tasks (in priority order)
 
-1. **Run SQL migration** — Execute `migration_bulletin_public_read.sql` in Supabase to enable bulletin display on public pages
+1. **Run SQL migration** — Execute `migration_bulletin_public_read.sql` in Supabase to enable bulletin display on public campaign pages (may already be done — confirm in Supabase)
 2. **Influence Tier 1** — selectable influence modes per campaign
 3. **Influence Tier 2** — event-linked mission bonuses (needs `mission_type` field on battle log)
 4. **Influence Tier 3** — cascade influence via warp routes
+5. **Campaign Bulletin design** — approved design documented in `project_bulletin_design.md`, estimated ready ~2026-04-14
 
 ---
 
@@ -159,5 +112,7 @@ Until this is run, the BulletinPanel on the public campaign page will show an em
 - Git remote has GitHub token embedded — `git push` works directly from terminal
 - If `git commit` fails with HEAD.lock: request Cowork file delete permission, then `rm -f .git/HEAD.lock`
 - Step components in Create Campaign wizard must be called as functions `Step1()` not `<Step1 />`
-- `createAdminClient()` (service role) is required for any server-side operation that needs to bypass RLS (e.g. reading invite codes for unauthenticated users)
+- `createAdminClient()` (service role) is required for any server-side operation that needs to bypass RLS or access auth.users emails
 - The BattleSphere code folder is at `/Users/benjamingrunwald/Desktop/BattleSphere` — must be mounted separately from the "BattleSphere Cowork Project" outputs folder
+- `profiles` table has NO email column — email lives in `auth.users`; use `supabase.auth.admin.getUserById(id)` server-side to fetch it
+- Supabase newly-added columns return `undefined` (not `null`) in JS — always use `== null` (loose equality) when checking if a column has never been set

@@ -80,12 +80,33 @@ export async function GET(request) {
 
         // Fire welcome email — non-blocking, errors are swallowed
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin;
+        const displayName = discordName || user.email;
         fetch(`${appUrl}/api/send-welcome-email`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({
             email:    user.email,
-            username: discordName || user.email,
+            username: displayName,
+          }),
+        }).catch(() => {});
+
+        // Welcome in-app notification
+        fetch(`${appUrl}/api/notifications/create`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            recipientId: user.id,
+            type:        'onboarding_welcome',
+            title:       `Welcome to BattleSphere, ${displayName}!`,
+            body:        'Your forces are mustered. Join a campaign, deploy your first army, or browse what other commanders are building.',
+            link:        '/dashboard',
+            metadata: {
+              tips: [
+                { label: 'Browse campaigns', link: '/campaigns' },
+                { label: 'Browse armies',    link: '/armies' },
+                { label: 'Deploy your army', link: '/armies/new' },
+              ],
+            },
           }),
         }).catch(() => {});
       }

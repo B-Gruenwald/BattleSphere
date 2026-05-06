@@ -6,6 +6,7 @@ import Link from 'next/link';
 import LogoutButton from './LogoutButton';
 import FeedbackButton from './FeedbackButton';
 import PublicCampaignNavCTA from './PublicCampaignNavCTA';
+import NotificationBell from './NotificationBell';
 
 const navLinkStyle = {
   fontFamily: 'var(--font-display)',
@@ -57,6 +58,7 @@ export default function NavBar({ user, isAdmin, username }) {
               {isAdmin && (
                 <Link href="/admin" style={{ ...navLinkStyle, color: '#e05a5a' }}>Admin</Link>
               )}
+              <NotificationBell />
               <FeedbackButton username={username} />
               <span style={{ ...navLinkStyle, opacity: 0.5 }}>{username}</span>
               <LogoutButton />
@@ -115,6 +117,9 @@ export default function NavBar({ user, isAdmin, username }) {
                   Admin
                 </Link>
               )}
+              <div className="site-nav__dropdown-link">
+                <NotificationBell />
+              </div>
               <div className="site-nav__dropdown-link">
                 <FeedbackButton username={username} />
               </div>

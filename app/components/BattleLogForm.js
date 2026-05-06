@@ -311,6 +311,40 @@ export default function BattleLogForm({ campaign, territories, factions, members
       }),
     }).catch(() => {});
 
+    // In-app notification — notify any player in this battle who didn't log it
+    {
+      const attackerFactionName = factions.find(f => f.id === attackerFactionId)?.name ?? 'Unknown';
+      const defenderFactionName = factions.find(f => f.id === defenderFactionId)?.name ?? 'Unknown';
+      const territoryName       = territories.find(t => t.id === territoryId)?.name ?? null;
+      const resultText =
+        winnerFactionId === attackerFactionId ? `${attackerFactionName} won` :
+        winnerFactionId === defenderFactionId ? `${defenderFactionName} won` :
+        'The battle was a draw';
+      const bodyText = [
+        `${attackerFactionName} vs ${defenderFactionName}`,
+        territoryName ? `in ${territoryName}` : `in ${campaign.name}`,
+        `— ${resultText}.`,
+      ].join(' ');
+
+      const recipientsToNotify = [];
+      if (attackerPlayerId && attackerPlayerId !== userId) recipientsToNotify.push(attackerPlayerId);
+      if (defenderPlayerId && defenderPlayerId !== userId) recipientsToNotify.push(defenderPlayerId);
+
+      for (const recipientId of recipientsToNotify) {
+        fetch('/api/notifications/create', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            recipientId,
+            type:  'battle_opponent',
+            title: 'A battle has been recorded — check the report',
+            body:  bodyText,
+            link:  `/c/${campaign.slug}/battle/${battle.id}`,
+          }),
+        }).catch(() => {});
+      }
+    }
+
     router.push(`/c/${campaign.slug}/battle/${battle.id}`);
   }
 

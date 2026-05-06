@@ -75,6 +75,26 @@ function RegisterForm() {
             body: JSON.stringify({ email, username }),
           });
         } catch (_) { /* non-fatal */ }
+
+        // Welcome notification — appears immediately in their inbox
+        fetch('/api/notifications/create', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recipientId: signUpData.user.id,
+            type:        'onboarding_welcome',
+            title:       `Welcome to BattleSphere, ${username}!`,
+            body:        'Your forces are mustered. Join a campaign, deploy your first army, or browse what other commanders are building.',
+            link:        '/dashboard',
+            metadata: {
+              tips: [
+                { label: 'Browse campaigns',  link: '/campaigns' },
+                { label: 'Browse armies',     link: '/armies' },
+                { label: 'Deploy your army',  link: '/armies/new' },
+              ],
+            },
+          }),
+        }).catch(() => {});
       }
       setSuccess(true);
       setLoading(false);

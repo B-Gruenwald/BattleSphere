@@ -255,6 +255,35 @@ export default function CreateCampaignPage() {
         .insert(form.factions.map(f => ({ campaign_id: campaign.id, name: f.name, colour: f.colour })));
       if (e3) throw e3;
 
+      // First-campaign onboarding notification (fire-and-forget)
+      {
+        const { count: campCount } = await supabase
+          .from('campaigns')
+          .select('id', { count: 'exact', head: true })
+          .eq('organiser_id', user.id);
+        if (campCount === 1) {
+          fetch('/api/notifications/create', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              recipientId: user.id,
+              type:        'onboarding_campaign',
+              title:       `${form.name} is live — here's what to do next`,
+              body:        'Share your public page to recruit players, set up the map, create Campaign Events, and let the narrative begin.',
+              link:        `/c/${slug}`,
+              metadata: {
+                tips: [
+                  { label: 'Share public page', link: `/campaign/${slug}` },
+                  { label: 'Invite players',    link: `/c/${slug}/admin` },
+                  { label: 'Edit the map',      link: `/c/${slug}/map` },
+                  { label: 'Create an event',   link: `/c/${slug}/events` },
+                ],
+              },
+            }),
+          }).catch(() => {});
+        }
+      }
+
       // 4. Generate & insert territories (narrative campaigns only)
       if (form.format === 'league') {
         router.push(`/c/${slug}`);

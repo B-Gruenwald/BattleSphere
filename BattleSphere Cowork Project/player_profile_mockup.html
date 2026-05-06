@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BattleSphere — Player Profile Mockup</title>
+<style>
+  /* ── Design tokens (matching BattleSphere) ── */
+  :root {
+    --bg:           #0e0e0f;
+    --surface-1:    #141416;
+    --surface-2:    #1b1b1e;
+    --bg-raised:    #1f1f23;
+    --border-dim:   #2a2a30;
+    --border-mid:   #3a3a42;
+    --gold:         #b78c40;
+    --text-primary: #e8e6e0;
+    --text-secondary:#b0ae a6;
+    --text-muted:   #6b6966;
+    --text-gold:    #c9a055;
+    --win:          #7aad6b;
+    --loss:         #e05a5a;
+    --faction-blue: #4a90d9;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'Georgia', serif;
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* Simulated nav bar */
+  .navbar {
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border-dim);
+    padding: 0 2rem;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .navbar-brand {
+    font-family: 'Georgia', serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .navbar-links {
+    display: flex;
+    gap: 1.5rem;
+  }
+  .navbar-links a {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    letter-spacing: 0.08em;
+  }
+
+  /* Page wrapper */
+  .page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.75rem 1.5rem 3rem;
+  }
+
+  /* Breadcrumb */
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+  }
+  .breadcrumb a, .breadcrumb span {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  .breadcrumb .sep { color: var(--border-mid); }
+  .breadcrumb .current { color: var(--text-secondary); }
+
+  /* ── HERO ROW ── */
+  .hero {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.1rem 1.25rem;
+    border: 1px solid var(--border-dim);
+    background: var(--surface-1);
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .avatar {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    background: var(--surface-2);
+    border: 2px solid color-mix(in srgb, var(--faction-blue) 40%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--faction-blue);
+  }
+
+  .hero-identity { flex: 1; min-width: 0; }
+  .hero-name {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .hero-name h1 {
+    font-size: 1.35rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1.1;
+  }
+  .chip-you {
+    font-family: 'Georgia', serif;
+    font-size: 0.45rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-gold);
+    border: 1px solid var(--gold);
+    padding: 0.15rem 0.4rem;
+    line-height: 1.6;
+  }
+  .hero-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.3rem;
+    flex-wrap: wrap;
+  }
+  .hero-meta .role-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .hero-meta .sep { color: var(--border-mid); font-size: 0.8rem; }
+  .faction-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    text-decoration: none;
+  }
+  .faction-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--faction-blue);
+    transform: rotate(45deg);
+    flex-shrink: 0;
+  }
+  .faction-pill span {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--faction-blue);
+  }
+  /* Faction change: tiny inline select, own profile only */
+  .faction-change {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline dotted;
+  }
+
+  /* ── STATS STRIP ── */
+  .stats-strip {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin-left: auto;
+    border-left: 1px solid var(--border-dim);
+    flex-shrink: 0;
+  }
+  .stat-cell {
+    padding: 0.4rem 0.9rem;
+    text-align: center;
+    border-right: 1px solid var(--border-dim);
+  }
+  .stat-cell:last-child { border-right: none; }
+  .stat-num {
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 0.15rem;
+  }
+  .stat-label {
+    font-size: 0.42rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-gold);
+  }
+  .stat-win  { color: var(--win); }
+  .stat-draw { color: var(--text-muted); }
+  .stat-loss { color: var(--loss); }
+  .stat-xp   { color: var(--text-gold); }
+  .stat-xp .stat-num { font-size: 1rem; }
+
+  /* Achievements inline */
+  .achievements-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.9rem;
+    border-left: 1px solid var(--border-dim);
+    flex-shrink: 0;
+  }
+  .ach-icon {
+    font-size: 1rem;
+    line-height: 1;
+    cursor: default;
+  }
+  .ach-more {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  /* ── MAIN TWO-COLUMN LAYOUT ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 1rem;
+    align-items: start;
+  }
+  @media (max-width: 680px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .stats-strip { border-left: none; border-top: 1px solid var(--border-dim); width: 100%; }
+  }
+
+  /* ── SHARED PANEL STYLE ── */
+  .panel {
+    border: 1px solid var(--border-dim);
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-dim);
+    background: var(--surface-1);
+  }
+  .panel-title {
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-gold);
+  }
+  .panel-action {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    cursor: pointer;
+    background: none;
+    border: none;
+  }
+  .panel-body { padding: 1rem; }
+
+  /* ── CAMPAIGN ARMY (LEFT PANEL) ── */
+  .army-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin-bottom: 1rem;
+  }
+  .army-thumb {
+    width: 64px;
+    height: 42px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-dim);
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--border-mid);
+    font-size: 1.1rem;
+  }
+  .army-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .army-name-link {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    display: block;
+  }
+  .army-sub {
+    font-size: 0.48rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-gold);
+    margin-top: 0.15rem;
+  }
+
+  /* Stats rows */
+  .stats-row-label {
+    font-size: 0.42rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.3rem;
+  }
+  .stats-grid {
+    display: grid;
+    border: 1px solid var(--border-dim);
+    margin-bottom: 0.75rem;
+  }
+  .stats-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .stats-grid.cols-5 { grid-template-columns: repeat(5, 1fr); }
+  .sg-cell {
+    padding: 0.6rem 0.4rem;
+    text-align: center;
+    border-right: 1px solid var(--border-dim);
+  }
+  .sg-cell:last-child { border-right: none; }
+  .sg-num {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.1rem;
+    line-height: 1;
+  }
+  .sg-label {
+    font-size: 0.42rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-gold);
+  }
+
+  /* Crusade roster */
+  .roster-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.5rem;
+  }
+  .roster-heading span {
+    font-size: 0.52rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-gold);
+  }
+  .unit-row {
+    border: 1px solid var(--border-dim);
+    margin-bottom: 0.5rem;
+  }
+  .unit-row-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.5rem 0.75rem;
+    flex-wrap: wrap;
+  }
+  .unit-diamond {
+    width: 5px; height: 5px;
+    background: var(--gold);
+    transform: rotate(45deg);
+    flex-shrink: 0;
+    opacity: 0.6;
+  }
+  .unit-name { font-weight: 700; font-size: 0.88rem; flex: 1; min-width: 0; }
+  .unit-type { font-size: 0.42rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+  .rank-chip {
+    font-size: 0.42rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-gold);
+    border: 1px solid rgba(183,140,64,0.35);
+    padding: 0.15rem 0.4rem;
+  }
+  .unit-stats {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .us-cell { text-align: center; }
+  .us-num { font-size: 0.95rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
+  .us-label { font-size: 0.38rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-gold); }
+  .unit-edit-btn {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .unit-notes {
+    padding: 0.35rem 0.75rem 0.5rem 1.85rem;
+    font-size: 0.78rem;
+    color: #8a8880;
+    border-top: 1px solid var(--border-dim);
+    font-style: italic;
+  }
+
+  /* Enlist row */
+  .enlist-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .enlist-row select {
+    background: var(--bg-raised);
+    border: 1px solid var(--border-dim);
+    color: var(--text-primary);
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+    font-family: inherit;
+    flex: 1;
+    min-width: 160px;
+  }
+  .btn-sm {
+    padding: 0.3rem 0.75rem;
+    font-size: 0.75rem;
+    border: 1px solid var(--border-dim);
+    background: var(--bg-raised);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 0.05em;
+  }
+  .btn-sm.primary {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  /* Campaign notes */
+  .camp-notes {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-dim);
+    font-size: 0.82rem;
+    color: #8a8880;
+    font-style: italic;
+    line-height: 1.6;
+  }
+
+  /* ── RIGHT COLUMN ── */
+
+  /* Battle History */
+  .battle-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border-dim);
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .battle-row:last-child { border-bottom: none; }
+  .b-diamond {
+    width: 5px; height: 5px;
+    transform: rotate(45deg);
+    flex-shrink: 0;
+  }
+  .b-info { flex: 1; min-width: 0; }
+  .b-matchup { font-size: 0.83rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .b-result { font-size: 0.48rem; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 0.1rem; }
+  .b-date { font-size: 0.68rem; color: var(--text-muted); flex-shrink: 0; }
+
+  .see-all-link {
+    display: block;
+    text-align: right;
+    margin-top: 0.5rem;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+
+  /* Army Portfolio compact list */
+  .army-list-item {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--border-dim);
+    text-decoration: none;
+  }
+  .army-list-item:last-child { border-bottom: none; }
+  .army-mini-thumb {
+    width: 40px;
+    height: 28px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-dim);
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: var(--border-mid);
+  }
+  .army-mini-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .army-mini-info { flex: 1; min-width: 0; }
+  .army-mini-name {
+    font-size: 0.83rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .army-mini-sub {
+    font-size: 0.42rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-gold);
+  }
+  .army-mini-edit {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+  }
+
+  /* ── ANNOTATION LABELS (mockup only) ── */
+  .annot {
+    position: relative;
+  }
+  .annot-label {
+    display: inline-block;
+    background: rgba(183,140,64,0.15);
+    border: 1px dashed rgba(183,140,64,0.4);
+    color: var(--text-gold);
+    font-size: 0.58rem;
+    padding: 0.1rem 0.4rem;
+    letter-spacing: 0.1em;
+    font-family: monospace;
+    margin-bottom: 0.25rem;
+  }
+
+  /* Divider */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border-dim);
+    margin: 0.75rem 0;
+  }
+
+  /* Action row */
+  .actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-dim);
+  }
+</style>
+</head>
+<body>
+
+<!-- Simulated nav bar -->
+<nav class="navbar">
+  <span class="navbar-brand">BattleSphere</span>
+  <div class="navbar-links">
+    <a href="#">Dashboard</a>
+    <a href="#">Campaigns</a>
+    <a href="#">Profile</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb">
+    <a href="#">Vespator Front</a>
+    <span class="sep">›</span>
+    <a href="#">Players</a>
+    <span class="sep">›</span>
+    <span class="current">GrimDarkBen</span>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       HERO ROW — all identity info in one compact bar
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="annot-label">① Hero row — was: header block + separate record strip + separate faction box</div>
+  <div class="hero">
+
+    <!-- Avatar -->
+    <div class="avatar">GB</div>
+
+    <!-- Name + meta -->
+    <div class="hero-identity">
+      <div class="hero-name">
+        <h1>GrimDarkBen</h1>
+        <span class="chip-you">You</span>
+      </div>
+      <div class="hero-meta">
+        <span class="role-label">Player · Vespator Front</span>
+        <span class="sep">·</span>
+        <!-- Faction inline — no separate box -->
+        <a href="#" class="faction-pill">
+          <div class="faction-dot"></div>
+          <span>Sons of Ultramar</span>
+        </a>
+        <!-- Own profile: tiny "change" trigger -->
+        <button class="faction-change">change</button>
+      </div>
+    </div>
+
+    <!-- Win / Draw / Loss strip — right-aligned, compact cells -->
+    <div class="stats-strip">
+      <div class="stat-cell">
+        <div class="stat-num stat-win">7</div>
+        <div class="stat-label">Won</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num stat-draw">2</div>
+        <div class="stat-label">Draw</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num stat-loss">3</div>
+        <div class="stat-label">Lost</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num stat-xp" style="font-size:1rem; padding-top:0.1rem">
+          Heroic<br><span style="font-size:0.7rem; color:var(--text-muted); font-weight:400">9 XP</span>
+        </div>
+        <div class="stat-label">Rank</div>
+      </div>
+    </div>
+
+    <!-- Achievements inline — just icons, tooltip on hover -->
+    <div class="achievements-inline" title="Achievements">
+      <span class="ach-icon" title="First Blood">🗡</span>
+      <span class="ach-icon" title="Unbroken">🛡</span>
+      <span class="ach-icon" title="Warlord">👑</span>
+      <span class="ach-more">+2</span>
+    </div>
+
+  </div><!-- /.hero -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       TWO-COLUMN MAIN CONTENT
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="annot-label">② Two-column layout — was: all sections stacked vertically</div>
+  <div class="main-grid">
+
+    <!-- ─────────────────────────────────────────
+         LEFT: Campaign Army + Crusade Roster
+    ───────────────────────────────────────── -->
+    <div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Campaign Army · Crusade Force</span>
+          <button class="panel-action">Edit Force Stats →</button>
+        </div>
+        <div class="panel-body">
+
+          <!-- Army identity -->
+          <div class="army-identity">
+            <div class="army-thumb">
+              <img src="https://via.placeholder.com/64x42/1b1b1e/4a90d9?text=☩" alt="army cover" />
+            </div>
+            <div>
+              <a href="#" class="army-name-link">Sons of Ultramar — 3rd Company</a>
+              <div class="army-sub">Warhammer 40,000 · Ultramarines</div>
+            </div>
+          </div>
+
+          <!-- Computed totals from units -->
+          <div class="stats-row-label">From units</div>
+          <div class="stats-grid cols-3">
+            <div class="sg-cell"><div class="sg-num">9</div><div class="sg-label">Total XP</div></div>
+            <div class="sg-cell"><div class="sg-num">24</div><div class="sg-label">Kills</div></div>
+            <div class="sg-cell"><div class="sg-num">12</div><div class="sg-label">Total CP</div></div>
+          </div>
+
+          <!-- Force-level stats -->
+          <div class="stats-row-label">Force stats</div>
+          <div class="stats-grid cols-5">
+            <div class="sg-cell"><div class="sg-num">3</div><div class="sg-label">RP</div></div>
+            <div class="sg-cell"><div class="sg-num">60</div><div class="sg-label">Limit</div></div>
+            <div class="sg-cell"><div class="sg-num">48</div><div class="sg-label">Used</div></div>
+            <div class="sg-cell"><div class="sg-num">7</div><div class="sg-label">Played</div></div>
+            <div class="sg-cell"><div class="sg-num">5</div><div class="sg-label">Won</div></div>
+          </div>
+
+          <!-- Crusade Roster -->
+          <hr class="divider">
+          <div class="roster-heading">
+            <span>Crusade Roster — 3 units</span>
+          </div>
+
+          <!-- Unit rows -->
+          <div class="unit-row">
+            <div class="unit-row-header">
+              <div class="unit-diamond"></div>
+              <div class="unit-name">Tactical Squad Aquila<br><span class="unit-type">Infantry</span></div>
+              <span class="rank-chip">Battle-Hardened</span>
+              <div class="unit-stats">
+                <div class="us-cell"><div class="us-num">6</div><div class="us-label">XP</div></div>
+                <div class="us-cell"><div class="us-num">12</div><div class="us-label">Kills</div></div>
+                <div class="us-cell"><div class="us-num">5</div><div class="us-label">CP</div></div>
+              </div>
+              <button class="unit-edit-btn">Edit →</button>
+            </div>
+            <div class="unit-notes">Veteran marksmen, Relentless advance, <em>Battle scar: reduced movement</em></div>
+          </div>
+
+          <div class="unit-row">
+            <div class="unit-row-header">
+              <div class="unit-diamond"></div>
+              <div class="unit-name">Venerable Dreadnought Ferrus<br><span class="unit-type">Vehicle</span></div>
+              <span class="rank-chip">Heroic</span>
+              <div class="unit-stats">
+                <div class="us-cell"><div class="us-num">8</div><div class="us-label">XP</div></div>
+                <div class="us-cell"><div class="us-num">9</div><div class="us-label">Kills</div></div>
+                <div class="us-cell"><div class="us-num">7</div><div class="us-label">CP</div></div>
+              </div>
+              <button class="unit-edit-btn">Edit →</button>
+            </div>
+          </div>
+
+          <div class="unit-row">
+            <div class="unit-row-header">
+              <div class="unit-diamond"></div>
+              <div class="unit-name">Intercessor Squad Beta<br><span class="unit-type">Infantry</span></div>
+              <span class="rank-chip">Blooded</span>
+              <div class="unit-stats">
+                <div class="us-cell"><div class="us-num">2</div><div class="us-label">XP</div></div>
+                <div class="us-cell"><div class="us-num">3</div><div class="us-label">Kills</div></div>
+                <div class="us-cell"><div class="us-num">0</div><div class="us-label">CP</div></div>
+              </div>
+              <button class="unit-edit-btn">Edit →</button>
+            </div>
+          </div>
+
+          <!-- Enlist a unit -->
+          <div class="enlist-row">
+            <select><option>— Add unit to Crusade —</option><option>Eliminators Squad</option></select>
+            <button class="btn-sm primary">Enlist</button>
+          </div>
+
+          <!-- Campaign notes -->
+          <div class="camp-notes">
+            "Spearhead of the relief force, tasked with holding the Vespator Gate against the encroaching tide."
+          </div>
+
+        </div><!-- /.panel-body -->
+      </div><!-- /.panel -->
+
+    </div><!-- /left col -->
+
+    <!-- ─────────────────────────────────────────
+         RIGHT: Recent Battles + Army Portfolio
+    ───────────────────────────────────────── -->
+    <div>
+
+      <!-- Recent Battles -->
+      <div class="annot-label">③ Battle history — trimmed to 5, was: full list</div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Recent Battles</span>
+          <a href="#" class="panel-action">Log battle →</a>
+        </div>
+        <div class="panel-body">
+
+          <a href="#" class="battle-row">
+            <div class="b-diamond" style="background:var(--win)"></div>
+            <div class="b-info">
+              <div class="b-matchup">Sons of Ultramar <span style="color:var(--text-muted)">vs</span> Iron Tide</div>
+              <div class="b-result" style="color:var(--win)">Victory · 8–3</div>
+            </div>
+            <span class="b-date">12 Apr →</span>
+          </a>
+
+          <a href="#" class="battle-row">
+            <div class="b-diamond" style="background:var(--loss)"></div>
+            <div class="b-info">
+              <div class="b-matchup">Sons of Ultramar <span style="color:var(--text-muted)">vs</span> Wyrm Cult</div>
+              <div class="b-result" style="color:var(--loss)">Defeat · 4–9</div>
+            </div>
+            <span class="b-date">10 Apr →</span>
+          </a>
+
+          <a href="#" class="battle-row">
+            <div class="b-diamond" style="background:var(--win)"></div>
+            <div class="b-info">
+              <div class="b-matchup">Sons of Ultramar <span style="color:var(--text-muted)">vs</span> Klaw Boyz</div>
+              <div class="b-result" style="color:var(--win)">Victory · 7–5</div>
+            </div>
+            <span class="b-date">7 Apr →</span>
+          </a>
+
+          <a href="#" class="battle-row">
+            <div class="b-diamond" style="background:var(--text-muted)"></div>
+            <div class="b-info">
+              <div class="b-matchup">Sons of Ultramar <span style="color:var(--text-muted)">vs</span> Iron Tide</div>
+              <div class="b-result" style="color:var(--text-muted)">Draw · 6–6</div>
+            </div>
+            <span class="b-date">3 Apr →</span>
+          </a>
+
+          <a href="#" class="battle-row">
+            <div class="b-diamond" style="background:var(--win)"></div>
+            <div class="b-info">
+              <div class="b-matchup">Sons of Ultramar <span style="color:var(--text-muted)">vs</span> Wyrm Cult</div>
+              <div class="b-result" style="color:var(--win)">Victory · 9–2</div>
+            </div>
+            <span class="b-date">1 Apr →</span>
+          </a>
+
+          <a href="#" class="see-all-link">See all 12 battles →</a>
+        </div>
+      </div>
+
+      <!-- Army Portfolio compact -->
+      <div class="annot-label">④ Army Portfolio — compact list, was: full card grid</div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Army Portfolio</span>
+          <a href="#" class="panel-action">+ New Army</a>
+        </div>
+        <div class="panel-body" style="padding: 0.5rem 1rem;">
+
+          <a href="#" class="army-list-item">
+            <div class="army-mini-thumb">☩</div>
+            <div class="army-mini-info">
+              <div class="army-mini-name">Sons of Ultramar — 3rd Co.</div>
+              <div class="army-mini-sub">WH40K · Ultramarines</div>
+            </div>
+            <span class="army-mini-edit">Active →</span>
+          </a>
+
+          <a href="#" class="army-list-item">
+            <div class="army-mini-thumb">⚔</div>
+            <div class="army-mini-info">
+              <div class="army-mini-name">Stormhost of the Gilded Peak</div>
+              <div class="army-mini-sub">Age of Sigmar · Stormcast</div>
+            </div>
+            <span class="army-mini-edit">View →</span>
+          </a>
+
+          <a href="#" class="army-list-item">
+            <div class="army-mini-thumb">◆</div>
+            <div class="army-mini-info">
+              <div class="army-mini-name">Vile Harbingers</div>
+              <div class="army-mini-sub">WH40K · Death Guard</div>
+            </div>
+            <span class="army-mini-edit">View →</span>
+          </a>
+
+        </div>
+      </div>
+
+    </div><!-- /right col -->
+  </div><!-- /.main-grid -->
+
+  <!-- Actions -->
+  <div class="actions">
+    <button class="btn-sm">← All Players</button>
+    <button class="btn-sm primary">Log a Battle</button>
+    <a href="#" style="font-size:0.72rem; color:var(--text-muted); text-decoration:none; align-self:center; margin-left:auto;">+ Award achievement →</a>
+  </div>
+
+</div><!-- /.page -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     CHANGE SUMMARY (annotations)
+═══════════════════════════════════════════════════════════ -->
+<div style="background:var(--surface-1); border-top:1px solid var(--border-dim); padding:1.5rem 2rem; margin-top:2rem; max-width:900px; margin-left:auto; margin-right:auto;">
+  <div style="font-size:0.6rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-gold); margin-bottom:1rem;">Mockup — Changes vs current page</div>
+  <div style="font-size:0.82rem; color:var(--text-secondary); display:flex; flex-direction:column; gap:0.6rem; line-height:1.7;">
+    <div><strong style="color:var(--text-primary)">① Hero row</strong> — Avatar + Name + Faction + W/D/L + Rank + Achievement icons collapsed from 3 separate full-width blocks into one 80px-tall bar. Faction change stays for own profile but as a tiny inline trigger.</div>
+    <div><strong style="color:var(--text-primary)">② Two-column layout</strong> — Campaign Army takes the left column (the main content). Recent Battles + Army Portfolio share the right column. Previously everything was single-column and you had to scroll past 5 boxes to see battles.</div>
+    <div><strong style="color:var(--text-primary)">③ Battle history</strong> — Shows last 5 only, with "See all N battles →" link. The full list stays accessible but doesn't dominate the page.</div>
+    <div><strong style="color:var(--text-primary)">④ Army Portfolio</strong> — Compact list (name + system, tiny thumb) instead of a card grid. The Crusade Army is already shown prominently in the left column, so the portfolio just links to the others.</div>
+    <div><strong style="color:var(--text-primary)">Faction box removed</strong> — Faction info is in the hero row. Own-profile faction-change is a "change" text link that could open a small inline dropdown.</div>
+    <div><strong style="color:var(--text-primary)">Spacing tightened throughout</strong> — Panel padding reduced from 1.75rem to 1rem. Stat cells reduced from 1.25rem to 0.6rem padding. Section margins halved.</div>
+  </div>
+</div>
+
+</body>
+</html>
