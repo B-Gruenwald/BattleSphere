@@ -22,7 +22,8 @@ export default function NotificationBell() {
   const [unread,        setUnread]        = useState(0);
   const [loading,       setLoading]       = useState(false);
   const [dropdownStyle, setDropdownStyle] = useState({});
-  const dropRef = useRef(null);
+  const dropRef  = useRef(null);
+  const bellRef  = useRef(null); // ref on the button only — used for positioning
 
   const fetchNotifs = useCallback(async () => {
     try {
@@ -48,10 +49,12 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  // Recalculate dropdown position whenever it opens so it never goes off-screen
+  // Recalculate dropdown position whenever it opens so it never goes off-screen.
+  // We measure the bell BUTTON (bellRef), not the container, because by the time
+  // this effect runs the dropdown is already in the DOM and would inflate the container rect.
   useEffect(() => {
-    if (!open || !dropRef.current) return;
-    const rect      = dropRef.current.getBoundingClientRect();
+    if (!open || !bellRef.current) return;
+    const rect      = bellRef.current.getBoundingClientRect();
     const vw        = window.innerWidth;
     const PADDING   = 8; // min gap from screen edge
     const dropWidth = Math.min(360, vw - PADDING * 2);
@@ -101,6 +104,7 @@ export default function NotificationBell() {
 
       {/* ── Bell button ─────────────────────────────────────────────────────── */}
       <button
+        ref={bellRef}
         onClick={() => { setOpen(o => !o); if (!open) fetchNotifs(); }}
         aria-label={`Notifications${unread > 0 ? ` — ${unread} unread` : ''}`}
         style={{
