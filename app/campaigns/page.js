@@ -28,14 +28,22 @@ export default async function CampaignsDirectoryPage() {
     .from('battles')
     .select('campaign_id');
 
-  const activeCampaignIds = [...new Set((battleRows || []).map(b => b.campaign_id))];
+  // Count battles per campaign
+  const battleCount = {};
+  for (const b of (battleRows || [])) {
+    battleCount[b.campaign_id] = (battleCount[b.campaign_id] || 0) + 1;
+  }
 
-  const rows = activeCampaignIds.length === 0 ? [] : await admin
+  const activeCampaignIds = Object.keys(battleCount);
+
+  const unsorted = activeCampaignIds.length === 0 ? [] : await admin
     .from('campaigns')
     .select('*')
     .in('id', activeCampaignIds)
-    .order('created_at', { ascending: false })
     .then(({ data }) => data || []);
+
+  // Sort by battle count descending
+  const rows = unsorted.sort((a, b) => (battleCount[b.id] || 0) - (battleCount[a.id] || 0));
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2.5rem 2rem', color: 'var(--text-primary)' }}>
@@ -81,12 +89,13 @@ export default async function CampaignsDirectoryPage() {
           border: '1px solid var(--border-dim)',
         }}>
           {rows.map(c => {
-            const format  = c.campaign_format === 'league' ? 'league' : 'narrative';
-            const badge   = FORMAT_BADGE[format];
-            const setting = SETTING_LABELS[c.setting] || c.setting || null;
-            const desc    = c.description
+            const format   = c.campaign_format === 'league' ? 'league' : 'narrative';
+            const badge    = FORMAT_BADGE[format];
+            const setting  = SETTING_LABELS[c.setting] || c.setting || null;
+            const desc     = c.description
               ? c.description.slice(0, 140) + (c.description.length > 140 ? '…' : '')
               : null;
+            const battles  = battleCount[c.id] || 0;
 
             return (
               <Link
@@ -135,6 +144,9 @@ export default async function CampaignsDirectoryPage() {
                           {setting}
                         </span>
                       )}
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        {`${battles} ${battles === 1 ? 'battle' : 'battles'}`}
+                      </span>
                     </div>
 
                     <div style={{
