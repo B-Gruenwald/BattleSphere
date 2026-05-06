@@ -1,11 +1,182 @@
-export default function CampaignsPage() {
+import Link from 'next/link';
+import { createAdminClient } from '@/lib/supabase/admin';
+
+export const metadata = {
+  title: 'All Campaigns',
+  description:
+    'Browse all narrative wargaming campaigns and club leagues running on BattleSphere — for Warhammer 40,000, Age of Sigmar, and beyond.',
+};
+
+const FORMAT_BADGE = {
+  league:    { label: 'League',    bg: 'rgba(106,143,199,0.15)', color: '#6a8fc7', border: 'rgba(106,143,199,0.3)' },
+  narrative: { label: 'Narrative', bg: 'rgba(183,140,64,0.12)',  color: '#b78c40', border: 'rgba(183,140,64,0.3)'  },
+};
+
+const SETTING_LABELS = {
+  'Gothic Sci-Fi': 'Gothic Sci-Fi',
+  'High Fantasy':  'High Fantasy',
+  'Space Opera':   'Space Opera',
+  'Historical':    'Historical',
+  'Custom':        'Custom',
+};
+
+export default async function CampaignsDirectoryPage() {
+  const admin = createAdminClient();
+
+  const { data: campaigns } = await admin
+    .from('campaigns')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  const rows = campaigns || [];
+
   return (
-    <div style={{ padding: '4rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '1rem' }}>
-        Active Operations
-      </p>
-      <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Campaigns</h1>
-      <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Browse, create, and join narrative campaigns.</p>
+    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2.5rem 2rem', color: 'var(--text-primary)' }}>
+
+      {/* ── Header ────────────────────────────────────────────────────────── */}
+      <div style={{ marginBottom: '2.5rem' }}>
+        <p style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: '0.6rem',
+          letterSpacing: '0.18em',
+          textTransform: 'uppercase',
+          color: 'var(--text-gold)',
+          marginBottom: '0.6rem',
+          opacity: 0.85,
+        }}>
+          BattleSphere
+        </p>
+        <h1 style={{
+          fontSize: 'clamp(1.6rem, 3vw, 2.2rem)',
+          fontWeight: 900,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          margin: '0 0 0.75rem',
+          lineHeight: 1.1,
+        }}>
+          All Campaigns
+        </h1>
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0, maxWidth: '560px' }}>
+          Live narrative campaigns and club leagues running on BattleSphere —
+          for Warhammer 40,000, Age of Sigmar, and beyond.
+        </p>
+      </div>
+
+      {/* ── Campaign list ─────────────────────────────────────────────────── */}
+      {rows.length === 0 ? (
+        <p style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No campaigns yet.</p>
+      ) : (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '1px',
+          background: 'var(--border-dim)',
+          border: '1px solid var(--border-dim)',
+        }}>
+          {rows.map(c => {
+            const format  = c.campaign_format === 'league' ? 'league' : 'narrative';
+            const badge   = FORMAT_BADGE[format];
+            const setting = SETTING_LABELS[c.setting] || c.setting || null;
+            const desc    = c.description
+              ? c.description.slice(0, 140) + (c.description.length > 140 ? '…' : '')
+              : null;
+
+            return (
+              <Link
+                key={c.id}
+                href={`/campaign/${c.slug}`}
+                style={{ textDecoration: 'none', color: 'inherit' }}
+              >
+                <div style={{
+                  background: 'var(--bg-deep)',
+                  padding: '1.25rem 1.5rem',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  gap: '1.5rem',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}>
+                  {/* Gold left accent */}
+                  <div style={{
+                    position: 'absolute',
+                    left: 0, top: 0, bottom: 0,
+                    width: '2px',
+                    background: 'linear-gradient(180deg, var(--gold), transparent)',
+                    opacity: 0.4,
+                  }} />
+
+                  {/* Left: info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                      <span style={{
+                        display: 'inline-block',
+                        fontSize: '0.65rem',
+                        fontFamily: 'var(--font-display)',
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        padding: '0.2rem 0.55rem',
+                        background: badge.bg,
+                        color: badge.color,
+                        border: `1px solid ${badge.border}`,
+                        borderRadius: '2px',
+                      }}>
+                        {badge.label}
+                      </span>
+                      {setting && (
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          {setting}
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{
+                      fontSize: '1.05rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.03em',
+                      color: 'var(--text-primary)',
+                      marginBottom: desc ? '0.4rem' : 0,
+                      lineHeight: 1.2,
+                    }}>
+                      {c.name}
+                    </div>
+
+                    {desc && (
+                      <p style={{
+                        fontSize: '0.82rem',
+                        color: 'var(--text-secondary)',
+                        lineHeight: 1.55,
+                        margin: 0,
+                        fontStyle: 'italic',
+                      }}>
+                        {desc}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Right: arrow */}
+                  <div style={{
+                    fontSize: '0.8rem',
+                    color: 'var(--text-gold)',
+                    opacity: 0.7,
+                    flexShrink: 0,
+                    alignSelf: 'center',
+                  }}>
+                    View
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      <div style={{ marginTop: '3rem' }}>
+        <Link href="/" style={{ fontSize: '0.82rem', color: 'var(--text-gold)', textDecoration: 'none', opacity: 0.75 }}>
+          Back to BattleSphere
+        </Link>
+      </div>
+
     </div>
   );
 }

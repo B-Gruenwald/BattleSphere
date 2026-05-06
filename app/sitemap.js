@@ -8,7 +8,8 @@ export default async function sitemap() {
 
   // ── 1. Static pages ──────────────────────────────────────────────────────
   const staticUrls = [
-    { url: APP_URL, lastModified: now, changeFrequency: 'weekly', priority: 1.0 },
+    { url: APP_URL,               lastModified: now, changeFrequency: 'weekly', priority: 1.0 },
+    { url: `${APP_URL}/campaigns`, lastModified: now, changeFrequency: 'daily',  priority: 0.9 },
   ];
 
   // ── 2. Public campaign pages ─────────────────────────────────────────────

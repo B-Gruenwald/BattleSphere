@@ -370,6 +370,19 @@ export default async function HomePage() {
                 Explore a live campaign →
               </button>
             </Link>
+
+            <Link href="/campaigns" style={{ textDecoration: 'none' }}>
+              <div style={{
+                marginTop: '0.6rem',
+                textAlign: 'center',
+                fontSize: '0.75rem',
+                color: 'var(--text-gold)',
+                opacity: 0.7,
+                letterSpacing: '0.04em',
+              }}>
+                Browse all campaigns →
+              </div>
+            </Link>
           </div>
 
         </div>
