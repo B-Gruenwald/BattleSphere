@@ -9,7 +9,7 @@ function formatDate(isoString) {
   });
 }
 
-export default function RequestsList({ initialRequests, campaignId, campaignSlug }) {
+export default function RequestsList({ initialRequests, campaignId, campaignSlug, campaignName }) {
   const [requests, setRequests] = useState(initialRequests || []);
   const [loading, setLoading]   = useState(null); // id of the request being acted on
   const [error, setError]       = useState(null);
@@ -58,6 +58,19 @@ export default function RequestsList({ initialRequests, campaignId, campaignSlug
       setLoading(null);
       return;
     }
+
+    // Notify the approved player
+    fetch('/api/notifications/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipientId: req.user_id,
+        type:  'campaign_joined',
+        title: `Your request to join ${campaignName || 'the campaign'} has been approved!`,
+        body:  'Head to the campaign to choose your faction and start playing.',
+        link:  `/c/${campaignSlug}`,
+      }),
+    }).catch(() => {});
 
     setRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'approved' } : r));
     setLoading(null);

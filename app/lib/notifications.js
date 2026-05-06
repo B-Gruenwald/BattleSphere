@@ -69,6 +69,7 @@ export const NOTIF_TYPES = {
   ACHIEVEMENT_AWARDED:   'achievement_awarded',
   WEEKLY_REPORT:         'weekly_report',
   EVENT_LIVE:            'event_live',
+  CAMPAIGN_JOINED:       'campaign_joined',
   ONBOARDING_WELCOME:    'onboarding_welcome',
   ONBOARDING_CAMPAIGN:   'onboarding_campaign',
   ONBOARDING_ARMY:       'onboarding_army',
@@ -111,5 +112,10 @@ export const NOTIF_CONFIG = {
     icon:   '🛡️',
     colour: '#b78c40',
     label:  'Getting Started',
+  },
+  campaign_joined: {
+    icon:   '🏴',
+    colour: '#7a9e7e',
+    label:  'Campaign',
   },
 };

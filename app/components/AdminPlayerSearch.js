@@ -28,7 +28,7 @@ function isExpired(expiresAt) {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function AdminPlayerSearch({ members: initialMembers, campaignId, organiserId, initialInviteCodes, slug }) {
+export default function AdminPlayerSearch({ members: initialMembers, campaignId, organiserId, initialInviteCodes, slug, campaignName }) {
   const supabase = createClient();
 
   const [members,     setMembers]     = useState(initialMembers || []);
@@ -87,6 +87,18 @@ export default function AdminPlayerSearch({ members: initialMembers, campaignId,
       setMembers(prev => [...prev, { user_id: profile.id, role: 'player', faction_id: null, profile }]);
       setResults(prev => prev.filter(p => p.id !== profile.id));
       setQuery('');
+      // Notify the added player
+      fetch('/api/notifications/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientId: profile.id,
+          type:  'campaign_joined',
+          title: `You've been added to ${campaignName || 'a campaign'}!`,
+          body:  'Head to the campaign to choose your faction and start playing.',
+          link:  `/c/${slug}`,
+        }),
+      }).catch(() => {});
     }
   }
 

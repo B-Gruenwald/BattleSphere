@@ -152,6 +152,7 @@ export default async function AdminPage({ params }) {
           organiserId={campaign.organiser_id}
           initialInviteCodes={inviteCodes || []}
           slug={slug}
+          campaignName={campaign.name}
         />
       </div>
 

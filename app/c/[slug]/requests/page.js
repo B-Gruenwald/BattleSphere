@@ -121,6 +121,7 @@ export default async function JoinRequestsPage({ params }) {
         initialRequests={requests}
         campaignId={campaign.id}
         campaignSlug={slug}
+        campaignName={campaign.name}
       />
 
     </div>

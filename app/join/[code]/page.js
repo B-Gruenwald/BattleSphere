@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { createNotification } from '@/app/lib/notifications';
 
 export default async function JoinCampaignPage({ params }) {
   const { code } = await params;
@@ -48,6 +49,14 @@ export default async function JoinCampaignPage({ params }) {
   if (joinError) {
     return <JoinErrorPage message={joinError.message} />;
   }
+
+  // Notify the player they've joined
+  createNotification(user.id, {
+    type:  'campaign_joined',
+    title: `Welcome to ${campaign.name}!`,
+    body:  'You\'ve joined the campaign. Choose your faction and get ready for battle.',
+    link:  `/c/${campaign.slug}`,
+  }).catch(() => {});
 
   // Success
   redirect(`/c/${campaign.slug}`);
