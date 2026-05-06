@@ -268,8 +268,8 @@ export default function CreateCampaignPage() {
             body: JSON.stringify({
               recipientId: user.id,
               type:        'onboarding_campaign',
-              title:       `${form.name} is live — here's what to do next`,
-              body:        'Share your public page to recruit players, set up the map, create Campaign Events, and let the narrative begin.',
+              title:       `${form.name} is live — now recruit your commanders`,
+              body:        `Your campaign is set up and ready. Share the public page so players can find and join it, customise the map to match your theatre of war, and create Campaign Events to give battles real narrative stakes. The story starts with you.`,
               link:        `/c/${slug}`,
               metadata: {
                 tips: [

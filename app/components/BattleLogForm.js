@@ -313,18 +313,26 @@ export default function BattleLogForm({ campaign, territories, factions, members
 
     // In-app notification — notify any player in this battle who didn't log it
     {
+      const loggerUsername      = members.find(m => m.user_id === userId)?.username ?? 'Your opponent';
       const attackerFactionName = factions.find(f => f.id === attackerFactionId)?.name ?? 'Unknown';
       const defenderFactionName = factions.find(f => f.id === defenderFactionId)?.name ?? 'Unknown';
       const territoryName       = territories.find(t => t.id === territoryId)?.name ?? null;
+      const battleTitle         = headline.trim() || null;
+
+      // Title: include the battle headline if one was set
+      const notifTitle = battleTitle
+        ? `${loggerUsername} has reported your battle: ${battleTitle}`
+        : `${loggerUsername} has reported your latest battle`;
+
+      // Body: match-up, location, result, CTA
       const resultText =
-        winnerFactionId === attackerFactionId ? `${attackerFactionName} won` :
-        winnerFactionId === defenderFactionId ? `${defenderFactionName} won` :
-        'The battle was a draw';
-      const bodyText = [
-        `${attackerFactionName} vs ${defenderFactionName}`,
-        territoryName ? `in ${territoryName}` : `in ${campaign.name}`,
-        `— ${resultText}.`,
-      ].join(' ');
+        winnerFactionId === attackerFactionId ? `${attackerFactionName} emerged victorious` :
+        winnerFactionId === defenderFactionId ? `${defenderFactionName} emerged victorious` :
+        'the battle ended in a draw';
+      const locationText = territoryName
+        ? `${attackerFactionName} vs ${defenderFactionName} in ${territoryName}`
+        : `${attackerFactionName} vs ${defenderFactionName} in ${campaign.name}`;
+      const notifBody = `${locationText} — ${resultText}. Check the full report and add your own perspective.`;
 
       const recipientsToNotify = [];
       if (attackerPlayerId && attackerPlayerId !== userId) recipientsToNotify.push(attackerPlayerId);
@@ -337,8 +345,8 @@ export default function BattleLogForm({ campaign, territories, factions, members
           body:    JSON.stringify({
             recipientId,
             type:  'battle_opponent',
-            title: 'A battle has been recorded — check the report',
-            body:  bodyText,
+            title: notifTitle,
+            body:  notifBody,
             link:  `/c/${campaign.slug}/battle/${battle.id}`,
           }),
         }).catch(() => {});
