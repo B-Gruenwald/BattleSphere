@@ -58,7 +58,6 @@ export default function NavBar({ user, isAdmin, username }) {
               {isAdmin && (
                 <Link href="/admin" style={{ ...navLinkStyle, color: '#e05a5a' }}>Admin</Link>
               )}
-              <NotificationBell />
               <FeedbackButton username={username} />
               <span style={{ ...navLinkStyle, opacity: 0.5 }}>{username}</span>
               <LogoutButton />
@@ -72,6 +71,9 @@ export default function NavBar({ user, isAdmin, username }) {
             </>
           )}
         </div>
+
+        {/* Notification bell — always visible when logged in (desktop + mobile) */}
+        {user && <NotificationBell />}
 
         {/* Mobile hamburger button */}
         <button
@@ -117,9 +119,6 @@ export default function NavBar({ user, isAdmin, username }) {
                   Admin
                 </Link>
               )}
-              <div className="site-nav__dropdown-link">
-                <NotificationBell />
-              </div>
               <div className="site-nav__dropdown-link">
                 <FeedbackButton username={username} />
               </div>
