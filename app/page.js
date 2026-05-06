@@ -221,6 +221,19 @@ export default async function HomePage() {
                 See an example army →
               </button>
             </Link>
+
+            <Link href="/armies" style={{ textDecoration: 'none' }}>
+              <div style={{
+                marginTop: '0.6rem',
+                textAlign: 'center',
+                fontSize: '0.75rem',
+                color: 'var(--text-gold)',
+                opacity: 0.7,
+                letterSpacing: '0.04em',
+              }}>
+                Browse all armies →
+              </div>
+            </Link>
           </div>
 
           {/* ── PATH 2: Track your League ──────────────────────── */}

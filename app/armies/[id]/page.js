@@ -15,7 +15,9 @@ export async function generateMetadata({ params }) {
   const playerName = profileRows?.[0]?.username ?? null;
   const { count: unitCount } = await admin.from('army_units').select('*', { count: 'exact', head: true }).eq('army_id', id);
 
-  const title       = `${army.name} — Army Portfolio`;
+  const title       = army.faction_name
+    ? `${army.name} — ${army.faction_name} Army Portfolio`
+    : `${army.name} — Army Portfolio`;
   const description = army.description
     ? army.description.slice(0, 155)
     : `${army.faction_name ? army.faction_name + ' wargaming army' : 'Wargaming army'} on BattleSphere, commanded by ${playerName ?? 'an unknown warlord'}. ${unitCount ?? 0} units with Crusade records, battle history, and photo galleries.`;
