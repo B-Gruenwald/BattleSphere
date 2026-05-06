@@ -23,12 +23,19 @@ const SETTING_LABELS = {
 export default async function CampaignsDirectoryPage() {
   const admin = createAdminClient();
 
-  const { data: campaigns } = await admin
+  // Only show campaigns that have at least one battle recorded
+  const { data: battleRows } = await admin
+    .from('battles')
+    .select('campaign_id');
+
+  const activeCampaignIds = [...new Set((battleRows || []).map(b => b.campaign_id))];
+
+  const rows = activeCampaignIds.length === 0 ? [] : await admin
     .from('campaigns')
     .select('*')
-    .order('created_at', { ascending: false });
-
-  const rows = campaigns || [];
+    .in('id', activeCampaignIds)
+    .order('created_at', { ascending: false })
+    .then(({ data }) => data || []);
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2.5rem 2rem', color: 'var(--text-primary)' }}>
