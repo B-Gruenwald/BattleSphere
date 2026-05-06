@@ -239,6 +239,22 @@ export default function NotificationBell() {
                         </p>
                       )}
 
+                      {/* Tip buttons from metadata */}
+                      {n.metadata?.tips && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', margin: '0.3rem 0 0.15rem' }}>
+                          {n.metadata.tips.map((tip, ti) => (
+                            <Link key={ti} href={tip.link} onClick={() => setOpen(false)} style={{
+                              fontSize: '0.68rem', fontFamily: 'var(--font-body)',
+                              color: 'var(--text-gold)', background: 'rgba(183,140,64,0.1)',
+                              border: '1px solid rgba(183,140,64,0.3)', borderRadius: '4px',
+                              padding: '0.15rem 0.45rem', textDecoration: 'none', display: 'inline-block',
+                            }}>
+                              {tip.label} →
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+
                       {/* Mark as read button — only for unread */}
                       {!n.is_read && (
                         <button onClick={(e) => markOneRead(e, n)} style={{
