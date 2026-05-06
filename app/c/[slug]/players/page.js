@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import PlayerAchievementIcons from '@/app/components/PlayerAchievementIcons';
 import { calcPlayerXP, getXPRank } from '@/app/lib/xp';
+import AdminPlayerSearch from '@/app/components/AdminPlayerSearch';
 
 export default async function PlayersPage({ params }) {
   const { slug } = await params;
@@ -51,6 +52,17 @@ export default async function PlayersPage({ params }) {
     .select('*')
     .eq('campaign_id', campaign.id)
     .eq('awarded_to_type', 'player');
+
+  const isOrganiser = campaign.organiser_id === user.id;
+
+  // Fetch invite codes for organiser
+  const { data: inviteCodes } = isOrganiser
+    ? await supabase
+        .from('campaign_invite_codes')
+        .select('*')
+        .eq('campaign_id', campaign.id)
+        .order('created_at', { ascending: false })
+    : { data: [] };
 
   const profileMap  = Object.fromEntries((profiles  || []).map(p => [p.id, p]));
   const factionMap  = Object.fromEntries((factions  || []).map(f => [f.id, f]));
@@ -336,6 +348,35 @@ export default async function PlayersPage({ params }) {
           )}
         </div>
       </div>
+
+      {/* ── Organiser: manage players & invite links ──────────────── */}
+      {isOrganiser && (
+        <div style={{ marginTop: '3.5rem' }}>
+          <div style={{ borderTop: '1px solid var(--border-dim)', paddingTop: '2.5rem', marginBottom: '2rem' }}>
+            <p style={{
+              fontFamily: 'var(--font-display)', fontSize: '0.6rem',
+              letterSpacing: '0.2em', textTransform: 'uppercase',
+              color: 'var(--text-gold)', marginBottom: '0.4rem',
+            }}>
+              Organiser
+            </p>
+            <h2 style={{
+              fontSize: 'clamp(1.2rem, 3vw, 1.8rem)', fontWeight: '900',
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+            }}>
+              Manage Players
+            </h2>
+          </div>
+          <AdminPlayerSearch
+            members={players.map(p => ({ user_id: p.user_id, role: p.role, faction_id: p.faction_id, profile: p.profile }))}
+            campaignId={campaign.id}
+            organiserId={campaign.organiser_id}
+            initialInviteCodes={inviteCodes || []}
+            slug={slug}
+            campaignName={campaign.name}
+          />
+        </div>
+      )}
 
       <div style={{ marginTop: '2.5rem' }}>
         <Link href={`/c/${slug}`}>

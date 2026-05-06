@@ -274,7 +274,7 @@ export default function CreateCampaignPage() {
               metadata: {
                 tips: [
                   { label: 'Share public page', link: `/campaign/${slug}` },
-                  { label: 'Invite players',    link: `/c/${slug}/admin` },
+                  { label: 'Invite players',    link: `/c/${slug}/players` },
                   { label: 'Edit the map',      link: `/c/${slug}/map` },
                   { label: 'Create an event',   link: `/c/${slug}/events` },
                 ],
