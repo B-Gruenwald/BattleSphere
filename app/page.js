@@ -112,8 +112,9 @@ export default async function HomePage() {
               lineHeight: 1.55,
               margin: 0,
             }}>
-              Run Warhammer 40k Crusade campaigns, track Age of Sigmar
-              narrative play, manage your club league — free, forever.
+              Showcase your painted armies, run a club league, or launch
+              your own map-based narrative campaign. For Warhammer 40,000,
+              Age of Sigmar, and beyond. Free, forever.
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', flexShrink: 0 }}>
               <Link href="/register">
