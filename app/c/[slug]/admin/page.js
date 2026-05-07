@@ -2,9 +2,6 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import AdminCampaignSettings from '@/app/components/AdminCampaignSettings';
-import AdminPlayerSearch from '@/app/components/AdminPlayerSearch';
-import AdminFactionEditor from '@/app/components/AdminFactionEditor';
-import AdminBattleManager from '@/app/components/AdminBattleManager';
 import OrganiserDigestMessage from '@/app/components/OrganiserDigestMessage';
 
 export default async function AdminPage({ params }) {
@@ -26,32 +23,6 @@ export default async function AdminPage({ params }) {
   // Organiser only
   if (campaign.organiser_id !== user.id) redirect(`/c/${slug}`);
 
-  // Fetch members with role + faction info
-  const { data: members } = await supabase
-    .from('campaign_members')
-    .select('*')
-    .eq('campaign_id', campaign.id);
-
-  // Fetch profiles for all members
-  const memberIds = (members || []).map(m => m.user_id);
-  const { data: profiles } = memberIds.length > 0
-    ? await supabase.from('profiles').select('*').in('id', memberIds)
-    : { data: [] };
-
-  // Merge profiles into members
-  const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
-  const membersWithProfiles = (members || []).map(m => ({
-    ...m,
-    profile: profileMap[m.user_id] || null,
-  }));
-
-  // Fetch factions
-  const { data: factions } = await supabase
-    .from('factions')
-    .select('*')
-    .eq('campaign_id', campaign.id)
-    .order('created_at');
-
   // Fetch queued digest messages for this campaign
   const { data: digestMessages } = await supabase
     .from('campaign_digest_messages')
@@ -60,26 +31,12 @@ export default async function AdminPage({ params }) {
     .order('created_at', { ascending: false })
     .limit(10);
 
-  // Fetch battles (for battle management section)
-  const { data: battles } = await supabase
-    .from('battles')
-    .select('*')
-    .eq('campaign_id', campaign.id)
-    .order('created_at', { ascending: false });
-
   // Fetch pending join request count (for the Join Requests section)
   const { count: pendingRequestCount } = await supabase
     .from('join_requests')
     .select('*', { count: 'exact', head: true })
     .eq('campaign_id', campaign.id)
     .eq('status', 'pending');
-
-  // Fetch existing invite codes for the multi-link invite system
-  const { data: inviteCodes } = await supabase
-    .from('campaign_invite_codes')
-    .select('*')
-    .eq('campaign_id', campaign.id)
-    .order('created_at', { ascending: false });
 
   const isLeague = campaign.campaign_format === 'league';
 
@@ -130,33 +87,15 @@ export default async function AdminPage({ params }) {
       {/* ═══ SECTION 1: Campaign Settings ═══════════════════════════════════ */}
       <div style={{ marginBottom: '3.5rem' }}>
         <div style={{ borderBottom: '1px solid var(--border-dim)', marginBottom: '2rem', paddingBottom: '0.75rem', display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
-          <h2 style={sectionTitle}>Campaign Settings</h2>
+          <h2 style={sectionTitle}>General Settings</h2>
         </div>
         <p style={sectionDesc}>
-          Edit your campaign's name, description, and genre setting.
+          Edit your campaign's name, description, genre, visibility, influence mode, and Discord integration.
         </p>
         <AdminCampaignSettings campaign={campaign} slug={slug} />
       </div>
 
-      {/* ═══ SECTION 2: Players & Invitations ════════════════════════════════ */}
-      <div style={{ marginBottom: '3.5rem' }}>
-        <div style={{ borderBottom: '1px solid var(--border-dim)', marginBottom: '2rem', paddingBottom: '0.75rem' }}>
-          <h2 style={sectionTitle}>Players & Invitations</h2>
-        </div>
-        <p style={sectionDesc}>
-          Manage who is in your campaign. Add players by searching their username, or share an invite link they can use to join themselves.
-        </p>
-        <AdminPlayerSearch
-          members={membersWithProfiles}
-          campaignId={campaign.id}
-          organiserId={campaign.organiser_id}
-          initialInviteCodes={inviteCodes || []}
-          slug={slug}
-          campaignName={campaign.name}
-        />
-      </div>
-
-      {/* ═══ SECTION 2b: Join Requests ══════════════════════════════════════ */}
+      {/* ═══ SECTION 2: Join Requests ═══════════════════════════════════════ */}
       <div style={{ marginBottom: '3.5rem' }}>
         <div style={{ borderBottom: '1px solid var(--border-dim)', marginBottom: '2rem', paddingBottom: '0.75rem', display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
           <h2 style={sectionTitle}>Join Requests</h2>
@@ -180,18 +119,7 @@ export default async function AdminPage({ params }) {
         </Link>
       </div>
 
-      {/* ═══ SECTION 3: Factions ═════════════════════════════════════════════ */}
-      <div style={{ marginBottom: '3.5rem' }}>
-        <div style={{ borderBottom: '1px solid var(--border-dim)', marginBottom: '2rem', paddingBottom: '0.75rem' }}>
-          <h2 style={sectionTitle}>Factions</h2>
-        </div>
-        <p style={sectionDesc}>
-          Edit faction names and colours. Changes take effect across the whole campaign immediately.
-        </p>
-        <AdminFactionEditor factions={factions || []} campaignId={campaign.id} />
-      </div>
-
-      {/* ═══ SECTION 4: Map (narrative only) ════════════════════════════════ */}
+      {/* ═══ SECTION 3: Map (narrative only) ═══════════════════════════════ */}
       {!isLeague && (
         <div style={{ marginBottom: '3.5rem' }}>
           <div style={{ borderBottom: '1px solid var(--border-dim)', marginBottom: '2rem', paddingBottom: '0.75rem' }}>
@@ -206,7 +134,7 @@ export default async function AdminPage({ params }) {
         </div>
       )}
 
-      {/* ═══ SECTION 4b: Campaign Digest Messages ═══════════════════════════ */}
+      {/* ═══ SECTION 4: Campaign Digest ════════════════════════════════════ */}
       <div style={{ marginBottom: '3.5rem' }}>
         <div style={{ borderBottom: '1px solid var(--border-dim)', marginBottom: '2rem', paddingBottom: '0.75rem' }}>
           <h2 style={sectionTitle}>Campaign Digest</h2>
@@ -218,22 +146,6 @@ export default async function AdminPage({ params }) {
           campaignId={campaign.id}
           userId={user.id}
           initialMessages={digestMessages || []}
-        />
-      </div>
-
-      {/* ═══ SECTION 5: Battle Records ═══════════════════════════════════════ */}
-      <div style={{ marginBottom: '3.5rem' }}>
-        <div style={{ borderBottom: '1px solid var(--border-dim)', marginBottom: '2rem', paddingBottom: '0.75rem' }}>
-          <h2 style={sectionTitle}>Battle Records</h2>
-        </div>
-        <p style={sectionDesc}>
-          As organiser, you can delete any battle record in this campaign. This cannot be undone.
-        </p>
-        <AdminBattleManager
-          battles={battles || []}
-          factions={factions || []}
-          slug={slug}
-          influenceMode={campaign.influence_mode || 'standard'}
         />
       </div>
 

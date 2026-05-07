@@ -36,6 +36,7 @@ export default function AdminCampaignSettings({ campaign, slug }) {
   const [description,   setDescription]   = useState(campaign.description || '');
   const [setting,       setSetting]       = useState(campaign.setting || 'Gothic Sci-Fi');
   const [influenceMode, setInfluenceMode] = useState(campaign.influence_mode || 'standard');
+  const [visibility,    setVisibility]    = useState(campaign.visibility || 'Private');
   const [saving,        setSaving]        = useState(false);
   const [saved,         setSaved]         = useState(false);
   const [error,         setError]         = useState('');
@@ -56,7 +57,8 @@ export default function AdminCampaignSettings({ campaign, slug }) {
   const dirty = name !== campaign.name
     || description !== (campaign.description || '')
     || setting !== campaign.setting
-    || influenceMode !== (campaign.influence_mode || 'standard');
+    || influenceMode !== (campaign.influence_mode || 'standard')
+    || visibility !== (campaign.visibility || 'Private');
 
   async function save(overrideSetting) {
     const saveSetting = overrideSetting !== undefined ? overrideSetting : setting;
@@ -72,6 +74,7 @@ export default function AdminCampaignSettings({ campaign, slug }) {
         description:    description.trim() || null,
         setting:        saveSetting,
         influence_mode: influenceMode,
+        visibility,
       })
       .eq('id', campaign.id);
 
@@ -153,6 +156,7 @@ export default function AdminCampaignSettings({ campaign, slug }) {
           description:    description.trim() || null,
           setting:        newSetting,
           influence_mode: influenceMode,
+          visibility,
         })
         .eq('id', campaign.id);
       if (saveErr) throw saveErr;
@@ -371,6 +375,39 @@ export default function AdminCampaignSettings({ campaign, slug }) {
             {influenceMode === 'standard' && 'Battle results automatically award influence points: winner +3, loser +1, draw +2 each.'}
             {influenceMode === 'victory'  && 'Only the winner gains influence (+1 per victory). Draws and losses award nothing.'}
             {influenceMode === 'off'      && 'Influence is not updated automatically. Use the manual override on each territory to set values yourself.'}
+          </p>
+        </div>
+
+        {/* Visibility */}
+        <div style={{ marginBottom: '1.75rem' }}>
+          <label style={labelStyle}>Visibility</label>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.6rem' }}>
+            {['Public', 'Private'].map(v => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => { setVisibility(v); setSaved(false); }}
+                style={{
+                  padding: '0.5rem 0.9rem',
+                  cursor: 'pointer',
+                  border: `1px solid ${visibility === v ? 'var(--gold)' : 'var(--border-dim)'}`,
+                  background: visibility === v ? 'rgba(183,140,64,0.12)' : 'rgba(255,255,255,0.02)',
+                  color: visibility === v ? 'var(--text-gold)' : 'var(--text-secondary)',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.58rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+          <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: 0 }}>
+            {visibility === 'Public'
+              ? 'Anyone can view this campaign without logging in.'
+              : 'Only invited players can see this campaign.'}
           </p>
         </div>
 

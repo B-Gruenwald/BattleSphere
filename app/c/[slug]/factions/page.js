@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import FactionStandingsTable from '@/app/components/FactionStandingsTable';
+import AdminFactionManager from '@/app/components/AdminFactionManager';
 
 export default async function FactionsPage({ params }) {
   const { slug } = await params;
@@ -17,6 +18,8 @@ export default async function FactionsPage({ params }) {
     .single();
 
   if (!campaign) notFound();
+
+  const isOrganiser = campaign.organiser_id === user.id;
 
   const { data: factions } = await supabase
     .from('factions')
@@ -74,6 +77,31 @@ export default async function FactionsPage({ params }) {
       <div style={{ borderTop: '1px solid var(--border-dim)', marginBottom: '2.5rem' }} />
 
       <FactionStandingsTable factions={factionsWithStats} slug={slug} />
+
+      {/* ── Organiser: edit factions ───────────────────────────────── */}
+      {isOrganiser && (
+        <div style={{ marginTop: '3.5rem' }}>
+          <div style={{ borderTop: '1px solid var(--border-dim)', paddingTop: '2.5rem', marginBottom: '1.25rem' }}>
+            <p style={{
+              fontFamily: 'var(--font-display)', fontSize: '0.52rem',
+              letterSpacing: '0.16em', textTransform: 'uppercase',
+              color: 'var(--text-gold)', marginBottom: '0.35rem',
+            }}>
+              Organiser
+            </p>
+            <h2 style={{
+              fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)', fontWeight: '900',
+              letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem',
+            }}>
+              Manage Factions
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, margin: 0 }}>
+              Edit faction names and colours, or add and remove factions. Changes take effect across the campaign immediately.
+            </p>
+          </div>
+          <AdminFactionManager factions={factions || []} campaignId={campaign.id} />
+        </div>
+      )}
 
       <div style={{ marginTop: '2.5rem' }}>
         <Link href={`/c/${slug}`}>

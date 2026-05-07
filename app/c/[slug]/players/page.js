@@ -149,6 +149,28 @@ export default async function PlayersPage({ params }) {
 
       <div style={{ borderTop: '1px solid var(--border-dim)', marginBottom: '2.5rem' }} />
 
+      {/* ── Organiser: manage players & invite links (top) ─────────── */}
+      {isOrganiser && (
+        <div style={{ marginBottom: '3rem' }}>
+          <p style={{
+            fontFamily: 'var(--font-display)', fontSize: '0.52rem',
+            letterSpacing: '0.16em', textTransform: 'uppercase',
+            color: 'var(--text-gold)', marginBottom: '1.25rem',
+          }}>
+            Manage Players
+          </p>
+          <AdminPlayerSearch
+            members={players.map(p => ({ user_id: p.user_id, role: p.role, faction_id: p.faction_id, profile: p.profile }))}
+            campaignId={campaign.id}
+            organiserId={campaign.organiser_id}
+            initialInviteCodes={inviteCodes || []}
+            slug={slug}
+            campaignName={campaign.name}
+          />
+          <div style={{ borderTop: '1px solid var(--border-dim)', marginTop: '3rem', marginBottom: '2.5rem' }} />
+        </div>
+      )}
+
       <div className="table-scroll-wrap">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
 
@@ -348,35 +370,6 @@ export default async function PlayersPage({ params }) {
           )}
         </div>
       </div>
-
-      {/* ── Organiser: manage players & invite links ──────────────── */}
-      {isOrganiser && (
-        <div style={{ marginTop: '3.5rem' }}>
-          <div style={{ borderTop: '1px solid var(--border-dim)', paddingTop: '2.5rem', marginBottom: '2rem' }}>
-            <p style={{
-              fontFamily: 'var(--font-display)', fontSize: '0.6rem',
-              letterSpacing: '0.2em', textTransform: 'uppercase',
-              color: 'var(--text-gold)', marginBottom: '0.4rem',
-            }}>
-              Organiser
-            </p>
-            <h2 style={{
-              fontSize: 'clamp(1.2rem, 3vw, 1.8rem)', fontWeight: '900',
-              letterSpacing: '0.08em', textTransform: 'uppercase',
-            }}>
-              Manage Players
-            </h2>
-          </div>
-          <AdminPlayerSearch
-            members={players.map(p => ({ user_id: p.user_id, role: p.role, faction_id: p.faction_id, profile: p.profile }))}
-            campaignId={campaign.id}
-            organiserId={campaign.organiser_id}
-            initialInviteCodes={inviteCodes || []}
-            slug={slug}
-            campaignName={campaign.name}
-          />
-        </div>
-      )}
 
       <div style={{ marginTop: '2.5rem' }}>
         <Link href={`/c/${slug}`}>
