@@ -68,7 +68,13 @@ export default async function DashboardPage() {
           </p>
           <h1 style={{ fontSize: '2.5rem', fontWeight: '700' }}>Welcome, {username}</h1>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <Link
+            href={`/players/${encodeURIComponent(username)}`}
+            style={{ fontFamily: 'var(--font-display)', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', textDecoration: 'none' }}
+          >
+            My profile →
+          </Link>
           <Link href="/campaign/new">
             <button className="btn-primary">+ New Campaign</button>
           </Link>

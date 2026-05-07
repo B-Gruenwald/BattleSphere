@@ -110,7 +110,7 @@ export default async function BattleDetailPage({ params }) {
 
   const playerIds = [battle.attacker_player_id, battle.defender_player_id].filter(Boolean);
   const { data: profiles } = playerIds.length > 0
-    ? await supabase.from('profiles').select('id, username').in('id', playerIds)
+    ? await supabase.from('profiles').select('id, username, profile_public').in('id', playerIds)
     : { data: [] };
 
   const profileMap       = Object.fromEntries((profiles || []).map(p => [p.id, p]));
@@ -305,7 +305,12 @@ export default async function BattleDetailPage({ params }) {
           </div>
           {attackerPlayer && (
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-              Commanded by {attackerPlayer.username}
+              Commanded by{' '}
+              {attackerPlayer.profile_public !== false ? (
+                <Link href={`/players/${encodeURIComponent(attackerPlayer.username)}`} style={{ color: 'var(--text-gold)', textDecoration: 'none' }}>
+                  {attackerPlayer.username}
+                </Link>
+              ) : attackerPlayer.username}
             </p>
           )}
           {battle.attacker_army_type && (
@@ -333,7 +338,12 @@ export default async function BattleDetailPage({ params }) {
           </div>
           {defenderPlayer && (
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-              Commanded by {defenderPlayer.username}
+              Commanded by{' '}
+              {defenderPlayer.profile_public !== false ? (
+                <Link href={`/players/${encodeURIComponent(defenderPlayer.username)}`} style={{ color: 'var(--text-gold)', textDecoration: 'none' }}>
+                  {defenderPlayer.username}
+                </Link>
+              ) : defenderPlayer.username}
             </p>
           )}
           {battle.defender_army_type && (

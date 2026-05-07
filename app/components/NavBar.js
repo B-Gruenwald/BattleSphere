@@ -59,7 +59,7 @@ export default function NavBar({ user, isAdmin, username }) {
                 <Link href="/admin" style={{ ...navLinkStyle, color: '#e05a5a' }}>Admin</Link>
               )}
               <FeedbackButton username={username} />
-              <span style={{ ...navLinkStyle, opacity: 0.5 }}>{username}</span>
+              <Link href="/profile" style={{ ...navLinkStyle, opacity: 0.5 }}>{username}</Link>
               <LogoutButton />
             </>
           ) : (
@@ -122,9 +122,14 @@ export default function NavBar({ user, isAdmin, username }) {
               <div className="site-nav__dropdown-link">
                 <FeedbackButton username={username} />
               </div>
-              <div className="site-nav__dropdown-link" style={{ opacity: 0.5 }}>
-                <span style={navLinkStyle}>{username}</span>
-              </div>
+              <Link
+                href="/profile"
+                style={{ ...navLinkStyle, opacity: 0.5 }}
+                className="site-nav__dropdown-link"
+                onClick={() => setMenuOpen(false)}
+              >
+                {username}
+              </Link>
               <div className="site-nav__dropdown-link">
                 <LogoutButton />
               </div>

@@ -64,7 +64,7 @@ export default async function ArmyPage({ params }) {
   // Player profile
   const { data: profileRows } = await admin
     .from('profiles')
-    .select('id, username')
+    .select('id, username, profile_public')
     .eq('id', army.player_id)
     .limit(1);
   const profile = profileRows?.[0] ?? null;
@@ -103,7 +103,13 @@ export default async function ArmyPage({ params }) {
       <nav style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
         {profile && (
           <>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{profile.username}</span>
+            {profile.profile_public !== false ? (
+              <Link href={`/players/${encodeURIComponent(profile.username)}`} style={{ color: 'var(--text-muted)', fontSize: '0.75rem', textDecoration: 'none' }}>
+                {profile.username}
+              </Link>
+            ) : (
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{profile.username}</span>
+            )}
             <span style={{ color: 'var(--border-dim)', fontSize: '0.75rem' }}>›</span>
           </>
         )}
@@ -153,9 +159,15 @@ export default async function ArmyPage({ params }) {
             {profile && (
               <>
                 <span style={{ color: 'var(--border-dim)', fontSize: '0.75rem' }}>·</span>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.58rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                  {profile.username}
-                </span>
+                {profile.profile_public !== false ? (
+                  <Link href={`/players/${encodeURIComponent(profile.username)}`} style={{ fontFamily: 'var(--font-display)', fontSize: '0.58rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', textDecoration: 'none' }}>
+                    {profile.username}
+                  </Link>
+                ) : (
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.58rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                    {profile.username}
+                  </span>
+                )}
               </>
             )}
           </div>
