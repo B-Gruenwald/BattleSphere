@@ -85,6 +85,7 @@ export default async function OgImage({ params }) {
   let bgPhotoUrl = null;
   const { data: photoRows } = await admin
     .from('battle_photos').select('url').eq('battle_id', id)
+    .order('is_portrait', { ascending: false })
     .order('created_at', { ascending: true }).limit(1);
   bgPhotoUrl = photoRows?.[0]?.url ?? null;
   if (!bgPhotoUrl && territory?.image_url) bgPhotoUrl = territory.image_url;
