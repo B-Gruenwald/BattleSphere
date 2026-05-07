@@ -116,9 +116,7 @@ export default async function OgImage({ params }) {
 
   // ── PHOTO LAYOUT (full-bleed) ────────────────────────────────────────────────
   if (bgPhotoUrl) {
-    // Crop to the visible zone width (gradient goes solid at 68% = 544px)
-    // so Cloudinary centres the subject at x≈270 — the visual centre of the photo area
-    const croppedPhoto = cropUrl(bgPhotoUrl, 540, H);
+    const croppedPhoto = cropUrl(bgPhotoUrl, W, H);
     const headlineSize = headline
       ? (headline.length > 36 ? 17 : headline.length > 24 ? 20 : 23) : 0;
     const factionSize  = (name) => name.length > 14 ? 13 : 17;
@@ -128,9 +126,9 @@ export default async function OgImage({ params }) {
         <div style={{ width: W, height: H, display: 'flex', position: 'relative',
           backgroundColor: BG_VOID, fontFamily: 'Cinzel', color: TEXT_PRI }}>
 
-          {/* Photo — sized to visible zone; right edge meets the solid gradient point */}
-          <img src={croppedPhoto} width={540} height={H}
-            style={{ position: 'absolute', top: 0, left: 0, width: 540, height: H, objectFit: 'cover' }} />
+          {/* Photo — full 800×419 crop; shifted left so g_auto subject (x=400) lands at x≈200 in canvas */}
+          <img src={croppedPhoto} width={W} height={H}
+            style={{ position: 'absolute', top: 0, left: -200, width: W, height: H, objectFit: 'cover' }} />
 
           {/* Gradient veil: photo clear on left, dark on right for text legibility */}
           <div style={{
