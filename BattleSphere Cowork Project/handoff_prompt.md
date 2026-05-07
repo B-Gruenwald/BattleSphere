@@ -30,15 +30,15 @@ I'm Benjamin Grünwald, a Warhammer 40,000 hobbyist with limited coding skills. 
 
 ## Current git state
 
-**Last commit**: `797f1f5` — `feat: show metadata tip buttons in bell dropdown preview`
+**Last commit**: `cf7746d` — `Admin overhaul: distribute tools to sub-pages + UI improvements`
 
 ```
+cf7746d  Admin overhaul: distribute tools to sub-pages + UI improvements
+54c1b0e  (previous session commits)
 797f1f5  feat: show metadata tip buttons in bell dropdown preview
-68103eb  fix: measure bell button rect (not container) for dropdown positioning — avoids inflated width bug
-4e3f62a  fix: notification dropdown uses fixed viewport positioning — no off-screen clipping on mobile
-0c07ad1  fix: notification bell always visible on mobile, dropdown constrained to viewport width
-14605a8  fix: notifications — decouple mark-as-read from navigation, richer battle/campaign text
-20587df  feat: in-app notification inbox — bell, /inbox page, battle/achievement/onboarding/weekly/event notifications
+68103eb  fix: measure bell button rect (not container) for dropdown positioning
+4e3f62a  fix: notification dropdown uses fixed viewport positioning
+20587df  feat: in-app notification inbox — bell, /inbox page, all notification triggers
 e6f1021  fix: sitemap — use select('*'), remove join, wrap sections in try/catch
 a33f0d4  feat: public armies directory, faction in army title, sitemap + landing page links
 ```
@@ -75,7 +75,7 @@ Everything below is live on `main`:
 - **Focal point on unit/battle photos** — Top/Ctr/Bot toggle per photo in gallery; stored in `army_unit_photos.focal_point` and `battle_photos.focal_point`; respected in all image displays via CSS `objectPosition`. API: `PATCH /api/photos/focal-point`.
 - **1080×1080 share image** — `GET /api/units/[id]/share-image?download=1`; full-bleed photo, bottom caption, `battlesphere.cc` URL vignette; `ShareUnitButton.js` (download + copy link)
 - **Battle Record pages** — public, no login needed; Copy Link button; 16:9 portrait hero image (first `is_portrait` photo, or first uploaded photo) displayed right below the share button with click-to-enlarge lightbox. `battle_photos.is_portrait` flag; "Set as Portrait" button in gallery for canEdit users.
-- **Battle Record OG image** — `app/c/[slug]/battle/[id]/opengraph-image.js`; 800×419 WhatsApp/social preview card showing faction matchup (VS layout with faction colour accents), result (Victory/Draw), territory, battle headline if set. Battle detail page also has `generateMetadata` for dynamic og:title and description.
+- **Battle Record OG image** — `app/c/[slug]/battle/[id]/opengraph-image.js`; 800×419 WhatsApp/social preview card. **Photo layout (full-bleed)**: photo fills the entire 800×419 canvas; gradient overlay fades transparent→dark from left to right (solid at 68% width); text overlaid in a 265px zone on the right. Photo is clearly visible across ~65% of the image. Text-only fallback (no photo): dark void background with coloured radial gradients. Both layouts show faction matchup (VS with faction colour accents), result badge, territory, headline.
 - **Landing page OG image** — `app/opengraph-image.js`; 800×419; dark void background with gold aurora, large "BATTLESPHERE" title, tagline split across three lines, domain stamp. Metadata in `app/layout.js` includes explicit `og:image` and `twitter:image` URLs for Discord/social scrapers.
 - **Army Portfolio OG image** — `app/armies/[id]/opengraph-image.js`; 800×419; single `ImageResponse` with ternary: cover photo (419px left square panel) + text panel (381px right) when cover exists, placeholder diamond when not. Shows army name, faction, player, unit count. Title: `"[Name] — Army Portfolio"`. `generateMetadata` in `app/armies/[id]/page.js`.
 - **Campaign OG image** — `app/campaign/[slug]/opengraph-image.js`; 800×419; narrative campaigns show the live map rendered as Satori-native JSX (position:absolute divs for territories/routes, no SVG); league/no-territory campaigns show a split text card: campaign name + setting on the left, league standings (rank · faction colour · name · W/D · pts) on the right, computed from actual battle data. Battles fetched as `select('attacker_faction_id, defender_faction_id, winner_faction_id')` (not head:true) so standings can be computed. Title: `"[Name] — BattleSphere Narrative Campaign"` or `"[Name] — BattleSphere League Campaign"`. `generateMetadata` in `app/campaign/[slug]/page.js`.
@@ -121,6 +121,24 @@ Full in-app notification system. DB migration run, all code deployed.
   - Weekly cron → all members: `weekly_report` (same run as digest email)
   - Daily cron `0 9 * * *` (`/api/cron/event-notifications`) → all members when event goes active: `event_live`; stamps `notif_sent_at` to prevent duplicates
 - **Test data**: `BattleSphere Cowork Project/seed_test_notifications.sql` — plain INSERT (no PL/pgSQL); starts with DELETE so re-running replaces old data. Run in Supabase SQL Editor for user `b2e54bde-7868-4250-9228-a43ba5b9da92`.
+
+### Admin overhaul — tools distributed to sub-pages (built 2026-05-07)
+
+Organiser tools moved out of the monolithic Admin page and into the relevant sub-pages:
+
+- **`/c/[slug]/admin`** — slimmed to two sections only: **General Settings** (name, description, visibility, influence mode, Discord webhook) and **Campaign Digest**. Join Requests link and Campaign Map link removed.
+- **`/c/[slug]/players`** — three organiser tools at top:
+  1. **Add Player** search (by username) — `AdminPlayerSearch.js` updated: "Current Members" duplicate list removed; expired invite links collapsed behind a `▸ Expired (N)` toggle.
+  2. **Invite Links** (in same `AdminPlayerSearch` panel)
+  3. **Join Requests** — `InlineJoinRequests.js` (new); shows only when pending > 0; approve fires `campaign_joined` notification; disappears when queue is empty.
+  - **Player rows** now have an inline **Remove** button (`RemovePlayerButton.js`) as an extra column — both league and narrative tables. Hidden for the organiser's own row.
+- **`/c/[slug]/factions`** — `AdminFactionManager.js` at bottom (built previous session): compact inline editor (colour + name per row, add/delete).
+- **`/c/[slug]/battles`** — each battle row now has an inline **Delete** button (`DeleteBattleButton.js`). Runs full influence reversal (`reverseInfluence` + `reverseEventBonuses` + `reverseTerritoryCascade`) before deleting. Confirm flow: Delete → Sure? [Yes] [✕]. Standalone "Delete Battle Records" section removed.
+
+**New components**:
+- `app/components/RemovePlayerButton.js` — `'use client'`; props: `userId`, `campaignId`; confirm flow; `e.preventDefault()` + `e.stopPropagation()` on all buttons (lives inside `<Link>` wrappers); calls `router.refresh()` on success.
+- `app/components/DeleteBattleButton.js` — same pattern; props: `battle`, `influenceMode`; runs reversal functions before delete.
+- `app/components/InlineJoinRequests.js` — `'use client'`; props: `campaignId`, `campaignSlug`, `campaignName`, `initialRequests` (with `profiles:user_id(username)` join); renders `null` when empty.
 
 ### SEO pass (built 2026-05-06)
 - **`app/sitemap.js`** — dynamic sitemap at `/sitemap.xml`; covers homepage, `/campaigns`, `/armies`, all `/campaign/[slug]` pages, all public `/armies/[id]` pages, all `/units/[id]` pages (from public armies), and all `/c/[slug]/battle/[id]` pages. Uses `select('*')` throughout; try/catch per section; battles-campaign mapping done via two separate queries (no join).
