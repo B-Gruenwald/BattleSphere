@@ -2,6 +2,9 @@
 -- Plain INSERT — no PL/pgSQL block, no DO $$, just a direct query.
 -- Run in Supabase SQL Editor.
 
+-- Remove previous test notifications before re-seeding
+DELETE FROM user_notifications WHERE user_id = 'b2e54bde-7868-4250-9228-a43ba5b9da92'::uuid;
+
 INSERT INTO user_notifications (user_id, type, title, body, link, metadata)
 
 SELECT
@@ -19,10 +22,36 @@ FROM (VALUES
   ),
 
   ('battle_opponent',
-   'A battle has been recorded — check the report',
-   'Iron Warriors vs Space Wolves in Vespator Front — Iron Warriors won.',
-   (SELECT CONCAT('/c/', slug, '/battle/', (SELECT id FROM battles WHERE campaign_id = campaigns.id ORDER BY created_at DESC LIMIT 1))
-    FROM campaigns ORDER BY created_at DESC LIMIT 1),
+   -- Title: "[Organiser username] has reported your battle: [headline or 'an unnamed engagement']"
+   (SELECT CONCAT(
+      COALESCE((SELECT username FROM profiles WHERE id = c.organiser_id LIMIT 1), 'A player'),
+      ' has reported your battle: ',
+      COALESCE(
+        (SELECT b.headline FROM battles b WHERE b.campaign_id = c.id AND b.headline IS NOT NULL AND b.headline <> '' ORDER BY b.created_at DESC LIMIT 1),
+        'an unnamed engagement'
+      )
+    ) FROM campaigns c ORDER BY c.created_at DESC LIMIT 1),
+   -- Body: "Faction A vs Faction B in Territory — result. Check the full report and add your own perspective."
+   (SELECT CONCAT(
+      COALESCE(f1.name, 'Unknown'), ' vs ', COALESCE(f2.name, 'Unknown'),
+      ' in ', COALESCE(t.name, c.name),
+      ' — ',
+      CASE
+        WHEN b.winner_faction_id = b.attacker_faction_id THEN COALESCE(f1.name, 'Unknown') || ' emerged victorious'
+        WHEN b.winner_faction_id = b.defender_faction_id THEN COALESCE(f2.name, 'Unknown') || ' emerged victorious'
+        ELSE 'the battle ended in a draw'
+      END,
+      '. Check the full report and add your own perspective.'
+    )
+    FROM campaigns c
+    JOIN battles b ON b.campaign_id = c.id
+    LEFT JOIN factions f1 ON f1.id = b.attacker_faction_id
+    LEFT JOIN factions f2 ON f2.id = b.defender_faction_id
+    LEFT JOIN territories t ON t.id = b.territory_id
+    ORDER BY c.created_at DESC, b.created_at DESC LIMIT 1),
+   (SELECT CONCAT('/c/', c.slug, '/battle/', b.id)
+    FROM campaigns c JOIN battles b ON b.campaign_id = c.id
+    ORDER BY c.created_at DESC, b.created_at DESC LIMIT 1),
    NULL
   ),
 

@@ -44,15 +44,12 @@ export default function AdminPlayerSearch({ members: initialMembers, campaignId,
   const [adding,      setAdding]      = useState({});
   const [addError,    setAddError]    = useState('');
 
-  // Remove state
-  const [removing,    setRemoving]    = useState({});
-  const [confirmRemove, setConfirmRemove] = useState(null);
-
   // Invite code state
   const [generatingCode, setGeneratingCode] = useState(false);
   const [inviteError,    setInviteError]    = useState('');
   const [revoking,       setRevoking]       = useState({});
   const [copied,         setCopied]         = useState(null); // code id that was just copied
+  const [showExpired,    setShowExpired]    = useState(false);
 
   const existingIds = new Set(members.map(m => m.user_id));
 
@@ -99,23 +96,6 @@ export default function AdminPlayerSearch({ members: initialMembers, campaignId,
           link:  `/c/${slug}`,
         }),
       }).catch(() => {});
-    }
-  }
-
-  // ── Remove player ──────────────────────────────────────────────────────────
-  async function removePlayer(userId) {
-    setRemoving(prev => ({ ...prev, [userId]: true }));
-    const { error } = await supabase
-      .from('campaign_members')
-      .delete()
-      .eq('campaign_id', campaignId)
-      .eq('user_id', userId);
-    setRemoving(prev => ({ ...prev, [userId]: false }));
-    if (error) {
-      setMembers(prev => prev.map(m => m.user_id === userId ? { ...m, _removeError: error.message } : m));
-    } else {
-      setMembers(prev => prev.filter(m => m.user_id !== userId));
-      setConfirmRemove(null);
     }
   }
 
@@ -192,73 +172,11 @@ export default function AdminPlayerSearch({ members: initialMembers, campaignId,
     marginBottom: '0.4rem',
   };
 
-  const roleColour = { organiser: 'var(--text-gold)', admin: '#6a8fc7', player: 'var(--text-muted)' };
-
   const activeLinks = inviteCodes.filter(c => !isExpired(c.expires_at));
   const expiredLinks = inviteCodes.filter(c => isExpired(c.expires_at));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-
-      {/* ── Current members ─────────────────────────────────────────────────── */}
-      <div style={{ border: '1px solid var(--border-dim)', padding: '1.75rem' }}>
-        <p style={{ ...labelStyle, marginBottom: '1.25rem', color: 'var(--text-gold)' }}>
-          Current Members ({members.length})
-        </p>
-
-        {members.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
-            No players yet. Add some below or share an invite link.
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px auto', gap: '0.5rem', padding: '0.4rem 0.75rem', borderBottom: '1px solid var(--border-dim)', marginBottom: '0.25rem' }}>
-              {['Player', 'Role', ''].map((h, i) => (
-                <span key={i} style={{ fontFamily: 'var(--font-display)', fontSize: '0.5rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{h}</span>
-              ))}
-            </div>
-
-            {members.map(m => {
-              const username    = m.profile?.username || 'Unknown';
-              const isOrganiser = m.user_id === organiserId;
-              const isConfirm   = confirmRemove === m.user_id;
-              const isRemoving  = removing[m.user_id];
-
-              return (
-                <div key={m.user_id} style={{ display: 'grid', gridTemplateColumns: '1fr 120px auto', gap: '0.5rem', padding: '0.65rem 0.75rem', borderBottom: '1px solid rgba(255,255,255,0.04)', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.92rem', color: 'var(--text-primary)' }}>
-                    {username}
-                    {isOrganiser && (
-                      <span style={{ marginLeft: '0.5rem', fontFamily: 'var(--font-display)', fontSize: '0.48rem', letterSpacing: '0.1em', color: 'var(--text-gold)' }}>YOU</span>
-                    )}
-                  </span>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: roleColour[m.role] || 'var(--text-muted)' }}>
-                    {m.role}
-                  </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                    {m._removeError && <span style={{ color: '#e05a5a', fontSize: '0.75rem' }}>{m._removeError}</span>}
-                    {!isOrganiser && (
-                      isConfirm ? (
-                        <>
-                          <span style={{ fontSize: '0.78rem', color: '#e05a5a' }}>Remove?</span>
-                          <button type="button" onClick={() => removePlayer(m.user_id)} disabled={isRemoving} style={{ background: 'rgba(224,90,90,0.15)', border: '1px solid #e05a5a', color: '#e05a5a', padding: '0.2rem 0.55rem', fontSize: '0.72rem', cursor: 'pointer', opacity: isRemoving ? 0.6 : 1 }}>
-                            {isRemoving ? '…' : 'Yes'}
-                          </button>
-                          <button type="button" onClick={() => setConfirmRemove(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.8rem' }}>✕</button>
-                        </>
-                      ) : (
-                        <button type="button" onClick={() => setConfirmRemove(m.user_id)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.78rem', padding: '0.2rem 0.4rem' }}>
-                          Remove
-                        </button>
-                      )
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
 
       {/* ── Add player by username ───────────────────────────────────────────── */}
       <div style={{ border: '1px solid var(--border-dim)', padding: '1.75rem' }}>
@@ -370,29 +288,42 @@ export default function AdminPlayerSearch({ members: initialMembers, campaignId,
           </div>
         )}
 
-        {/* Expired links (collapsed list) */}
+        {/* Expired links (collapsible) */}
         {expiredLinks.length > 0 && (
           <div>
-            <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.5rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
+            <button
+              type="button"
+              onClick={() => setShowExpired(v => !v)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontFamily: 'var(--font-display)', fontSize: '0.5rem',
+                letterSpacing: '0.12em', textTransform: 'uppercase',
+                color: 'var(--text-muted)', padding: 0, marginBottom: '0.6rem',
+                display: 'flex', alignItems: 'center', gap: '0.35rem',
+              }}
+            >
+              <span style={{ fontSize: '0.6rem', opacity: 0.7 }}>{showExpired ? '▾' : '▸'}</span>
               Expired ({expiredLinks.length})
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              {expiredLinks.map(codeObj => (
-                <div key={codeObj.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.4rem 0.75rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-dim)', opacity: 0.6 }}>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                    …{codeObj.code.slice(-6)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => revokeCode(codeObj.id)}
-                    disabled={revoking[codeObj.id]}
-                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.75rem', padding: 0, opacity: revoking[codeObj.id] ? 0.6 : 1 }}
-                  >
-                    {revoking[codeObj.id] ? '…' : 'Remove'}
-                  </button>
-                </div>
-              ))}
-            </div>
+            </button>
+            {showExpired && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {expiredLinks.map(codeObj => (
+                  <div key={codeObj.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.4rem 0.75rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-dim)', opacity: 0.6 }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                      …{codeObj.code.slice(-6)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => revokeCode(codeObj.id)}
+                      disabled={revoking[codeObj.id]}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.75rem', padding: 0, opacity: revoking[codeObj.id] ? 0.6 : 1 }}
+                    >
+                      {revoking[codeObj.id] ? '…' : 'Remove'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

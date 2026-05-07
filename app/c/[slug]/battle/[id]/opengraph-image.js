@@ -19,9 +19,8 @@ const BORDER_DIM = 'rgba(255,255,255,0.09)';
 
 // Canvas — 800×419 (scaled from 1200×630 for WhatsApp <600 KB limit)
 const W = 800, H = 419;
-// Photo layout split: 320 photo + 480 text
-const PHOTO_W = 320;
-const TEXT_W  = W - PHOTO_W; // 480
+// Text overlay zone (right side, over darkened photo)
+const TEXT_ZONE_W = 265;
 
 function trunc(str, max) {
   if (!str) return '';
@@ -114,115 +113,121 @@ export default async function OgImage({ params }) {
   const attackerOpacity = defenderWon ? 0.55 : 1;
   const defenderOpacity = attackerWon ? 0.55 : 1;
 
-  // ── PHOTO LAYOUT ─────────────────────────────────────────────────────────────
+  // ── PHOTO LAYOUT (full-bleed) ────────────────────────────────────────────────
   if (bgPhotoUrl) {
-    const croppedPhoto = cropUrl(bgPhotoUrl, PHOTO_W, H);
+    const croppedPhoto = cropUrl(bgPhotoUrl, W, H);
     const headlineSize = headline
-      ? (headline.length > 36 ? 20 : headline.length > 24 ? 24 : 28) : 0;
-    const factionSize  = (name) => name.length > 16 ? 17 : 21;
+      ? (headline.length > 36 ? 17 : headline.length > 24 ? 20 : 23) : 0;
+    const factionSize  = (name) => name.length > 14 ? 13 : 17;
 
     return new ImageResponse(
       (
-        <div style={{ width: W, height: H, display: 'flex', flexDirection: 'row',
+        <div style={{ width: W, height: H, display: 'flex', position: 'relative',
           backgroundColor: BG_VOID, fontFamily: 'Cinzel', color: TEXT_PRI }}>
 
-          {/* LEFT: photo */}
-          <div style={{ width: PHOTO_W, height: H, display: 'flex', position: 'relative',
-            flexShrink: 0, overflow: 'hidden' }}>
-            <img src={croppedPhoto} width={PHOTO_W} height={H}
-              style={{ width: PHOTO_W, height: H, objectFit: 'cover' }} />
-            <div style={{ position: 'absolute', top: 0, right: 0, width: 80, height: H,
-              display: 'flex', backgroundImage: `linear-gradient(90deg, transparent 0%, ${BG_VOID} 100%)` }} />
+          {/* Full-bleed photo */}
+          <img src={croppedPhoto} width={W} height={H}
+            style={{ position: 'absolute', top: 0, left: 0, width: W, height: H, objectFit: 'cover' }} />
+
+          {/* Gradient veil: photo clear on left, dark on right for text legibility */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0, width: W, height: H, display: 'flex',
+            background: `linear-gradient(to right, rgba(10,10,15,0.08) 0%, rgba(10,10,15,0.08) 32%, rgba(10,10,15,0.72) 54%, ${BG_VOID} 68%)`,
+          }} />
+
+          {/* Top bar */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, height: 46, display: 'flex',
+            alignItems: 'center', justifyContent: 'space-between', padding: '0 26px',
+            background: `linear-gradient(180deg, rgba(10,10,15,0.5) 0%, transparent 100%)`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ width: 7, height: 7, backgroundColor: GOLD, transform: 'rotate(45deg)', marginRight: 7 }} />
+              <div style={{ fontSize: 9, letterSpacing: 5, textTransform: 'uppercase', color: GOLD, fontWeight: 700 }}>
+                BattleSphere
+              </div>
+            </div>
+            <div style={{ fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', color: 'rgba(160,152,128,0.75)' }}>
+              {trunc(campaignName, 32)}
+            </div>
           </div>
 
-          {/* RIGHT: text */}
-          <div style={{ width: TEXT_W, height: H, display: 'flex', flexDirection: 'column',
-            justifyContent: 'space-between', padding: '21px 35px 19px 24px' }}>
-
-            {/* Top: brand + campaign */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ width: 7, height: 7, backgroundColor: GOLD, transform: 'rotate(45deg)', marginRight: 7 }} />
-                <div style={{ fontSize: 9, letterSpacing: 5, textTransform: 'uppercase', color: GOLD, fontWeight: 700 }}>
-                  BattleSphere
-                </div>
+          {/* Middle text zone: right side over dark gradient */}
+          <div style={{
+            position: 'absolute', top: 46, right: 0, width: TEXT_ZONE_W, bottom: 44,
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', padding: '0 24px 0 10px',
+          }}>
+            {headline ? (
+              <div style={{ fontSize: headlineSize, fontWeight: 900, letterSpacing: 2,
+                textTransform: 'uppercase', color: TEXT_PRI, textAlign: 'center',
+                lineHeight: 1.1, marginBottom: 14, maxWidth: TEXT_ZONE_W - 28 }}>
+                {headline}
               </div>
-              <div style={{ fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', color: TEXT_MUT }}>
-                {trunc(campaignName, 32)}
+            ) : null}
+
+            {/* Factions row */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '100%', marginBottom: 11 }}>
+              {/* Attacker */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column',
+                alignItems: 'flex-end', paddingRight: 10, opacity: attackerOpacity }}>
+                <div style={{ fontSize: 7, letterSpacing: 3, textTransform: 'uppercase', color: TEXT_MUT, marginBottom: 4 }}>Attacker</div>
+                <div style={{ fontSize: factionSize(attackerName), fontWeight: 900, letterSpacing: 1,
+                  textTransform: 'uppercase', color: TEXT_PRI, textAlign: 'right',
+                  lineHeight: 1.05, textShadow: attackerGlow }}>
+                  {attackerName}
+                </div>
+                <div style={{ width: 18, height: 2, backgroundColor: attackerColour, marginTop: 4, opacity: 0.8 }} />
+              </div>
+
+              {/* VS */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 9px' }}>
+                <div style={{ width: 1, height: 16, backgroundColor: BORDER_DIM }} />
+                <div style={{ width: 7, height: 7, backgroundColor: isDraw ? TEXT_MUT : GOLD,
+                  transform: 'rotate(45deg)', margin: '4px 0', opacity: isDraw ? 0.5 : 0.9 }} />
+                <div style={{ fontSize: 7, letterSpacing: 3, textTransform: 'uppercase',
+                  color: isDraw ? TEXT_MUT : GOLD_BRT, fontWeight: 700, marginBottom: 4 }}>VS</div>
+                <div style={{ width: 1, height: 16, backgroundColor: BORDER_DIM }} />
+              </div>
+
+              {/* Defender */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column',
+                alignItems: 'flex-start', paddingLeft: 10, opacity: defenderOpacity }}>
+                <div style={{ fontSize: 7, letterSpacing: 3, textTransform: 'uppercase', color: TEXT_MUT, marginBottom: 4 }}>Defender</div>
+                <div style={{ fontSize: factionSize(defenderName), fontWeight: 900, letterSpacing: 1,
+                  textTransform: 'uppercase', color: TEXT_PRI, lineHeight: 1.05, textShadow: defenderGlow }}>
+                  {defenderName}
+                </div>
+                <div style={{ width: 18, height: 2, backgroundColor: defenderColour, marginTop: 4, opacity: 0.8 }} />
               </div>
             </div>
 
-            {/* Middle: headline + VS + result */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1,
-              justifyContent: 'center' }}>
-              {headline ? (
-                <div style={{ fontSize: headlineSize, fontWeight: 900, letterSpacing: 2,
-                  textTransform: 'uppercase', color: TEXT_PRI, textAlign: 'center',
-                  lineHeight: 1.1, marginBottom: 13, maxWidth: TEXT_W - 58 }}>
-                  {headline}
+            {/* Result badge */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ fontSize: 7, letterSpacing: 4, textTransform: 'uppercase',
+                color: isDraw ? TEXT_MUT : GOLD_BRT, fontWeight: 700,
+                backgroundColor: isDraw ? 'rgba(255,255,255,0.04)' : `${GOLD}18`,
+                border: `1px solid ${isDraw ? BORDER_DIM : GOLD + '44'}`,
+                padding: '5px 11px' }}>
+                {resultLabel}
+              </div>
+              {territory ? (
+                <div style={{ fontSize: 7, letterSpacing: 2, textTransform: 'uppercase', color: TEXT_MUT, marginTop: 6 }}>
+                  {territory.name}
                 </div>
               ) : null}
-
-              {/* Factions row */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: '100%', marginBottom: 11 }}>
-                {/* Attacker */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column',
-                  alignItems: 'flex-end', paddingRight: 19, opacity: attackerOpacity }}>
-                  <div style={{ fontSize: 8, letterSpacing: 3, textTransform: 'uppercase', color: TEXT_MUT, marginBottom: 4 }}>Attacker</div>
-                  <div style={{ fontSize: factionSize(attackerName), fontWeight: 900, letterSpacing: 1,
-                    textTransform: 'uppercase', color: TEXT_PRI, textAlign: 'right',
-                    lineHeight: 1.05, textShadow: attackerGlow }}>
-                    {attackerName}
-                  </div>
-                  <div style={{ width: 24, height: 2, backgroundColor: attackerColour, marginTop: 5, opacity: 0.8 }} />
-                </div>
-
-                {/* VS */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 11px' }}>
-                  <div style={{ width: 1, height: 19, backgroundColor: BORDER_DIM }} />
-                  <div style={{ width: 8, height: 8, backgroundColor: isDraw ? TEXT_MUT : GOLD,
-                    transform: 'rotate(45deg)', margin: '5px 0', opacity: isDraw ? 0.5 : 0.9 }} />
-                  <div style={{ fontSize: 8, letterSpacing: 3, textTransform: 'uppercase',
-                    color: isDraw ? TEXT_MUT : GOLD_BRT, fontWeight: 700, marginBottom: 5 }}>VS</div>
-                  <div style={{ width: 1, height: 19, backgroundColor: BORDER_DIM }} />
-                </div>
-
-                {/* Defender */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column',
-                  alignItems: 'flex-start', paddingLeft: 19, opacity: defenderOpacity }}>
-                  <div style={{ fontSize: 8, letterSpacing: 3, textTransform: 'uppercase', color: TEXT_MUT, marginBottom: 4 }}>Defender</div>
-                  <div style={{ fontSize: factionSize(defenderName), fontWeight: 900, letterSpacing: 1,
-                    textTransform: 'uppercase', color: TEXT_PRI, lineHeight: 1.05, textShadow: defenderGlow }}>
-                    {defenderName}
-                  </div>
-                  <div style={{ width: 24, height: 2, backgroundColor: defenderColour, marginTop: 5, opacity: 0.8 }} />
-                </div>
-              </div>
-
-              {/* Result */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ fontSize: 8, letterSpacing: 4, textTransform: 'uppercase',
-                  color: isDraw ? TEXT_MUT : GOLD_BRT, fontWeight: 700,
-                  backgroundColor: isDraw ? 'rgba(255,255,255,0.04)' : `${GOLD}18`,
-                  border: `1px solid ${isDraw ? BORDER_DIM : GOLD + '44'}`,
-                  padding: '6px 15px' }}>
-                  {resultLabel}
-                </div>
-                {territory ? (
-                  <div style={{ fontSize: 8, letterSpacing: 2, textTransform: 'uppercase', color: TEXT_MUT, marginTop: 7 }}>
-                    {territory.name}
-                  </div>
-                ) : null}
-              </div>
             </div>
+          </div>
 
-            {/* Bottom */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              borderTop: `1px solid ${BORDER_DIM}`, paddingTop: 11 }}>
-              <div style={{ fontSize: 8, letterSpacing: 2, color: TEXT_MUT, textTransform: 'uppercase' }}>{date}</div>
-              <div style={{ fontSize: 9, letterSpacing: 2, color: GOLD, fontWeight: 700 }}>battlesphere.cc</div>
-            </div>
+          {/* Bottom bar */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: 44,
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '0 26px 14px',
+            background: `linear-gradient(0deg, rgba(10,10,15,0.6) 0%, transparent 100%)`,
+          }}>
+            <div style={{ fontSize: 8, letterSpacing: 2, color: 'rgba(90,84,69,0.8)', textTransform: 'uppercase' }}>{date}</div>
+            <div style={{ fontSize: 9, letterSpacing: 2, color: GOLD, fontWeight: 700 }}>battlesphere.cc</div>
           </div>
         </div>
       ),

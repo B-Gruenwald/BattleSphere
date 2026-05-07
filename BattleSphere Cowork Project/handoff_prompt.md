@@ -30,17 +30,17 @@ I'm Benjamin Grünwald, a Warhammer 40,000 hobbyist with limited coding skills. 
 
 ## Current git state
 
-**Last commit**: `e6f1021` — `fix: sitemap — use select('*'), remove join, wrap sections in try/catch`
+**Last commit**: `797f1f5` — `feat: show metadata tip buttons in bell dropdown preview`
 
 ```
+797f1f5  feat: show metadata tip buttons in bell dropdown preview
+68103eb  fix: measure bell button rect (not container) for dropdown positioning — avoids inflated width bug
+4e3f62a  fix: notification dropdown uses fixed viewport positioning — no off-screen clipping on mobile
+0c07ad1  fix: notification bell always visible on mobile, dropdown constrained to viewport width
+14605a8  fix: notifications — decouple mark-as-read from navigation, richer battle/campaign text
+20587df  feat: in-app notification inbox — bell, /inbox page, battle/achievement/onboarding/weekly/event notifications
 e6f1021  fix: sitemap — use select('*'), remove join, wrap sections in try/catch
 a33f0d4  feat: public armies directory, faction in army title, sitemap + landing page links
-643e457  feat: campaigns directory — sort by battle count, show battle count per row
-4d05253  feat: campaigns directory — filter to campaigns with at least one battle
-2694212  feat: public campaigns directory page + landing page link + sitemap
-e924f68  fix: update masthead copy — accurate pitch, 40k/AoS keywords
-8f31982  feat: SEO — sitemap, robots.txt, keyword-rich copy and meta descriptions
-643411e  fix: redirect logged-in non-members to public campaign page from dashboard and event detail
 ```
 
 ---
@@ -99,6 +99,28 @@ Everything below is live on `main`:
 #### Two campaign page files (important distinction):
 - `app/c/[slug]/page.js` — authenticated dashboard (members only)
 - `app/campaign/[slug]/page.js` — public-facing campaign page (no login required)
+
+### Player Inbox / Notification System ✓ Complete (built 2026-05-06)
+
+Full in-app notification system. DB migration run, all code deployed.
+
+- **`user_notifications` table** — id, user_id, type, title, body, link, is_read, created_at, metadata JSONB. RLS: users SELECT/UPDATE own rows; admin client bypasses for inserts. Migration: `migration_user_notifications.sql`.
+- **`campaign_events.notif_sent_at`** — new column, guards against duplicate event-live notifications.
+- **`app/lib/notifications.js`** — server utility: `createNotification(userId, payload)`, `createNotificationForMany(userIds, payload)`, `NOTIF_TYPES`, `NOTIF_CONFIG` (icon, colour, label for 7 types). Shared between server and client.
+- **`GET /api/notifications`** — returns `{ notifications[], unreadCount }` with limit/offset params.
+- **`PATCH /api/notifications`** — marks read: `{ all: true }` or `{ ids: [] }`.
+- **`POST /api/notifications/create`** — auth-gated, for client component triggers.
+- **`NotificationBell.js`** — bell in NavBar, always visible on desktop + mobile (just before hamburger). Dropdown uses `position: fixed` + two refs: `bellRef` (button only, for measurement) and `dropRef` (container, for click-outside). Mobile-safe: `left = max(8, rect.right - dropWidth)`, `width = min(360, vw-16)`. Polls every 60s. Title is gold Link when `n.link` exists; separate "✓ Mark as read" button per unread item. Shows `metadata.tips` as gold pill buttons.
+- **`app/inbox/page.js`** — full paginated inbox, All/Unread filter, load more, same tip-pill + link pattern.
+- **Notification triggers** (all fire-and-forget, never block main action):
+  - Battle logged → opponent(s): `battle_opponent` (username + battle title + factions + territory + result)
+  - Achievement awarded → recipient: `achievement_awarded`
+  - Registration → new user: `onboarding_welcome` with tip buttons
+  - First army created → player: `onboarding_army` with tip buttons
+  - First campaign created → organiser: `onboarding_campaign` with tip buttons
+  - Weekly cron → all members: `weekly_report` (same run as digest email)
+  - Daily cron `0 9 * * *` (`/api/cron/event-notifications`) → all members when event goes active: `event_live`; stamps `notif_sent_at` to prevent duplicates
+- **Test data**: `BattleSphere Cowork Project/seed_test_notifications.sql` — plain INSERT (no PL/pgSQL); starts with DELETE so re-running replaces old data. Run in Supabase SQL Editor for user `b2e54bde-7868-4250-9228-a43ba5b9da92`.
 
 ### SEO pass (built 2026-05-06)
 - **`app/sitemap.js`** — dynamic sitemap at `/sitemap.xml`; covers homepage, `/campaigns`, `/armies`, all `/campaign/[slug]` pages, all public `/armies/[id]` pages, all `/units/[id]` pages (from public armies), and all `/c/[slug]/battle/[id]` pages. Uses `select('*')` throughout; try/catch per section; battles-campaign mapping done via two separate queries (no join).
@@ -176,8 +198,7 @@ Everything below is live on `main`:
 ## Pending backlog (in priority order)
 
 1. **PostHog product analytics** — custom events at key journey moments (portrait view, share-image download, copy link, battle logged, campaign created, etc.)
-2. **Player Inbox with Tutorials** — in-app inbox for new users with tutorial/onboarding messages
-3. **Reddit promotion** — craft and post to r/warhammer40k, r/ageofsigmar, r/wargaming etc. to drive backlinks and first users
+2. **Reddit promotion** — craft and post to r/warhammer40k, r/ageofsigmar, r/wargaming etc. to drive backlinks and first users
 
 ---
 
@@ -218,6 +239,8 @@ Everything below is live on `main`:
 - **Public page `allBattles` query** must include `territory_id` and `event_xp_bonus` — without these, `calcPlayerXP()` returns 0 for everyone
 - **`PhotoGallery.js` portrait picker** — `showPortrait` is enabled for both `entityType === 'army-unit'` AND `entityType === 'battle'`. Internal `activePortraitId` state is initialised from the `portraitPhotoId` prop and updated on Set as Portrait. `handleSetPortrait` calls `/api/photos/army-unit` (PATCH) for army-unit, `/api/photos/battle` (PATCH) for battle.
 - **Campaign Events date filtering** — `applyEventBonuses` and `applyTerritoryCascade` in `influence.js` filter by `starts_at` and `ends_at` as well as `status`. Events that haven't started yet or have passed their end date do not apply bonuses even if status is still 'active'.
+- **Notifications are always fire-and-forget** — every call to `createNotification()` must be followed by `.catch(() => {})` and must never be `await`-ed in a way that blocks the main user action. Import from `@/app/lib/notifications`.
+- **`NotificationBell.js` uses two refs** — `bellRef` on the button (for `getBoundingClientRect()` positioning) and `dropRef` on the outer container (for click-outside detection). Never merge these into one ref — measuring the container after the dropdown renders gives an inflated rect and breaks mobile positioning.
 
 ---
 
@@ -246,7 +269,7 @@ Everything below is live on `main`:
 
 ## DB tables (all with RLS)
 
-`profiles`, `campaigns`, `campaign_members`, `factions`, `territories`, `battles`, `territory_influence`, `campaign_events`, `achievements`, `join_requests`, `campaign_invite_codes`, `warp_routes`, `armies`, `army_units`, `army_unit_photos`, `campaign_army_records`, `crusade_unit_records`, `battle_photos`, `battle_event_bonuses`, `battle_cascade_bonuses`, `chronicle_weekly_updates`, `platform_announcements`, `campaign_digest_messages`, `bulletin_dispatches`
+`profiles`, `campaigns`, `campaign_members`, `factions`, `territories`, `battles`, `territory_influence`, `campaign_events`, `achievements`, `join_requests`, `campaign_invite_codes`, `warp_routes`, `armies`, `army_units`, `army_unit_photos`, `campaign_army_records`, `crusade_unit_records`, `battle_photos`, `battle_event_bonuses`, `battle_cascade_bonuses`, `chronicle_weekly_updates`, `platform_announcements`, `campaign_digest_messages`, `bulletin_dispatches`, `user_notifications`
 
 ### Recent schema additions
 - `army_unit_photos.is_portrait` — BOOLEAN NOT NULL DEFAULT false; portrait picker for unit gallery
@@ -258,3 +281,5 @@ Everything below is live on `main`:
 - `platform_announcements.sort_order` — INTEGER NOT NULL DEFAULT 0; display order in digest email; migration run 2026-04-28
 - `platform_announcements.sent_at` — TIMESTAMPTZ; stamped by cron after successful send; NULL = still pending; migration: `migration_announcements_sent_at.sql`
 - `campaigns.discord_webhook_url` — TEXT; Discord webhook URL per campaign; fetched server-side only via admin client; migration: `migration_discord_webhook.sql`
+- `user_notifications` — full table (see notification system above); migration: `migration_user_notifications.sql`
+- `campaign_events.notif_sent_at` — TIMESTAMPTZ DEFAULT NULL; stamped after event-live notification sent to prevent duplicates; added in same migration

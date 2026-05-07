@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import AdminBattleManager from '@/app/components/AdminBattleManager';
+import DeleteBattleButton from '@/app/components/DeleteBattleButton';
 
 export default async function BattleHistoryPage({ params }) {
   const { slug } = await params;
@@ -129,10 +129,18 @@ export default async function BattleHistoryPage({ params }) {
                     </div>
                   </div>
 
-                  {/* Date + arrow */}
+                  {/* Date */}
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', flexShrink: 0, whiteSpace: 'nowrap' }}>
                     {date} →
                   </span>
+
+                  {/* Delete (organiser only) */}
+                  {isOrganiser && (
+                    <DeleteBattleButton
+                      battle={battle}
+                      influenceMode={campaign.influence_mode || 'standard'}
+                    />
+                  )}
                 </div>
               </Link>
             );
@@ -150,36 +158,6 @@ export default async function BattleHistoryPage({ params }) {
           <Link href={`/c/${slug}/battle/new`}>
             <button className="btn-primary">Log First Battle</button>
           </Link>
-        </div>
-      )}
-
-      {/* ── Organiser: delete battle records ──────────────────────── */}
-      {isOrganiser && battles && battles.length > 0 && (
-        <div style={{ marginTop: '3.5rem' }}>
-          <div style={{ borderTop: '1px solid var(--border-dim)', paddingTop: '2.5rem', marginBottom: '1.25rem' }}>
-            <p style={{
-              fontFamily: 'var(--font-display)', fontSize: '0.52rem',
-              letterSpacing: '0.16em', textTransform: 'uppercase',
-              color: 'var(--text-gold)', marginBottom: '0.35rem',
-            }}>
-              Organiser
-            </p>
-            <h2 style={{
-              fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)', fontWeight: '900',
-              letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem',
-            }}>
-              Delete Battle Records
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5, margin: 0 }}>
-              As organiser, you can delete any battle record. This reverses all influence and XP changes and cannot be undone.
-            </p>
-          </div>
-          <AdminBattleManager
-            battles={battles}
-            factions={factions || []}
-            slug={slug}
-            influenceMode={campaign.influence_mode || 'standard'}
-          />
         </div>
       )}
 

@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 import PlayerAchievementIcons from '@/app/components/PlayerAchievementIcons';
 import { calcPlayerXP, getXPRank } from '@/app/lib/xp';
 import AdminPlayerSearch from '@/app/components/AdminPlayerSearch';
+import InlineJoinRequests from '@/app/components/InlineJoinRequests';
+import RemovePlayerButton from '@/app/components/RemovePlayerButton';
 
 export default async function PlayersPage({ params }) {
   const { slug } = await params;
@@ -62,6 +64,16 @@ export default async function PlayersPage({ params }) {
         .select('*')
         .eq('campaign_id', campaign.id)
         .order('created_at', { ascending: false })
+    : { data: [] };
+
+  // Fetch pending join requests for organiser
+  const { data: joinRequests } = isOrganiser
+    ? await supabase
+        .from('join_requests')
+        .select('id, user_id, message, created_at, profiles:user_id(username)')
+        .eq('campaign_id', campaign.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true })
     : { data: [] };
 
   const profileMap  = Object.fromEntries((profiles  || []).map(p => [p.id, p]));
@@ -149,7 +161,7 @@ export default async function PlayersPage({ params }) {
 
       <div style={{ borderTop: '1px solid var(--border-dim)', marginBottom: '2.5rem' }} />
 
-      {/* ── Organiser: manage players & invite links (top) ─────────── */}
+      {/* ── Organiser: add players, invite links, join requests ────── */}
       {isOrganiser && (
         <div style={{ marginBottom: '3rem' }}>
           <p style={{
@@ -167,6 +179,16 @@ export default async function PlayersPage({ params }) {
             slug={slug}
             campaignName={campaign.name}
           />
+          {(joinRequests || []).length > 0 && (
+            <div style={{ marginTop: '2rem' }}>
+              <InlineJoinRequests
+                campaignId={campaign.id}
+                campaignSlug={slug}
+                campaignName={campaign.name}
+                initialRequests={joinRequests || []}
+              />
+            </div>
+          )}
           <div style={{ borderTop: '1px solid var(--border-dim)', marginTop: '3rem', marginBottom: '2.5rem' }} />
         </div>
       )}
@@ -177,9 +199,9 @@ export default async function PlayersPage({ params }) {
           {isLeague ? (
             /* ── LEAGUE TABLE ─────────────────────────────────── */
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '36px 1fr 160px 56px 56px 56px 56px 72px', gap: '0.5rem', padding: '0.6rem 1.25rem', borderBottom: '1px solid var(--border-dim)' }}>
-                {['#', 'Player', teamLabel, 'P', 'W', 'D', 'L', 'Pts'].map((h, i) => (
-                  <span key={h} style={{ ...colHeaderStyle, textAlign: i >= 3 ? 'center' : 'left' }}>{h}</span>
+              <div style={{ display: 'grid', gridTemplateColumns: isOrganiser ? '36px 1fr 160px 56px 56px 56px 56px 72px auto' : '36px 1fr 160px 56px 56px 56px 56px 72px', gap: '0.5rem', padding: '0.6rem 1.25rem', borderBottom: '1px solid var(--border-dim)' }}>
+                {['#', 'Player', teamLabel, 'P', 'W', 'D', 'L', 'Pts', ...(isOrganiser ? [''] : [])].map((h, i) => (
+                  <span key={`${h}-${i}`} style={{ ...colHeaderStyle, textAlign: i >= 3 && h !== '' ? 'center' : 'left' }}>{h}</span>
                 ))}
               </div>
 
@@ -193,7 +215,7 @@ export default async function PlayersPage({ params }) {
                   <Link key={player.user_id} href={`/c/${slug}/player/${player.user_id}`} style={{ textDecoration: 'none' }}>
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: '36px 1fr 160px 56px 56px 56px 56px 72px',
+                      gridTemplateColumns: isOrganiser ? '36px 1fr 160px 56px 56px 56px 56px 72px auto' : '36px 1fr 160px 56px 56px 56px 56px 72px',
                       gap: '0.5rem',
                       padding: '0.9rem 1.25rem',
                       borderBottom: '1px solid var(--border-dim)',
@@ -269,6 +291,13 @@ export default async function PlayersPage({ params }) {
                         </span>
                         <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)', marginLeft: '0.15rem' }}>pts</span>
                       </div>
+
+                      {/* Remove (organiser only, not for self) */}
+                      {isOrganiser && (
+                        player.isMe
+                          ? <span />
+                          : <RemovePlayerButton userId={player.user_id} campaignId={campaign.id} />
+                      )}
                     </div>
                   </Link>
                 );
@@ -277,9 +306,9 @@ export default async function PlayersPage({ params }) {
           ) : (
             /* ── NARRATIVE PLAYER LIST (existing view) ─────────── */
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 80px 60px 60px 60px 60px', gap: '0.5rem', padding: '0.6rem 1.25rem', borderBottom: '1px solid var(--border-dim)' }}>
-                {['Player', 'Faction', 'XP', 'W', 'D', 'L', 'Played'].map(h => (
-                  <span key={h} style={{ ...colHeaderStyle, textAlign: h === 'Player' || h === 'Faction' ? 'left' : 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isOrganiser ? '1fr 140px 80px 60px 60px 60px 60px auto' : '1fr 140px 80px 60px 60px 60px 60px', gap: '0.5rem', padding: '0.6rem 1.25rem', borderBottom: '1px solid var(--border-dim)' }}>
+                {['Player', 'Faction', 'XP', 'W', 'D', 'L', 'Played', ...(isOrganiser ? [''] : [])].map(h => (
+                  <span key={h} style={{ ...colHeaderStyle, textAlign: h === 'Player' || h === 'Faction' || h === '' ? 'left' : 'center' }}>
                     {h}
                   </span>
                 ))}
@@ -294,7 +323,7 @@ export default async function PlayersPage({ params }) {
                   <Link key={player.user_id} href={`/c/${slug}/player/${player.user_id}`} style={{ textDecoration: 'none' }}>
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: '1fr 140px 80px 60px 60px 60px 60px',
+                      gridTemplateColumns: isOrganiser ? '1fr 140px 80px 60px 60px 60px 60px auto' : '1fr 140px 80px 60px 60px 60px 60px',
                       gap: '0.5rem',
                       padding: '0.9rem 1.25rem',
                       borderBottom: '1px solid var(--border-dim)',
@@ -362,6 +391,13 @@ export default async function PlayersPage({ params }) {
                           {val}
                         </span>
                       ))}
+
+                      {/* Remove (organiser only, not for self) */}
+                      {isOrganiser && (
+                        player.isMe
+                          ? <span />
+                          : <RemovePlayerButton userId={player.user_id} campaignId={campaign.id} />
+                      )}
                     </div>
                   </Link>
                 );
