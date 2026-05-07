@@ -51,22 +51,22 @@ export default async function PublicPlayerProfilePage({ params }) {
 
   const userId = profile.id;
 
-  // Fetch all data in parallel
+  // Step 1 — fetch memberships and battles in parallel (no join, more reliable)
   const [
     { data: armies },
-    { data: memberships },
+    { data: membershipRows },
     { data: allBattles },
     { data: achievements },
   ] = await Promise.all([
     // Public armies only
     admin.from('armies').select('*').eq('player_id', userId).eq('is_public', true).order('created_at', { ascending: false }),
 
-    // Campaign memberships (with campaign info)
+    // Campaign memberships — plain rows, no join
     admin.from('campaign_members')
-      .select('role, faction_id, campaigns(id, name, slug, visibility, campaign_format, setting)')
+      .select('campaign_id, role, faction_id')
       .eq('user_id', userId),
 
-    // All battles where this player participated (we filter by public campaign below)
+    // All battles this player participated in across ALL campaigns
     admin.from('battles')
       .select('id, campaign_id, attacker_player_id, defender_player_id, attacker_faction_id, defender_faction_id, winner_faction_id, attacker_score, defender_score, territory_id, event_xp_bonus, headline, created_at')
       .or(`attacker_player_id.eq.${userId},defender_player_id.eq.${userId}`)
@@ -80,28 +80,39 @@ export default async function PublicPlayerProfilePage({ params }) {
       .order('created_at', { ascending: false }),
   ]);
 
-  // Build campaign map
-  const campaignMap = {};
+  // Step 2 — fetch campaign details separately using the IDs we now have
+  const campaignIds = (membershipRows || []).map(m => m.campaign_id).filter(Boolean);
+  const { data: campaignRows } = campaignIds.length > 0
+    ? await admin.from('campaigns').select('id, name, slug, visibility, campaign_format, setting').in('id', campaignIds)
+    : { data: [] };
+
+  // Build lookup maps
+  const roleByCampaign    = Object.fromEntries((membershipRows || []).map(m => [m.campaign_id, m.role]));
+  const campaignMap       = {};
   const publicCampaignIds = new Set();
-  for (const m of (memberships || [])) {
-    const c = m.campaigns;
-    if (!c) continue;
-    campaignMap[c.id] = { ...c, role: m.role, faction_id: m.faction_id };
+  for (const c of (campaignRows || [])) {
+    campaignMap[c.id] = { ...c, role: roleByCampaign[c.id] ?? 'player' };
     if (c.visibility === 'Public') publicCampaignIds.add(c.id);
   }
 
-  const campaigns = Object.values(campaignMap);
+  const campaigns = Object.values(campaignMap).sort((a, b) => a.name.localeCompare(b.name));
 
-  // Filter battles to public campaigns only
-  const publicBattles = (allBattles || []).filter(b => publicCampaignIds.has(b.campaign_id));
+  // All battles shown (collated from across the platform)
+  const battles = allBattles || [];
 
-  // Compute XP from ALL battles (not restricted)
-  const totalXP = calcPlayerXP(allBattles || [], userId);
+  // Fetch factions for ALL campaigns the player is in (so battle names resolve correctly)
+  const { data: factions } = campaignIds.length > 0
+    ? await admin.from('factions').select('id, name, colour, campaign_id').in('campaign_id', campaignIds)
+    : { data: [] };
+  const factionMap = Object.fromEntries((factions || []).map(f => [f.id, f]));
+
+  // Compute XP from ALL battles
+  const totalXP = calcPlayerXP(battles, userId);
   const rank = getXPRank(totalXP);
 
-  // Compute overall W/D/L from public battles
+  // Compute overall W/D/L from all battles
   let wins = 0, draws = 0, losses = 0;
-  for (const b of publicBattles) {
+  for (const b of battles) {
     const isAttacker = b.attacker_player_id === userId;
     const myFaction = isAttacker ? b.attacker_faction_id : b.defender_faction_id;
     if (!b.winner_faction_id) draws++;
@@ -109,15 +120,8 @@ export default async function PublicPlayerProfilePage({ params }) {
     else losses++;
   }
 
-  // Fetch factions for public campaigns (for battle display colour)
-  const publicCampaignIdArr = [...publicCampaignIds];
-  const { data: factions } = publicCampaignIdArr.length > 0
-    ? await admin.from('factions').select('id, name, colour, campaign_id').in('campaign_id', publicCampaignIdArr)
-    : { data: [] };
-  const factionMap = Object.fromEntries((factions || []).map(f => [f.id, f]));
-
   const memberSince = new Date(profile.created_at).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-  const recentBattles = publicBattles.slice(0, 8);
+  const recentBattles = battles.slice(0, 8);
 
   const GOLD  = 'var(--gold)';
   const MUTED = 'var(--text-muted)';
@@ -342,7 +346,7 @@ export default async function PublicPlayerProfilePage({ params }) {
       )}
 
       {/* Empty state */}
-      {(!armies || armies.length === 0) && campaigns.length === 0 && recentBattles.length === 0 && (!achievements || achievements.length === 0) && (
+      {(!armies || armies.length === 0) && campaigns.length === 0 && battles.length === 0 && (!achievements || achievements.length === 0) && (
         <div style={{ textAlign: 'center', padding: '4rem 2rem', border: `1px solid ${DIM}` }}>
           <div style={{ width: '8px', height: '8px', background: GOLD, transform: 'rotate(45deg)', margin: '0 auto 1.5rem', opacity: 0.3 }} />
           <p style={{ color: MUTED, fontStyle: 'italic' }}>This commander's record is yet to be written.</p>

@@ -71,9 +71,9 @@ export default async function DashboardPage() {
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <Link
             href={`/players/${encodeURIComponent(username)}`}
-            style={{ fontFamily: 'var(--font-display)', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', textDecoration: 'none' }}
+            style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', textDecoration: 'none', border: '1px solid rgba(183,140,64,0.35)', padding: '0.45rem 0.9rem' }}
           >
-            My profile →
+            My Public Profile →
           </Link>
           <Link href="/campaign/new">
             <button className="btn-primary">+ New Campaign</button>
