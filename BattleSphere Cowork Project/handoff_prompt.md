@@ -220,6 +220,24 @@ Organiser tools moved out of the monolithic Admin page and into the relevant sub
 
 ---
 
+## Supabase explicit grants (done 2026-05-13)
+
+Supabase is removing auto-grants on public schema tables (May 30 for new projects, October 30 for all). Migration `migration_explicit_grants.sql` was run — all existing tables now have explicit GRANTs for `anon`, `authenticated`, and `service_role`.
+
+**Rule going forward**: every new `CREATE TABLE` migration must include explicit grants. Template at the bottom of `migration_explicit_grants.sql`. Pattern:
+```sql
+-- Public table (anon can read):
+GRANT SELECT                         ON public.your_table TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.your_table TO authenticated;
+GRANT ALL                            ON public.your_table TO service_role;
+
+-- Private table (no anon):
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.your_table TO authenticated;
+GRANT ALL                            ON public.your_table TO service_role;
+```
+
+---
+
 ## Key technical rules (must follow every session)
 
 - **`@` alias** maps to the project root: `@/app/components/...`
