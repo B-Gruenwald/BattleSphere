@@ -5,6 +5,7 @@ export const metadata = {
   title: 'All Campaigns',
   description:
     'Browse all narrative wargaming campaigns and club leagues running on BattleSphere — for Warhammer 40,000, Age of Sigmar, and beyond.',
+  alternates: { canonical: '/campaigns' },
 };
 
 const FORMAT_BADGE = {

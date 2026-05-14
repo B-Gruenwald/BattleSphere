@@ -1,6 +1,10 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 
+export const metadata = {
+  alternates: { canonical: '/' },
+};
+
 // ── Structured data for search engines ──────────────────────────────────────
 const jsonLd = {
   '@context': 'https://schema.org',

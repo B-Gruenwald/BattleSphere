@@ -5,6 +5,7 @@ export const metadata = {
   title: 'Army Portfolios',
   description:
     'Browse painted wargaming armies on BattleSphere — Warhammer 40,000, Age of Sigmar, and beyond. View unit rosters, Crusade records, and photo galleries.',
+  alternates: { canonical: '/armies' },
 };
 
 export default async function ArmiesDirectoryPage() {
