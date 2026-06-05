@@ -130,7 +130,7 @@ export default async function FactionDetailPage({ params }) {
 
       {/* Faction cover image */}
       {faction.image_url && (
-        <div style={{ marginBottom: '2rem', overflow: 'hidden', maxHeight: '280px', border: '1px solid var(--border-dim)' }}>
+        <div style={{ marginBottom: faction.description ? '0' : '2rem', overflow: 'hidden', maxHeight: '280px', border: '1px solid var(--border-dim)', borderBottom: faction.description ? 'none' : undefined }}>
           <img
             src={faction.image_url}
             alt={faction.name}
@@ -139,8 +139,25 @@ export default async function FactionDetailPage({ params }) {
         </div>
       )}
 
+      {/* Faction description — directly under photo */}
+      {faction.description && (
+        <div style={{
+          marginBottom: '2rem',
+          padding: '0.9rem 1.1rem',
+          border: '1px solid var(--border-dim)',
+          borderTop: faction.image_url ? 'none' : undefined,
+          color: 'var(--text-secondary)',
+          fontSize: '0.92rem',
+          lineHeight: 1.7,
+          whiteSpace: 'pre-wrap',
+          borderLeft: `3px solid ${faction.colour}`,
+        }}>
+          {faction.description}
+        </div>
+      )}
+
       {/* Faction header */}
-      <div style={{ marginBottom: faction.description ? '1.25rem' : '2.5rem' }}>
+      <div style={{ marginBottom: '2.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
           <div style={{ width: '18px', height: '18px', background: faction.colour, transform: 'rotate(45deg)', flexShrink: 0 }} />
           <h1 style={{ fontSize: 'clamp(1.6rem, 4vw, 2.6rem)', fontWeight: '900', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
@@ -151,21 +168,6 @@ export default async function FactionDetailPage({ params }) {
           {campaign.name} · {campaign.setting}
         </p>
       </div>
-
-      {/* Faction description */}
-      {faction.description && (
-        <div style={{
-          marginBottom: '2.5rem',
-          color: 'var(--text-secondary)',
-          fontSize: '0.95rem',
-          lineHeight: 1.7,
-          whiteSpace: 'pre-wrap',
-          borderLeft: `3px solid ${faction.colour}`,
-          paddingLeft: '1rem',
-        }}>
-          {faction.description}
-        </div>
-      )}
 
       {/* Record strip */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', borderTop: '1px solid var(--border-dim)', borderBottom: '1px solid var(--border-dim)', marginBottom: '2.5rem' }}>
