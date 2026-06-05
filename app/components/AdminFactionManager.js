@@ -305,18 +305,17 @@ export default function AdminFactionManager({ factions: initialFactions, campaig
               <button
                 type="button"
                 onClick={() => toggleExpand(faction.id)}
-                title={isExpanded ? 'Hide details' : 'Edit description & image'}
                 style={{
-                  padding: '0.3rem 0.5rem', fontSize: '0.68rem',
-                  background: isExpanded ? 'rgba(183,140,64,0.08)' : 'transparent',
-                  border: `1px solid ${isExpanded ? 'rgba(183,140,64,0.3)' : 'var(--border-dim)'}`,
-                  color: isExpanded ? 'var(--text-gold)' : 'var(--text-muted)',
+                  padding: '0.3rem 0.85rem', fontSize: '0.72rem',
+                  background: isExpanded ? 'rgba(183,140,64,0.15)' : 'rgba(183,140,64,0.07)',
+                  border: '1px solid var(--gold)',
+                  color: 'var(--text-gold)',
                   cursor: 'pointer',
                   fontFamily: 'var(--font-display)', letterSpacing: '0.08em',
-                  transition: 'color 0.1s, border-color 0.1s',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                {isExpanded ? '▾' : '▸'}
+                {isExpanded ? '▾ Details' : '▸ Edit Details'}
               </button>
 
               {/* Delete / confirm */}
