@@ -438,11 +438,24 @@ export default async function CampaignDashboard({ params }) {
                       .sort((a, b) => b.wins - a.wins)
                       .map((f, i) => (
                         <Link key={f.id} href={`/c/${slug}/faction/${f.id}`} style={{ textDecoration: 'none' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.2rem 0' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.35rem 0' }}>
                             <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.48rem', color: 'var(--text-muted)', width: '12px', textAlign: 'right', flexShrink: 0 }}>{i + 1}</span>
-                            <div style={{ width: '8px', height: '8px', background: f.colour, flexShrink: 0 }} />
-                            <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem', flex: 1 }}>{f.name}</span>
-                            <span style={{ color: f.wins > 0 ? f.colour : 'var(--text-muted)', fontSize: '0.78rem', fontWeight: f.wins > 0 ? '700' : '400' }}>
+                            {f.image_url ? (
+                              <div style={{ width: '40px', height: '40px', flexShrink: 0, border: `2px solid ${f.colour}`, overflow: 'hidden' }}>
+                                <img src={f.image_url} alt={f.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                              </div>
+                            ) : (
+                              <div style={{ width: '8px', height: '8px', background: f.colour, flexShrink: 0 }} />
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ color: 'var(--text-primary)', fontSize: '0.9rem', display: 'block' }}>{f.name}</span>
+                              {f.description && (
+                                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', fontStyle: 'italic', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {f.description}
+                                </span>
+                              )}
+                            </div>
+                            <span style={{ color: f.wins > 0 ? f.colour : 'var(--text-muted)', fontSize: '0.78rem', fontWeight: f.wins > 0 ? '700' : '400', flexShrink: 0 }}>
                               {f.wins} VP
                             </span>
                           </div>
