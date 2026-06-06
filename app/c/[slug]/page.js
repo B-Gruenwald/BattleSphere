@@ -6,6 +6,7 @@ import CampaignMap from '@/app/components/CampaignMap';
 import CampaignHeaderActions from '@/app/components/CampaignHeaderActions';
 import BulletinPanel from '@/app/components/BulletinPanel';
 import EventCardBody from '@/app/components/EventCardBody';
+import CampaignAboutDrawer from '@/app/components/CampaignAboutDrawer';
 
 const STATUS_COLOURS = {
   upcoming: '#6a8fc7',
@@ -233,9 +234,40 @@ export default async function CampaignDashboard({ params }) {
           {SETTING_LABELS[campaign.setting] || campaign.setting}
         </p>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-          <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: '900', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-            {campaign.name}
-          </h1>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: '900', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>
+                {campaign.name}
+              </h1>
+              {campaign.description && (
+                <CampaignAboutDrawer
+                  campaignName={campaign.name}
+                  description={campaign.description}
+                  setting={SETTING_LABELS[campaign.setting] || campaign.setting}
+                />
+              )}
+            </div>
+            {campaign.discord_invite_url && (
+              <p style={{ marginTop: '0.5rem', fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '18px', height: '18px', borderRadius: '50%', background: '#5865F2', flexShrink: 0 }}>
+                  <svg width="10" height="8" viewBox="0 0 24 18" fill="white" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20.317 1.492a19.84 19.84 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.566 18.566 0 0 0-5.487 0 12.36 12.36 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 1.492a.07.07 0 0 0-.032.027C.533 6.093-.32 10.555.099 14.961a.08.08 0 0 0 .031.055 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
+                  </svg>
+                </span>
+                Join the conversation on{' '}
+                <a
+                  href={campaign.discord_invite_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#7289da', textDecoration: 'none', fontWeight: 600 }}
+                  onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+                  onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+                >
+                  Discord
+                </a>
+              </p>
+            )}
+          </div>
           <CampaignHeaderActions
             campaignId={campaign.id}
             campaignSlug={slug}

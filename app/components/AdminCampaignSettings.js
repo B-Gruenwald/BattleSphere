@@ -41,6 +41,12 @@ export default function AdminCampaignSettings({ campaign, slug }) {
   const [saved,         setSaved]         = useState(false);
   const [error,         setError]         = useState('');
 
+  // Discord invite link state
+  const [discordInviteUrl,      setDiscordInviteUrl]      = useState(campaign.discord_invite_url || '');
+  const [inviteSaving,          setInviteSaving]          = useState(false);
+  const [inviteSaved,           setInviteSaved]           = useState(false);
+  const [inviteError,           setInviteError]           = useState('');
+
   // Discord webhook state
   const [webhookUrl,     setWebhookUrl]    = useState(campaign.discord_webhook_url || '');
   const [webhookSaving,  setWebhookSaving] = useState(false);
@@ -169,6 +175,20 @@ export default function AdminCampaignSettings({ campaign, slug }) {
     setRenaming(false);
     setShowRenameModal(false);
     setPendingSetting(null);
+  }
+
+  async function saveInviteUrl() {
+    setInviteSaving(true);
+    setInviteSaved(false);
+    setInviteError('');
+    const { error: err } = await supabase
+      .from('campaigns')
+      .update({ discord_invite_url: discordInviteUrl.trim() || null })
+      .eq('id', campaign.id);
+    setInviteSaving(false);
+    if (err) { setInviteError(err.message); return; }
+    setInviteSaved(true);
+    setTimeout(() => setInviteSaved(false), 3000);
   }
 
   async function saveWebhook() {
@@ -446,6 +466,40 @@ export default function AdminCampaignSettings({ campaign, slug }) {
             Discord Integration
           </p>
         </div>
+        {/* ── Discord invite URL ── */}
+        <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '0.75rem' }}>
+          Add a <strong>Discord invite link</strong> to show a "Join the conversation" prompt on the campaign dashboard.
+        </p>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+          <input
+            type="url"
+            value={discordInviteUrl}
+            onChange={e => setDiscordInviteUrl(e.target.value)}
+            placeholder="https://discord.gg/…"
+            style={{ flex: '1 1 300px', fontSize: '1rem',
+              background: 'var(--bg-input, rgba(255,255,255,0.04))',
+              border: '1px solid var(--border-dim)',
+              borderRadius: '4px', padding: '0.5rem 0.75rem',
+              color: 'var(--text-primary)',
+            }}
+            onFocus={e => e.target.style.borderColor = '#5865F2'}
+            onBlur={e => e.target.style.borderColor = 'var(--border-dim)'}
+          />
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={saveInviteUrl}
+            disabled={inviteSaving}
+            style={{ opacity: inviteSaving ? 0.5 : 1, whiteSpace: 'nowrap' }}
+          >
+            {inviteSaving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+        {inviteSaved  && <p style={{ fontSize: '0.8rem', color: 'var(--text-gold)', marginBottom: '1rem' }}>✓ Invite link saved</p>}
+        {inviteError  && <p style={{ fontSize: '0.8rem', color: '#e05a5a',          marginBottom: '1rem' }}>{inviteError}</p>}
+        {!inviteSaved && !inviteError && <div style={{ marginBottom: '1.25rem' }} />}
+
+        {/* ── Discord webhook ── */}
         <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
           Post battle results, new bulletin dispatches, and campaign events to a Discord channel automatically.
           Paste a Discord webhook URL below — you can create one in your server under <em>Channel Settings → Integrations → Webhooks</em>.
