@@ -208,7 +208,9 @@ function buildSubject(campaignSections, platformItems) {
     return `Campaign Digest — ${campaignSections.length} campaigns`;
   }
   if (platformItems.length > 0) {
-    return `What's new on BattleSphere`;
+    const first = platformItems[0];
+    if (first?.title) return `${first.title} — BattleSphere`;
+    return `New from BattleSphere`;
   }
   return 'Your BattleSphere Digest';
 }
