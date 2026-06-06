@@ -20,6 +20,7 @@ import Link from 'next/link';
  */
 
 const BRACKET_LINK_RE = /\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g;
+const MD_LINK_RE      = /\[([^\]]+?)\]\((https?:\/\/[^)]+?)\)/g;
 
 export function renderBulletinText(body, territoryMap, factionMap, campaignSlug) {
   if (!body) return null;
@@ -63,35 +64,53 @@ export function renderBulletinText(body, territoryMap, factionMap, campaignSlug)
     });
   }
 
-  /** Process one line → React nodes, handling [[ ]] bracket links then auto-links */
+  /** Process one line → React nodes, handling markdown links, [[ ]] bracket links, then auto-links */
   function processLine(line, lineIdx) {
+    // First pass: collect all match positions (markdown links + bracket links), sorted by index
+    const segments = [];
+    let m;
+
+    MD_LINK_RE.lastIndex = 0;
+    while ((m = MD_LINK_RE.exec(line)) !== null) {
+      segments.push({ index: m.index, length: m[0].length, type: 'md', display: m[1], href: m[2] });
+    }
+
+    BRACKET_LINK_RE.lastIndex = 0;
+    while ((m = BRACKET_LINK_RE.exec(line)) !== null) {
+      segments.push({ index: m.index, length: m[0].length, type: 'bracket', target: m[1], displayText: m[2] });
+    }
+
+    segments.sort((a, b) => a.index - b.index);
+
     const nodes = [];
     let lastIndex = 0;
 
-    BRACKET_LINK_RE.lastIndex = 0;
-    let match;
-
-    while ((match = BRACKET_LINK_RE.exec(line)) !== null) {
-      const [fullMatch, target, displayText] = match;
-      const before = line.slice(lastIndex, match.index);
+    for (const seg of segments) {
+      const before = line.slice(lastIndex, seg.index);
       if (before) nodes.push(...[].concat(autoLink(before, `${lineIdx}-b${lastIndex}`)));
 
-      const resolved = resolve(target);
-      const display  = displayText ? displayText.trim() : target.trim();
-
-      if (resolved) {
-        const className = resolved.type === 'territory' ? 'bulletin-territory-link' : 'bulletin-faction-link';
+      if (seg.type === 'md') {
         nodes.push(
-          <Link key={`${lineIdx}-link-${match.index}`} href={resolved.href} className={className}>
-            {display}
-          </Link>
+          <a key={`${lineIdx}-md-${seg.index}`} href={seg.href} className="bulletin-external-link" target="_blank" rel="noopener noreferrer">
+            {seg.display}
+          </a>
         );
       } else {
-        // Target not found — render display text as plain, no broken link
-        nodes.push(<span key={`${lineIdx}-unknown-${match.index}`}>{display}</span>);
+        const resolved = resolve(seg.target);
+        const display  = seg.displayText ? seg.displayText.trim() : seg.target.trim();
+        if (resolved) {
+          const className = resolved.type === 'territory' ? 'bulletin-territory-link' : 'bulletin-faction-link';
+          nodes.push(
+            <Link key={`${lineIdx}-link-${seg.index}`} href={resolved.href} className={className}>
+              {display}
+            </Link>
+          );
+        } else {
+          nodes.push(<span key={`${lineIdx}-unknown-${seg.index}`}>{display}</span>);
+        }
       }
 
-      lastIndex = match.index + fullMatch.length;
+      lastIndex = seg.index + seg.length;
     }
 
     const tail = line.slice(lastIndex);

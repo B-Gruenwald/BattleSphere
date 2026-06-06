@@ -640,6 +640,18 @@ nav a:hover {
   border-bottom-color: rgba(183,140,64,0.85);
 }
 
+.bulletin-external-link {
+  color: var(--text-gold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(183,140,64,0.5);
+  transition: color 0.15s, text-decoration-color 0.15s;
+}
+.bulletin-external-link:hover {
+  color: var(--gold-bright);
+  text-decoration-color: rgba(183,140,64,0.9);
+}
+
 /* ══════════════════════════════════════════════════════════
    BULLETIN DRAWER (slide-in right panel)
    ══════════════════════════════════════════════════════════ */
