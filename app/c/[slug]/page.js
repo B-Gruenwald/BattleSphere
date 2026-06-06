@@ -259,9 +259,7 @@ export default async function CampaignDashboard({ params }) {
                   href={campaign.discord_invite_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ color: '#7289da', textDecoration: 'none', fontWeight: 600 }}
-                  onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
-                  onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+                  style={{ color: '#7289da', fontWeight: 600 }}
                 >
                   Discord
                 </a>
