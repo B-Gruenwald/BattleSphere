@@ -189,7 +189,7 @@ function getLabelOffset(t, allTerritories) {
 // readOnly={true} disables node click navigation (used on the public campaign page)
 // warpRoutes: array of { territory_a: uuid, territory_b: uuid } from the DB.
 //   If empty/absent, falls back to the auto-generated ring topology (legacy campaigns).
-export default function CampaignMap({ territories, factions, influenceData = [], campaignSlug, setting, readOnly = false, warpRoutes = [] }) {
+export default function CampaignMap({ territories, factions, influenceData = [], campaignSlug, setting, readOnly = false, warpRoutes = [], subTerritoryBleed = false }) {
   const router = useRouter();
   const [hoveredId, setHoveredId] = useState(null);
   const [tooltip, setTooltip]     = useState(null);
@@ -225,7 +225,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
       .forEach(i => {
         result[i.faction_id] = (result[i.faction_id] || 0) + i.influence_points;
       });
-    if (territory.depth === 1) {
+    if (subTerritoryBleed && territory.depth === 1) {
       const subs = normalizedTerritories.filter(t => t.parent_id === territory.id);
       subs.forEach(sub => {
         influenceData
@@ -278,7 +278,7 @@ export default function CampaignMap({ territories, factions, influenceData = [],
     const rows     = influenceRows(t);
 
     const hasSubs  = t.depth === 1 && normalizedTerritories.some(s => s.parent_id === t.id);
-    const hasSubInfluence = hasSubs && influenceData.some(i =>
+    const hasSubInfluence = subTerritoryBleed && hasSubs && influenceData.some(i =>
       normalizedTerritories.filter(s => s.parent_id === t.id).map(s => s.id).includes(i.territory_id) && i.influence_points > 0
     );
 

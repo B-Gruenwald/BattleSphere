@@ -129,6 +129,9 @@ export default function EventForm({
   const [cascadeBonus,        setCascadeBonus]        = useState(existingEvent?.cascade_bonus ?? 1);
   const [cascadeTerritoryId,  setCascadeTerritoryId]  = useState(existingEvent?.cascade_territory_id ?? '');
 
+  // ── Sub-territory Influence Bleed state ──────────────────────────────────
+  const [bleedEnabled, setBleedEnabled] = useState(existingEvent?.sub_territory_bleed ?? false);
+
   // Only top-level territories qualify as cascade triggers (warp routes connect main territories only)
   const mainTerritories = (territories || []).filter(t => !t.parent_id).sort((a, b) => a.name.localeCompare(b.name));
 
@@ -158,6 +161,8 @@ export default function EventForm({
       // Territory Cascade — null out all fields when cascade is disabled
       cascade_bonus:        cascadeEnabled ? (parseInt(cascadeBonus) || 1) : null,
       cascade_territory_id: cascadeEnabled && cascadeTerritoryId ? cascadeTerritoryId : null,
+      // Sub-territory Influence Bleed
+      sub_territory_bleed: bleedEnabled,
       ...(!isEditing && { created_by: userId }),
     };
 
@@ -630,6 +635,37 @@ export default function EventForm({
             </div>
           </>
         )}
+      </div>
+
+      {/* ── Sub-territory Influence Bleed ── */}
+      <div style={{ ...fieldStyle, paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+          <button
+            type="button"
+            onClick={() => setBleedEnabled(v => !v)}
+            style={{
+              width: '36px', height: '20px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+              background: bleedEnabled ? 'var(--text-gold)' : 'var(--border-subtle)',
+              position: 'relative', flexShrink: 0, transition: 'background 0.2s',
+            }}
+            aria-label="Toggle sub-territory influence bleed"
+          >
+            <span style={{
+              position: 'absolute', top: '2px',
+              left: bleedEnabled ? '18px' : '2px',
+              width: '16px', height: '16px', borderRadius: '50%',
+              background: '#fff', transition: 'left 0.2s',
+            }} />
+          </button>
+          <label style={{ ...labelStyle, margin: 0, cursor: 'pointer' }} onClick={() => setBleedEnabled(v => !v)}>
+            Sub-territory Influence Bleed
+          </label>
+        </div>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+          {bleedEnabled
+            ? 'Active: battles fought in sub-territories count at ×0.5 toward the parent territory\'s influence totals on the map and territory pages. Encourages players to contest sub-locations.'
+            : 'Enable to make battles in sub-territories contribute ×0.5 influence toward their parent territory — visible on the campaign map and territory pages.'}
+        </p>
       </div>
 
       {error && (

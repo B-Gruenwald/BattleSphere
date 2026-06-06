@@ -83,6 +83,11 @@ export default async function CampaignDashboard({ params }) {
   const profileMap = Object.fromEntries((allProfiles || []).map(p => [p.id, p]));
   const factionMap = Object.fromEntries((factions    || []).map(f => [f.id, f]));
 
+  // ── Sub-territory influence bleed (event-gated) ───────────
+  const subTerritoryBleed = (activeEvents || []).some(ev =>
+    ev.status === 'active' && ev.sub_territory_bleed === true
+  );
+
   function resolveNames(ids, list) {
     if (!ids || ids.length === 0) return null;
     return ids.map(i => list?.find(x => x.id === i)?.name ?? '?');
@@ -276,6 +281,7 @@ export default async function CampaignDashboard({ params }) {
                 warpRoutes={warpRoutes || []}
                 campaignSlug={slug}
                 setting={campaign.setting}
+                subTerritoryBleed={subTerritoryBleed}
               />
             ) : (
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>
