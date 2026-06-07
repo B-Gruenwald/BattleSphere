@@ -176,8 +176,8 @@ export default async function AdminUsers() {
 
                 {/* Profile link */}
                 <div>
-                  {firstSlug ? (
-                    <Link href={`/c/${firstSlug}/player/${p.id}`} style={{
+                  {p.username ? (
+                    <Link href={`/players/${encodeURIComponent(p.username)}`} style={{
                       fontFamily: 'var(--font-display)',
                       fontSize: '0.54rem',
                       letterSpacing: '0.1em',

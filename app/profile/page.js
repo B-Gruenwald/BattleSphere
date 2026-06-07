@@ -19,7 +19,7 @@ export default async function ProfilePage() {
     .limit(1);
   const profile = profileRows?.[0] ?? null;
 
-  const username = profile?.username || user.user_metadata?.username || user.email;
+  const username = profile?.username || null;
 
   return (
     <div style={{ padding: '4rem 2rem', maxWidth: '680px', margin: '0 auto' }}>
@@ -29,13 +29,19 @@ export default async function ProfilePage() {
         <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.6rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.5rem' }}>
           Settings
         </p>
-        <h1 style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '0.5rem' }}>{username}</h1>
-        <Link
-          href={`/players/${encodeURIComponent(username)}`}
-          style={{ fontFamily: 'var(--font-display)', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', textDecoration: 'none' }}
-        >
-          View public profile →
-        </Link>
+        <h1 style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '0.5rem' }}>{username ?? user.email}</h1>
+        {username ? (
+          <Link
+            href={`/players/${encodeURIComponent(username)}`}
+            style={{ fontFamily: 'var(--font-display)', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', textDecoration: 'none' }}
+          >
+            View public profile →
+          </Link>
+        ) : (
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#e05a5a', margin: 0 }}>
+            Set a username below to activate your public profile
+          </p>
+        )}
       </div>
 
       {/* Privacy */}
