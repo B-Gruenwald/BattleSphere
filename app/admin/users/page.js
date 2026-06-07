@@ -177,7 +177,7 @@ export default async function AdminUsers() {
                 {/* Profile link */}
                 <div>
                   {p.username ? (
-                    <Link href={`/players/${encodeURIComponent(p.username)}`} style={{
+                    <Link href={`/players/${encodeURIComponent(p.username.replace(/#.*$/, ''))}`} style={{
                       fontFamily: 'var(--font-display)',
                       fontSize: '0.54rem',
                       letterSpacing: '0.1em',

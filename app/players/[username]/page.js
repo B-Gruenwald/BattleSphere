@@ -25,11 +25,14 @@ export default async function PublicPlayerProfilePage({ params }) {
   const { username } = await params;
   const admin = createAdminClient();
 
-  // Fetch profile by username
+  // Strip Discord-style discriminator (#0, #1234, etc.) from URL if present
+  const cleanUsername = username.replace(/#.*$/, '');
+
+  // Fetch profile by username — try clean version first, fall back to raw
   const { data: profileRows } = await admin
     .from('profiles')
     .select('*')
-    .eq('username', username)
+    .or(`username.eq.${cleanUsername},username.eq.${username}`)
     .limit(1);
   const profile = profileRows?.[0] ?? null;
 

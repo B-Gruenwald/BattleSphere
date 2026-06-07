@@ -32,7 +32,7 @@ export default async function ProfilePage() {
         <h1 style={{ fontSize: '2rem', fontWeight: '700', marginBottom: '0.5rem' }}>{username ?? user.email}</h1>
         {username ? (
           <Link
-            href={`/players/${encodeURIComponent(username)}`}
+            href={`/players/${encodeURIComponent(username.replace(/#.*$/, ''))}`}
             style={{ fontFamily: 'var(--font-display)', fontSize: '0.6rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', textDecoration: 'none' }}
           >
             View public profile →
