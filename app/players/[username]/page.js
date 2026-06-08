@@ -314,6 +314,11 @@ export default async function PublicPlayerProfilePage({ params }) {
                           {army.faction_name}
                         </div>
                       )}
+                      {army.game_system && (
+                        <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.5rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', opacity: 0.7, marginTop: '0.15rem' }}>
+                          {army.game_system}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Link>

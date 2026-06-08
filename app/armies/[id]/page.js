@@ -145,17 +145,14 @@ export default async function ArmyPage({ params }) {
           {/* Meta pills */}
           <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
             {army.game_system && (
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.58rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)' }}>
+              <span style={{ padding: '0.2rem 0.6rem', border: '1px solid var(--border-dim)', fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
                 {army.game_system}
               </span>
             )}
             {army.faction_name && (
-              <>
-                {army.game_system && <span style={{ color: 'var(--border-dim)', fontSize: '0.75rem' }}>·</span>}
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.58rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                  {army.faction_name}
-                </span>
-              </>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.58rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                {army.faction_name}
+              </span>
             )}
             {profile && (
               <>
