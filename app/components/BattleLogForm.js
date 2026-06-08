@@ -71,6 +71,13 @@ export default function BattleLogForm({ campaign, territories, factions, members
   const [pendingPhotos,    setPendingPhotos]      = useState([]); // [{ file, previewUrl }]
   const [photoError,       setPhotoError]         = useState('');
 
+  // Optional section toggles
+  const [showScenario,        setShowScenario]        = useState(false);
+  const [showAttackerDetails, setShowAttackerDetails] = useState(false);
+  const [showDefenderDetails, setShowDefenderDetails] = useState(false);
+  const [showScores,          setShowScores]          = useState(false);
+  const [showNarrative,       setShowNarrative]       = useState(false);
+
   // Auto-fill attacker faction (also fires on mount because attackerPlayerId defaults to userId)
   useEffect(() => {
     if (attackerPlayerId) {
@@ -91,6 +98,14 @@ export default function BattleLogForm({ campaign, territories, factions, members
   const winnerFactionId =
     result === 'attacker' ? attackerFactionId :
     result === 'defender' ? defenderFactionId : null;
+
+  // Derived labels for result buttons (use faction name if selected, else player name)
+  const attackerLabel = attackerFactionId
+    ? (factions.find(f => f.id === attackerFactionId)?.name ?? 'Player A')
+    : (members.find(m => m.user_id === attackerPlayerId)?.username ?? 'Player A');
+  const defenderLabel = defenderFactionId
+    ? (factions.find(f => f.id === defenderFactionId)?.name ?? 'Player B')
+    : (members.find(m => m.user_id === defenderPlayerId)?.username ?? 'Player B');
 
   // ── Photo queue handlers ─────────────────────────────────────────────────────
   function handlePhotoSelect(e) {
@@ -383,54 +398,50 @@ export default function BattleLogForm({ campaign, territories, factions, members
     fontFamily: 'var(--font-display)', fontSize: '0.6rem', letterSpacing: '0.12em',
     textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.15s',
   });
-  const sectionStyle = { marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '1px solid var(--border-dim)' };
-  const hintStyle = { fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.4rem', fontStyle: 'italic' };
+  const sectionStyle = { marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid var(--border-dim)' };
+  const hintStyle    = { fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.4rem', fontStyle: 'italic' };
+  const optToggleStyle = {
+    background: 'none', border: 'none', padding: 0,
+    fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.12em',
+    textTransform: 'uppercase', color: 'var(--text-muted)', cursor: 'pointer',
+    marginTop: '0.6rem', display: 'block',
+  };
+  const optPanelStyle = { marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' };
 
   return (
     <form onSubmit={handleSubmit} className="battle-form" style={{ maxWidth: '700px' }}>
 
-      {/* ── Headline ── */}
+      {/* ── Key Facts ── */}
       <div style={sectionStyle}>
-        <label style={labelStyle}>
-          Battle Headline <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span>
-        </label>
-        <input
-          type="text"
-          value={headline}
-          onChange={e => setHeadline(e.target.value)}
-          placeholder="e.g. The Fall of Hive Secondus, Ambush at the Iron Gate…"
-          style={inputStyle}
-        />
-        <p style={hintStyle}>A short title for this battle — shown in battle lists and the chronicle.</p>
-      </div>
-
-      {/* ── Battle Type + Scenario + Theatre ── */}
-      <div style={sectionStyle}>
-        <div className="form-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
-          <div>
-            <label style={labelStyle}>Battle Type</label>
-            <select value={battleType} onChange={e => setBattleType(e.target.value)} style={inputStyle}>
-              <option value="">— Select type —</option>
-              {BATTLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>
-              Scenario <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span>
-            </label>
-            <input
-              type="text" value={scenario} onChange={e => setScenario(e.target.value)}
-              placeholder="e.g. Vital Ground, Take &amp; Hold…" style={inputStyle}
-            />
-          </div>
+        {/* Headline */}
+        <div style={{ marginBottom: '0.9rem' }}>
+          <label style={labelStyle}>Battle Headline</label>
+          <input
+            type="text"
+            value={headline}
+            onChange={e => setHeadline(e.target.value)}
+            placeholder="e.g. The Fall of Hive Secondus, Ambush at the Iron Gate…"
+            style={inputStyle}
+          />
         </div>
+
+        {/* Battle Type */}
+        <div style={{ marginBottom: '0.9rem' }}>
+          <label style={labelStyle}>Battle Type</label>
+          <select value={battleType} onChange={e => setBattleType(e.target.value)} style={inputStyle}>
+            <option value="">— Select type —</option>
+            {BATTLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+
+        {/* Theatre of War */}
         <div>
-          <label style={labelStyle}>Theatre of Battle</label>
+          <label style={labelStyle}>Theatre of War</label>
           <select value={territoryId} onChange={e => setTerritoryId(e.target.value)} style={inputStyle}>
             <option value="">— None / Unknown —</option>
             {sortedTerritories.map(t => (
               <option key={t.id} value={t.id}>
-                {'\u00a0\u00a0\u00a0\u00a0'.repeat(t.depth - 1)}{t.depth > 1 ? '↳ ' : ''}{t.name}{t.depth > 1 ? ` (${t.type || 'sub-territory'})` : ''}
+                {'    '.repeat(t.depth - 1)}{t.depth > 1 ? '↳ ' : ''}{t.name}{t.depth > 1 ? ` (${t.type || 'sub-territory'})` : ''}
               </option>
             ))}
           </select>
@@ -453,14 +464,28 @@ export default function BattleLogForm({ campaign, territories, factions, members
             return hint ? <p style={hintStyle}>{hint}</p> : null;
           })()}
         </div>
+
+        {/* Scenario — optional toggle */}
+        <button type="button" style={optToggleStyle} onClick={() => setShowScenario(v => !v)}>
+          {showScenario ? '▾ Hide scenario' : '▸ Add scenario'}
+        </button>
+        {showScenario && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Scenario</label>
+            <input
+              type="text" value={scenario} onChange={e => setScenario(e.target.value)}
+              placeholder="e.g. Vital Ground, Take &amp; Hold…" style={inputStyle}
+            />
+          </div>
+        )}
       </div>
 
-      {/* ── Players & Armies ── */}
+      {/* ── Players ── */}
       <div style={sectionStyle}>
         <div className="form-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
 
           {/* Registering Player column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <div>
               <label style={labelStyle}>Registering Player <span style={{ color: '#e05a5a' }}>*</span></label>
               <select value={attackerPlayerId} onChange={e => setAttackerPlayer(e.target.value)} style={inputStyle} required>
@@ -471,58 +496,55 @@ export default function BattleLogForm({ campaign, territories, factions, members
             <div>
               <span style={sublabelStyle}>
                 {attackerPlayerId && members.find(m => m.user_id === attackerPlayerId)?.faction_id
-                  ? 'Faction (auto-filled, overridable)' : 'Faction'}
+                  ? 'Faction (auto-filled)' : 'Faction'}
               </span>
               <select value={attackerFactionId} onChange={e => setAttacker(e.target.value)} style={inputStyle} required>
                 <option value="">— Select faction —</option>
                 {factions.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
               </select>
             </div>
-            {/* Optional: army attribution */}
-            {memberArmies && attackerPlayerId && (memberArmies[attackerPlayerId] || []).length > 0 && (
-              <div style={{ opacity: 0.75 }}>
-                <label style={{ ...labelStyle, color: 'var(--text-muted)', fontSize: '0.52rem' }}>
-                  Army used <span style={{ opacity: 0.6, fontSize: '0.48rem' }}>(optional)</span>
-                </label>
-                <select
-                  value={attackerArmyId}
-                  onChange={e => setAttackerArmyId(e.target.value)}
-                  style={{ ...inputStyle, fontSize: '0.88rem' }}
-                >
-                  <option value="">— None selected —</option>
-                  {(memberArmies[attackerPlayerId] || []).map(a => (
-                    <option key={a.armyId} value={a.armyId}>
-                      {a.name}{a.faction_name ? ` · ${a.faction_name}` : ''}
-                    </option>
-                  ))}
-                </select>
+            {/* Optional army details toggle */}
+            <button type="button" style={optToggleStyle} onClick={() => setShowAttackerDetails(v => !v)}>
+              {showAttackerDetails ? '▾ Hide army details' : '▸ Add army details'}
+            </button>
+            {showAttackerDetails && (
+              <div style={optPanelStyle}>
+                {memberArmies && attackerPlayerId && (memberArmies[attackerPlayerId] || []).length > 0 && (
+                  <div>
+                    <label style={{ ...labelStyle, color: 'var(--text-muted)', fontSize: '0.52rem' }}>Deployed Army</label>
+                    <select value={attackerArmyId} onChange={e => setAttackerArmyId(e.target.value)} style={inputStyle}>
+                      <option value="">— None selected —</option>
+                      {(memberArmies[attackerPlayerId] || []).map(a => (
+                        <option key={a.armyId} value={a.armyId}>
+                          {a.name}{a.faction_name ? ` · ${a.faction_name}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Army Type &amp; Detachment</label>
+                  <input
+                    type="text" value={attackerArmyType} onChange={e => setAttackerArmyType(e.target.value)}
+                    placeholder="e.g. Space Marines – Gladius Task Force" style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Army List</label>
+                  <textarea
+                    value={attackerArmyList} onChange={e => setAttackerArmyList(e.target.value)}
+                    rows={4} placeholder="Paste or type army list here…"
+                    style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, fontFamily: 'monospace' }}
+                  />
+                </div>
               </div>
             )}
-            <div>
-              <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>
-                Army Type &amp; Detachment <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span>
-              </label>
-              <input
-                type="text" value={attackerArmyType} onChange={e => setAttackerArmyType(e.target.value)}
-                placeholder="e.g. Space Marines – Gladius Task Force" style={inputStyle}
-              />
-            </div>
-            <div>
-              <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>
-                Army List <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span>
-              </label>
-              <textarea
-                value={attackerArmyList} onChange={e => setAttackerArmyList(e.target.value)}
-                rows={5} placeholder="Paste or type army list here…"
-                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, fontFamily: 'monospace', fontSize: '1rem' }}
-              />
-            </div>
           </div>
 
           {/* Opponent column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <div>
-              <label style={labelStyle}>Opponent <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
+              <label style={labelStyle}>Opponent</label>
               <select value={defenderPlayerId} onChange={e => setDefenderPlayer(e.target.value)} style={inputStyle}>
                 <option value="">— Select player —</option>
                 {sortedMembers.filter(m => m.user_id !== attackerPlayerId).map(m => (
@@ -533,7 +555,7 @@ export default function BattleLogForm({ campaign, territories, factions, members
             <div>
               <span style={sublabelStyle}>
                 {defenderPlayerId && members.find(m => m.user_id === defenderPlayerId)?.faction_id
-                  ? 'Faction (auto-filled, overridable)' : 'Faction'}
+                  ? 'Faction (auto-filled)' : 'Faction'}
               </span>
               <select value={defenderFactionId} onChange={e => setDefender(e.target.value)} style={inputStyle} required>
                 <option value="">— Select faction —</option>
@@ -542,100 +564,78 @@ export default function BattleLogForm({ campaign, territories, factions, members
                 ))}
               </select>
             </div>
-            {/* Optional: army attribution */}
-            {memberArmies && defenderPlayerId && (memberArmies[defenderPlayerId] || []).length > 0 && (
-              <div style={{ opacity: 0.75 }}>
-                <label style={{ ...labelStyle, color: 'var(--text-muted)', fontSize: '0.52rem' }}>
-                  Army used <span style={{ opacity: 0.6, fontSize: '0.48rem' }}>(optional)</span>
-                </label>
-                <select
-                  value={defenderArmyId}
-                  onChange={e => setDefenderArmyId(e.target.value)}
-                  style={{ ...inputStyle, fontSize: '0.88rem' }}
-                >
-                  <option value="">— None selected —</option>
-                  {(memberArmies[defenderPlayerId] || []).map(a => (
-                    <option key={a.armyId} value={a.armyId}>
-                      {a.name}{a.faction_name ? ` · ${a.faction_name}` : ''}
-                    </option>
-                  ))}
-                </select>
+            {/* Optional army details toggle */}
+            <button type="button" style={optToggleStyle} onClick={() => setShowDefenderDetails(v => !v)}>
+              {showDefenderDetails ? '▾ Hide army details' : '▸ Add army details'}
+            </button>
+            {showDefenderDetails && (
+              <div style={optPanelStyle}>
+                {memberArmies && defenderPlayerId && (memberArmies[defenderPlayerId] || []).length > 0 && (
+                  <div>
+                    <label style={{ ...labelStyle, color: 'var(--text-muted)', fontSize: '0.52rem' }}>Deployed Army</label>
+                    <select value={defenderArmyId} onChange={e => setDefenderArmyId(e.target.value)} style={inputStyle}>
+                      <option value="">— None selected —</option>
+                      {(memberArmies[defenderPlayerId] || []).map(a => (
+                        <option key={a.armyId} value={a.armyId}>
+                          {a.name}{a.faction_name ? ` · ${a.faction_name}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Army Type &amp; Detachment</label>
+                  <input
+                    type="text" value={defenderArmyType} onChange={e => setDefenderArmyType(e.target.value)}
+                    placeholder="e.g. Aeldari – Aspect Host" style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Army List</label>
+                  <textarea
+                    value={defenderArmyList} onChange={e => setDefenderArmyList(e.target.value)}
+                    rows={4} placeholder="Paste or type army list here…"
+                    style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, fontFamily: 'monospace' }}
+                  />
+                </div>
               </div>
             )}
-            <div>
-              <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>
-                Army Type &amp; Detachment <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span>
-              </label>
-              <input
-                type="text" value={defenderArmyType} onChange={e => setDefenderArmyType(e.target.value)}
-                placeholder="e.g. Aeldari – Aspect Host" style={inputStyle}
-              />
-            </div>
-            <div>
-              <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>
-                Army List <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span>
-              </label>
-              <textarea
-                value={defenderArmyList} onChange={e => setDefenderArmyList(e.target.value)}
-                rows={5} placeholder="Paste or type army list here…"
-                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, fontFamily: 'monospace', fontSize: '1rem' }}
-              />
-            </div>
           </div>
         </div>
       </div>
 
       {/* ── Result ── */}
       <div style={sectionStyle}>
-        <label style={labelStyle}>Battle Result</label>
+        <label style={labelStyle}>Result <span style={{ color: '#e05a5a' }}>*</span></label>
         <div className="result-btn-row" style={{ display: 'flex', gap: '0.75rem' }}>
-          <button type="button" style={resultBtnStyle(result === 'attacker')} onClick={() => setResult('attacker')}>Registering Player Wins</button>
+          <button type="button" style={resultBtnStyle(result === 'attacker')} onClick={() => setResult('attacker')}>{attackerLabel} Wins</button>
           <button type="button" style={resultBtnStyle(result === 'draw')}     onClick={() => setResult('draw')}>Draw</button>
-          <button type="button" style={resultBtnStyle(result === 'defender')} onClick={() => setResult('defender')}>Opponent Wins</button>
+          <button type="button" style={resultBtnStyle(result === 'defender')} onClick={() => setResult('defender')}>{defenderLabel} Wins</button>
         </div>
-        <div className="form-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '1.25rem' }}>
-          <div>
-            <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Registering Player Score <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
-            <input type="number" min="0" value={attackerScore} onChange={e => setAttackerScore(e.target.value)} placeholder="e.g. 42" style={inputStyle} />
+
+        {/* Scores — optional toggle */}
+        <button type="button" style={optToggleStyle} onClick={() => setShowScores(v => !v)}>
+          {showScores ? '▾ Hide scores' : '▸ Add scores'}
+        </button>
+        {showScores && (
+          <div className="form-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginTop: '0.75rem' }}>
+            <div>
+              <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>{attackerLabel} Score</label>
+              <input type="number" min="0" value={attackerScore} onChange={e => setAttackerScore(e.target.value)} placeholder="e.g. 42" style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>{defenderLabel} Score</label>
+              <input type="number" min="0" value={defenderScore} onChange={e => setDefenderScore(e.target.value)} placeholder="e.g. 18" style={inputStyle} />
+            </div>
           </div>
-          <div>
-            <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>Opponent Score <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
-            <input type="number" min="0" value={defenderScore} onChange={e => setDefenderScore(e.target.value)} placeholder="e.g. 18" style={inputStyle} />
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* ── Battle Chronicles ── */}
+      {/* ── Narrative & Photos ── */}
       <div style={sectionStyle}>
-        <label style={labelStyle}>Battle Chronicles <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span></label>
-        <div className="form-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-          <div>
-            <span style={{ ...sublabelStyle, marginBottom: '0.5rem' }}>Registering Player's Account</span>
-            <textarea
-              value={attackerNarrative} onChange={e => setAttackerNarrative(e.target.value)}
-              rows={5} placeholder="Describe the battle from your perspective…"
-              style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
-            />
-            <p style={hintStyle}>**bold** &nbsp;·&nbsp; *italic*</p>
-          </div>
-          <div>
-            <span style={{ ...sublabelStyle, marginBottom: '0.5rem' }}>Opponent's Account</span>
-            <textarea
-              value={defenderNarrative} onChange={e => setDefenderNarrative(e.target.value)}
-              rows={5} placeholder="Describe the battle from the opponent's perspective…"
-              style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
-            />
-            <p style={hintStyle}>**bold** &nbsp;·&nbsp; *italic*</p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Battle Photos ── */}
-      <div style={sectionStyle}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
-          <label style={labelStyle}>
-            Battle Photos <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span>
-          </label>
+        {/* Photos — always visible */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.75rem' }}>
+          <label style={labelStyle}>Battle Photos</label>
           <label style={{ cursor: 'pointer' }}>
             <input
               type="file"
@@ -661,34 +661,20 @@ export default function BattleLogForm({ campaign, territories, factions, members
         )}
 
         {pendingPhotos.length > 0 ? (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-            gap: '0.65rem',
-          }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '0.5rem', marginBottom: '0.75rem' }}>
             {pendingPhotos.map((p, i) => (
               <div key={i} style={{ position: 'relative', paddingBottom: '100%', overflow: 'hidden' }}>
                 <img
                   src={p.previewUrl}
                   alt=""
-                  style={{
-                    position: 'absolute', inset: 0,
-                    width: '100%', height: '100%',
-                    objectFit: 'cover',
-                    border: '1px solid var(--border-dim)',
-                  }}
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', border: '1px solid var(--border-dim)' }}
                 />
                 {!submitting && (
                   <button
                     type="button"
                     onClick={() => removePendingPhoto(i)}
                     title="Remove photo"
-                    style={{
-                      position: 'absolute', top: '4px', right: '4px',
-                      background: 'rgba(0,0,0,0.75)', border: 'none',
-                      color: '#e05a5a', cursor: 'pointer',
-                      padding: '2px 7px', fontSize: '0.85rem', lineHeight: 1,
-                    }}
+                    style={{ position: 'absolute', top: '4px', right: '4px', background: 'rgba(0,0,0,0.75)', border: 'none', color: '#e05a5a', cursor: 'pointer', padding: '2px 7px', fontSize: '0.85rem', lineHeight: 1 }}
                   >
                     ×
                   </button>
@@ -697,9 +683,36 @@ export default function BattleLogForm({ campaign, territories, factions, members
             ))}
           </div>
         ) : (
-          <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.85rem' }}>
-            No photos queued. Use "+ Add Photos" to attach images — they'll be uploaded when you record the battle.
+          <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.82rem', marginBottom: '0.5rem' }}>
+            No photos queued yet.
           </p>
+        )}
+
+        {/* Battle Chronicles — optional toggle */}
+        <button type="button" style={optToggleStyle} onClick={() => setShowNarrative(v => !v)}>
+          {showNarrative ? '▾ Hide battle chronicle' : '▸ Add battle chronicle'}
+        </button>
+        {showNarrative && (
+          <div className="form-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '0.75rem' }}>
+            <div>
+              <span style={{ ...sublabelStyle, marginBottom: '0.5rem' }}>{attackerLabel}&apos;s Account</span>
+              <textarea
+                value={attackerNarrative} onChange={e => setAttackerNarrative(e.target.value)}
+                rows={5} placeholder="Describe the battle from your perspective…"
+                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
+              />
+              <p style={hintStyle}>**bold** &nbsp;·&nbsp; *italic*</p>
+            </div>
+            <div>
+              <span style={{ ...sublabelStyle, marginBottom: '0.5rem' }}>{defenderLabel}&apos;s Account</span>
+              <textarea
+                value={defenderNarrative} onChange={e => setDefenderNarrative(e.target.value)}
+                rows={5} placeholder="Describe the battle from the opponent's perspective…"
+                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
+              />
+              <p style={hintStyle}>**bold** &nbsp;·&nbsp; *italic*</p>
+            </div>
+          </div>
         )}
       </div>
 
