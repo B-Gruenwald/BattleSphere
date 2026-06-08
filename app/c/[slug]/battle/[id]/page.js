@@ -145,6 +145,15 @@ export default async function BattleDetailPage({ params }) {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
 
+  // Deployed armies linked to this battle
+  const armyIds = [battle.army_id_p1, battle.army_id_p2].filter(Boolean);
+  const { data: armyRows } = armyIds.length > 0
+    ? await supabase.from('armies').select('id, name, faction_name').in('id', armyIds)
+    : { data: [] };
+  const armyMap    = Object.fromEntries((armyRows || []).map(a => [a.id, a]));
+  const attackerArmy = armyMap[battle.army_id_p1] ?? null;
+  const defenderArmy = armyMap[battle.army_id_p2] ?? null;
+
   // Photos — portrait-flagged photo first, then oldest first as fallback
   const { data: battlePhotos } = await supabase
     .from('battle_photos')
@@ -316,6 +325,14 @@ export default async function BattleDetailPage({ params }) {
               ) : attackerPlayer.username}
             </p>
           )}
+          {attackerArmy && (
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+              Army:{' '}
+              <Link href={`/armies/${attackerArmy.id}`} style={{ color: 'var(--text-gold)', textDecoration: 'none' }}>
+                {attackerArmy.name}
+              </Link>
+            </p>
+          )}
           {battle.attacker_army_type && (
             <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', fontStyle: 'italic', marginBottom: '0.5rem' }}>
               {battle.attacker_army_type}
@@ -347,6 +364,14 @@ export default async function BattleDetailPage({ params }) {
                   {defenderPlayer.username}
                 </Link>
               ) : defenderPlayer.username}
+            </p>
+          )}
+          {defenderArmy && (
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+              Army:{' '}
+              <Link href={`/armies/${defenderArmy.id}`} style={{ color: 'var(--text-gold)', textDecoration: 'none' }}>
+                {defenderArmy.name}
+              </Link>
             </p>
           )}
           {battle.defender_army_type && (
