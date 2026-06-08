@@ -54,7 +54,7 @@ export default async function NewBattlePage({ params, searchParams }) {
   // Deployed armies per player in this campaign (for optional army attribution on battles)
   const { data: armyRecords } = await supabase
     .from('campaign_army_records')
-    .select('id, player_id, army_id')
+    .select('id, player_id, army_id, faction_id')
     .eq('campaign_id', campaign.id);
   const armyIds = [...new Set((armyRecords || []).map(r => r.army_id))];
   let armyDetailsMap = {};
@@ -63,14 +63,15 @@ export default async function NewBattlePage({ params, searchParams }) {
       .from('armies').select('id, name, faction_name, game_system').in('id', armyIds);
     armyDetailsMap = Object.fromEntries((armies || []).map(a => [a.id, a]));
   }
-  // memberArmies: { userId: [{ recordId, armyId, name, faction_name, game_system }] }
+  // memberArmies: { userId: [{ recordId, armyId, name, faction_name, game_system, faction_id }] }
   const memberArmies = {};
   for (const r of (armyRecords || [])) {
     if (!memberArmies[r.player_id]) memberArmies[r.player_id] = [];
     memberArmies[r.player_id].push({
-      recordId:    r.id,
-      armyId:      r.army_id,
-      name:        armyDetailsMap[r.army_id]?.name        ?? 'Unknown Army',
+      recordId:     r.id,
+      armyId:       r.army_id,
+      faction_id:   r.faction_id   ?? null,
+      name:         armyDetailsMap[r.army_id]?.name        ?? 'Unknown Army',
       faction_name: armyDetailsMap[r.army_id]?.faction_name ?? null,
       game_system:  armyDetailsMap[r.army_id]?.game_system  ?? null,
     });

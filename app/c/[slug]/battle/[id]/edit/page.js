@@ -75,6 +75,31 @@ export default async function EditBattlePage({ params }) {
     username:   profiles?.find(p => p.id === m.user_id)?.username ?? 'Unknown',
   }));
 
+  // Deployed armies per player in this campaign (for army attribution on edit)
+  const { data: armyRecords } = await supabase
+    .from('campaign_army_records')
+    .select('id, player_id, army_id, faction_id')
+    .eq('campaign_id', campaign.id);
+  const armyIds = [...new Set((armyRecords || []).map(r => r.army_id))];
+  let armyDetailsMap = {};
+  if (armyIds.length) {
+    const { data: armies } = await supabase
+      .from('armies').select('id, name, faction_name, game_system').in('id', armyIds);
+    armyDetailsMap = Object.fromEntries((armies || []).map(a => [a.id, a]));
+  }
+  const memberArmies = {};
+  for (const r of (armyRecords || [])) {
+    if (!memberArmies[r.player_id]) memberArmies[r.player_id] = [];
+    memberArmies[r.player_id].push({
+      recordId:     r.id,
+      armyId:       r.army_id,
+      faction_id:   r.faction_id   ?? null,
+      name:         armyDetailsMap[r.army_id]?.name        ?? 'Unknown Army',
+      faction_name: armyDetailsMap[r.army_id]?.faction_name ?? null,
+      game_system:  armyDetailsMap[r.army_id]?.game_system  ?? null,
+    });
+  }
+
   return (
     <div style={{ padding: '3rem 2rem', maxWidth: '780px', margin: '0 auto' }}>
 
@@ -112,6 +137,7 @@ export default async function EditBattlePage({ params }) {
         territories={territories || []}
         factions={factions || []}
         members={members}
+        memberArmies={memberArmies}
       />
     </div>
   );
