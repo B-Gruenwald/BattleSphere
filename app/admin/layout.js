@@ -59,6 +59,7 @@ export default async function AdminLayout({ children }) {
         <Link href="/admin/users" style={subNavLinkStyle}>Users</Link>
         <Link href="/admin/battles" style={subNavLinkStyle}>Battles</Link>
         <Link href="/admin/armies" style={subNavLinkStyle}>Armies</Link>
+        <Link href="/admin/blog" style={subNavLinkStyle}>Blog</Link>
         <Link href="/admin/notifications" style={subNavLinkStyle}>Send Notification</Link>
         <Link href="/admin/send-onboarding" style={subNavLinkStyle}>Send Onboarding</Link>
       </div>

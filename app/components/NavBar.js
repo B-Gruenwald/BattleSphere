@@ -48,6 +48,7 @@ export default function NavBar({ user, isAdmin, username }) {
         <div className="site-nav__desktop">
           {user ? (
             <>
+              <Link href="/blog" style={navLinkStyle}>Blog</Link>
               <Link href="/dashboard" style={navLinkStyle}>Dashboard</Link>
               {isAdmin && (
                 <Link href="/admin" style={{ ...navLinkStyle, color: '#e05a5a' }}>Admin</Link>
@@ -58,6 +59,7 @@ export default function NavBar({ user, isAdmin, username }) {
             </>
           ) : (
             <>
+              <Link href="/blog" style={navLinkStyle}>Blog</Link>
               <Link href="/register" style={navLinkStyle}>Register</Link>
               <Link href="/login">
                 <button className="btn-secondary" style={{ padding: '0.5rem 1.25rem' }}>Log In</button>
@@ -96,6 +98,14 @@ export default function NavBar({ user, isAdmin, username }) {
           {user ? (
             <>
               <Link
+                href="/blog"
+                style={navLinkStyle}
+                className="site-nav__dropdown-link"
+                onClick={() => setMenuOpen(false)}
+              >
+                Blog
+              </Link>
+              <Link
                 href="/dashboard"
                 style={navLinkStyle}
                 className="site-nav__dropdown-link"
@@ -130,6 +140,14 @@ export default function NavBar({ user, isAdmin, username }) {
             </>
           ) : (
             <>
+              <Link
+                href="/blog"
+                style={navLinkStyle}
+                className="site-nav__dropdown-link"
+                onClick={() => setMenuOpen(false)}
+              >
+                Blog
+              </Link>
               <Link
                 href="/register"
                 style={navLinkStyle}

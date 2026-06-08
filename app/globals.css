@@ -1266,3 +1266,39 @@ a:hover .stat-cell {
     grid-column: auto;
   }
 }
+
+/* ─── Blog post body (rendered markdown) ─────────────────────────────────── */
+.blog-body h1, .blog-body h2, .blog-body h3 {
+  font-family: var(--font-display);
+  color: var(--text-primary);
+  letter-spacing: 0.04em;
+  margin: 2rem 0 0.75rem;
+}
+.blog-body h1 { font-size: 1.5rem; }
+.blog-body h2 { font-size: 1.2rem; }
+.blog-body h3 { font-size: 1rem; }
+.blog-body p  { margin: 0 0 1.1rem; }
+.blog-body a  { color: var(--text-gold); text-decoration: underline; }
+.blog-body a:hover { opacity: 0.8; }
+.blog-body strong { color: var(--text-primary); font-weight: 600; }
+.blog-body em { color: var(--text-secondary); font-style: italic; }
+.blog-body ul, .blog-body ol { padding-left: 1.5rem; margin: 0 0 1.1rem; }
+.blog-body li { margin-bottom: 0.35rem; }
+.blog-body blockquote {
+  border-left: 3px solid var(--gold);
+  padding: 0.5rem 0 0.5rem 1.25rem;
+  margin: 1.25rem 0;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.blog-body code {
+  background: rgba(255,255,255,0.07);
+  padding: 0.1rem 0.35rem;
+  font-size: 0.88em;
+  border-radius: 3px;
+}
+.blog-body hr {
+  border: none;
+  border-top: 1px solid var(--border-dim);
+  margin: 2rem 0;
+}
