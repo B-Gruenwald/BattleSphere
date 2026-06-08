@@ -32,20 +32,35 @@ export default async function BlogPostPage({ params }) {
 
   const { data: post } = await supabase
     .from('blog_posts')
-    .select('*, profiles(username)')
+    .select('*')
     .eq('slug', slug)
     .eq('is_published', true)
     .single();
 
   if (!post) notFound();
 
-  // Comments with author usernames
-  const { data: comments } = await supabase
+  // Comments (plain)
+  const { data: rawComments } = await supabase
     .from('blog_comments')
-    .select('*, profiles(username)')
+    .select('*')
     .eq('post_id', post.id)
     .eq('is_deleted', false)
     .order('created_at', { ascending: true });
+
+  // Fetch author usernames for comments
+  const authorIds = [...new Set((rawComments || []).map(c => c.user_id))];
+  let usernameMap = {};
+  if (authorIds.length) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .in('id', authorIds);
+    (profiles || []).forEach(p => { usernameMap[p.id] = p.username; });
+  }
+  const comments = (rawComments || []).map(c => ({
+    ...c,
+    profiles: { username: usernameMap[c.user_id] || 'User' },
+  }));
 
   // Current user (for comment form)
   const authClient = await createClient();
