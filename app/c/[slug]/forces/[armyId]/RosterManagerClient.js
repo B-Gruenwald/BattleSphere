@@ -260,7 +260,9 @@ export default function RosterManagerClient({
         {/* Info */}
         <div style={{ flex: 1 }}>
           <h1 style={{ fontSize: 'clamp(1.1rem, 3vw, 1.5rem)', fontWeight: '900', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
-            {army.name}
+            <Link href={`/armies/${army.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+              {army.name}
+            </Link>
           </h1>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.5rem' }}>
             {army.game_system && (

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const UNIT_STAT_FIELDS = [
   { key: 'unit_size',         label: 'Unit Size',   short: 'Size',   type: 'number', min: 0 },
@@ -99,7 +100,11 @@ function UnitRow({ cur, armyUnit, canEdit, isOwnProfile, campaignArmyRecordId })
         {/* Name + type */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: '700', fontSize: '0.95rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {armyUnit?.name ?? 'Unknown Unit'}
+            {armyUnit?.id ? (
+              <Link href={`/units/${armyUnit.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                {armyUnit.name ?? 'Unknown Unit'}
+              </Link>
+            ) : (armyUnit?.name ?? 'Unknown Unit')}
           </div>
           {armyUnit?.unit_type && (
             <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.48rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
