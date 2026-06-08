@@ -78,7 +78,8 @@ function DeployModal({ armyId, memberCampaigns, deployedCampaignIds, onClose, on
         });
       }
 
-      onDeployed();
+      const campaign = memberCampaigns.find(c => c.id === selectedCampaignId) ?? null;
+      onDeployed({ id: json.record.id, campaign_id: selectedCampaignId, faction_id: selectedFactionId || null, campaign });
     } finally {
       setDeploying(false);
     }
@@ -175,7 +176,8 @@ export default function ArmyDeployments({ armyId, deployments: initialDeployment
 
   const deployedCampaignIds = deployments.map(d => d.campaign_id);
 
-  function handleDeployed() {
+  function handleDeployed(newDeployment) {
+    setDeployments(prev => [...prev, newDeployment]);
     setShowModal(false);
     router.refresh();
   }

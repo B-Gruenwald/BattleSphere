@@ -151,8 +151,18 @@ function DeployModal({ allPlayerArmies, deployedArmyIds, factions, campaignId, o
         });
       }
 
-      onDeployed();
-      router.refresh();
+      const army    = allPlayerArmies.find(a => a.id === selectedArmyId) ?? null;
+      const faction = factions.find(f => f.id === selectedFactionId) ?? null;
+      onDeployed({
+        id:            json.record.id,
+        army_id:       selectedArmyId,
+        campaign_id:   campaignId,
+        faction_id:    selectedFactionId || null,
+        battles_played: 0,
+        battles_won:    0,
+        army,
+        faction,
+      });
     } finally {
       setDeploying(false);
     }
@@ -245,7 +255,8 @@ export default function ForcesClient({ campaign, records: initialRecords, allPla
 
   const deployedArmyIds = records.map(r => r.army_id);
 
-  function handleDeployed() {
+  function handleDeployed(newRecord) {
+    setRecords(prev => [...prev, newRecord]);
     setShowDeploy(false);
     router.refresh();
   }
