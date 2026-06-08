@@ -38,12 +38,6 @@ export default function NavBar({ user, isAdmin, username }) {
           <Link href="/" className="site-nav__logo">
             BattleSphere
           </Link>
-          {/* Member area: Log a Battle */}
-          {user && campaignSlug && (
-            <Link href={`/c/${campaignSlug}/battle/new`}>
-              <button className="btn-primary nav-log-battle">+ Log a Battle</button>
-            </Link>
-          )}
           {/* Public campaign page: Request Access CTA */}
           {publicCampaignSlug && (
             <PublicCampaignNavCTA slug={publicCampaignSlug} />
