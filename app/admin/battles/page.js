@@ -64,6 +64,7 @@ export default async function AdminBattles() {
       attackerUsername: profileById[b.attacker_player_id]?.username ?? null,
       defenderUsername: profileById[b.defender_player_id]?.username ?? null,
       result:           b.result,
+      hasHeadline:      !!b.headline,
       hasNarrative:     !!(b.attacker_narrative || b.defender_narrative),
       photoCount,
       score,

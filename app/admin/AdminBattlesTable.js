@@ -3,7 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 
 // Each row: { id, campaignName, campaignSlug, attackerUsername, defenderUsername,
-//             result, hasNarrative, photoCount, score, created_at, campaign_id }
+//             result, hasNarrative, hasHeadline, photoCount, score, created_at }
 
 const colHeaderStyle = {
   fontFamily: 'var(--font-display)',
@@ -14,7 +14,15 @@ const colHeaderStyle = {
 }
 const sortableStyle = { ...colHeaderStyle, cursor: 'pointer', userSelect: 'none' }
 
-const COLS = '1.6fr 1fr 1fr 70px 60px 74px 130px 70px'
+const TAG = {
+  display: 'inline-block',
+  fontSize: '0.68rem',
+  color: 'var(--text-gold)',
+  marginTop: '0.15rem',
+  marginRight: '0.35rem',
+}
+
+const COLS = '1.6fr 1fr 1fr 70px 74px 130px 70px'
 
 function ScoreBadge({ score }) {
   const color = score >= 70 ? 'var(--text-gold)' : score >= 40 ? '#9ca3af' : '#555'
@@ -71,7 +79,6 @@ export default function AdminBattlesTable({ rows }) {
         <span style={colHeaderStyle}>Attacker</span>
         <span style={colHeaderStyle}>Defender</span>
         <span style={colHeaderStyle}>Result</span>
-        <span style={colHeaderStyle}>📸</span>
         <span style={sortableStyle} onClick={() => toggleSort('score')} title="Sort by engagement score">
           Score{sortLabel('score')}
         </span>
@@ -93,14 +100,16 @@ export default function AdminBattlesTable({ rows }) {
             borderBottom: '1px solid var(--border-dim)',
             alignItems: 'center',
           }}>
-            {/* Campaign */}
+            {/* Campaign + content tags */}
             <div>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                 {b.campaignName ?? <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>—</span>}
               </div>
-              {b.hasNarrative && (
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-gold)', marginTop: '0.1rem' }}>
-                  ✦ Chronicle
+              {(b.hasHeadline || b.hasNarrative || b.photoCount > 0) && (
+                <div style={{ marginTop: '0.2rem' }}>
+                  {b.hasHeadline  && <span style={TAG}>✦ Background</span>}
+                  {b.hasNarrative && <span style={TAG}>✦ Chronicle</span>}
+                  {b.photoCount > 0 && <span style={TAG}>✦ {b.photoCount} {b.photoCount === 1 ? 'Picture' : 'Pictures'}</span>}
                 </div>
               )}
             </div>
@@ -112,10 +121,6 @@ export default function AdminBattlesTable({ rows }) {
             </div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
               {fmtResult(b.result)}
-            </div>
-            {/* Photo count */}
-            <div style={{ fontSize: '0.85rem', textAlign: 'center', color: b.photoCount > 0 ? 'var(--text-gold)' : 'var(--text-muted)' }}>
-              {b.photoCount > 0 ? b.photoCount : '—'}
             </div>
             <div><ScoreBadge score={b.score} /></div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
