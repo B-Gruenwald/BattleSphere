@@ -113,12 +113,8 @@ export default function BattleEditForm({ battle, campaign, territories, factions
     result === 'attacker' ? attackerFactionId :
     result === 'defender' ? defenderFactionId : null;
 
-  const attackerLabel = attackerFactionId
-    ? (factions.find(f => f.id === attackerFactionId)?.name ?? 'Player A')
-    : (members.find(m => m.user_id === attackerPlayerId)?.username ?? 'Player A');
-  const defenderLabel = defenderFactionId
-    ? (factions.find(f => f.id === defenderFactionId)?.name ?? 'Player B')
-    : (members.find(m => m.user_id === defenderPlayerId)?.username ?? 'Player B');
+  const attackerLabel = members.find(m => m.user_id === attackerPlayerId)?.username ?? 'Player A';
+  const defenderLabel = members.find(m => m.user_id === defenderPlayerId)?.username ?? 'Player B';
 
   const attackerArmies = memberArmies && attackerPlayerId ? (memberArmies[attackerPlayerId] || []) : [];
   const defenderArmies = memberArmies && defenderPlayerId ? (memberArmies[defenderPlayerId] || []) : [];

@@ -110,12 +110,8 @@ export default function BattleLogForm({ campaign, territories, factions, members
     result === 'attacker' ? attackerFactionId :
     result === 'defender' ? defenderFactionId : null;
 
-  const attackerLabel = attackerFactionId
-    ? (factions.find(f => f.id === attackerFactionId)?.name ?? 'Player A')
-    : (members.find(m => m.user_id === attackerPlayerId)?.username ?? 'Player A');
-  const defenderLabel = defenderFactionId
-    ? (factions.find(f => f.id === defenderFactionId)?.name ?? 'Player B')
-    : (members.find(m => m.user_id === defenderPlayerId)?.username ?? 'Player B');
+  const attackerLabel = members.find(m => m.user_id === attackerPlayerId)?.username ?? 'Player A';
+  const defenderLabel = members.find(m => m.user_id === defenderPlayerId)?.username ?? 'Player B';
 
   // ── Photo handlers ───────────────────────────────────────────────────────────
   function handlePhotoSelect(e) {

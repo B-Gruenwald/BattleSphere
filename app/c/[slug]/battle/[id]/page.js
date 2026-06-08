@@ -133,9 +133,11 @@ export default async function BattleDetailPage({ params }) {
 
   const isDraw      = !battle.winner_faction_id;
   const attackerWon = battle.winner_faction_id === battle.attacker_faction_id;
+  const attackerDisplayName = attackerPlayer?.username ?? attackerFaction?.name ?? '?';
+  const defenderDisplayName = defenderPlayer?.username ?? defenderFaction?.name ?? '?';
   const resultLabel = isDraw ? 'Draw' : attackerWon
-    ? `${attackerFaction?.name ?? '?'} Victory`
-    : `${defenderFaction?.name ?? '?'} Victory`;
+    ? `${attackerDisplayName} wins`
+    : `${defenderDisplayName} wins`;
   const resultColour = isDraw ? 'var(--text-muted)' : (winnerFaction?.colour ?? 'var(--text-gold)');
   const hasScores    = battle.attacker_score > 0 || battle.defender_score > 0;
 

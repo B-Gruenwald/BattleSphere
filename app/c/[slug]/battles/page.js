@@ -36,8 +36,15 @@ export default async function BattleHistoryPage({ params }) {
 
   const isOrganiser = campaign.organiser_id === user.id;
 
-  const factionMap = Object.fromEntries((factions || []).map(f => [f.id, f]));
+  const factionMap   = Object.fromEntries((factions    || []).map(f => [f.id, f]));
   const territoryMap = Object.fromEntries((territories || []).map(t => [t.id, t]));
+
+  // Fetch player profiles for result labels
+  const playerIds = [...new Set((battles || []).flatMap(b => [b.attacker_player_id, b.defender_player_id].filter(Boolean)))];
+  const { data: profiles } = playerIds.length > 0
+    ? await supabase.from('profiles').select('id, username').in('id', playerIds)
+    : { data: [] };
+  const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]));
 
   return (
     <div style={{ padding: '4rem 2rem', maxWidth: '900px', margin: '0 auto' }}>
@@ -67,9 +74,11 @@ export default async function BattleHistoryPage({ params }) {
             const territory = battle.territory_id ? territoryMap[battle.territory_id] : null;
             const isDraw   = !battle.winner_faction_id;
             const attackerWon = battle.winner_faction_id === battle.attacker_faction_id;
+            const attackerDisplay = profileMap[battle.attacker_player_id]?.username ?? attacker?.name ?? '?';
+            const defenderDisplay = profileMap[battle.defender_player_id]?.username ?? defender?.name ?? '?';
             const resultLabel = isDraw ? 'Draw'
-              : attackerWon ? `${attacker?.name ?? '?'} Victory`
-              : `${defender?.name ?? '?'} Victory`;
+              : attackerWon ? `${attackerDisplay} wins`
+              : `${defenderDisplay} wins`;
             const resultColour = isDraw ? 'var(--text-muted)' : (winner?.colour ?? 'var(--text-gold)');
             const date = new Date(battle.created_at).toLocaleDateString('en-GB', {
               day: 'numeric', month: 'short', year: 'numeric',
