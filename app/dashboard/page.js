@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import CampaignCard from '@/app/components/CampaignCard';
-import ArmyCard from '@/app/components/ArmyCard';
+import DashboardArmiesList from './DashboardArmiesList';
+import DashboardCampaignsList from './DashboardCampaignsList';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -87,86 +87,69 @@ export default async function DashboardPage() {
 
         {/* ── My Armies ── */}
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', margin: 0, lineHeight: 1 }}>
-              My Armies
-            </h2>
-            <Link href="/armies/new" style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontFamily: 'var(--font-display)', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', lineHeight: 1 }}>
-              + New
-            </Link>
-          </div>
-
           {myArmies && myArmies.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {myArmies.map(army => (
-                <ArmyCard key={army.id} army={army} />
-              ))}
-            </div>
+            <DashboardArmiesList armies={myArmies} userId={user.id} />
           ) : (
-            <div style={{ border: '1px solid var(--border-dim)', padding: '3.5rem 2rem', textAlign: 'center', background: 'rgba(255,255,255,0.01)' }}>
-              <div style={{ width: '8px', height: '8px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1.5rem', opacity: 0.4 }} />
-              <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.75rem' }}>
-                Your forces await orders
-              </p>
-              <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: 1.6 }}>
-                Build a permanent record for your army — units, photos, Crusade stats, and a public portfolio to share.
-              </p>
-              <Link href="/armies/new">
-                <button className="btn-primary">Muster your first Army</button>
-              </Link>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', margin: 0, lineHeight: 1 }}>
+                  My Armies
+                </h2>
+                <Link href="/armies/new" style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontFamily: 'var(--font-display)', letterSpacing: '0.1em', textTransform: 'uppercase', textDecoration: 'none', lineHeight: 1 }}>
+                  + New
+                </Link>
+              </div>
+              <div style={{ border: '1px solid var(--border-dim)', padding: '3.5rem 2rem', textAlign: 'center', background: 'rgba(255,255,255,0.01)' }}>
+                <div style={{ width: '8px', height: '8px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1.5rem', opacity: 0.4 }} />
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.75rem' }}>
+                  Your forces await orders
+                </p>
+                <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: 1.6 }}>
+                  Build a permanent record for your army — units, photos, Crusade stats, and a public portfolio to share.
+                </p>
+                <Link href="/armies/new">
+                  <button className="btn-primary">Muster your first Army</button>
+                </Link>
+              </div>
             </div>
           )}
         </div>
 
         {/* ── My Campaigns ── */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', margin: 0, lineHeight: 1 }}>
-              My Campaigns
-            </h2>
-          </div>
-
           {campaigns.length === 0 ? (
-            <div style={{ border: '1px solid var(--border-dim)', padding: '3rem 2rem', textAlign: 'center', background: 'rgba(255,255,255,0.01)' }}>
-              <div style={{ width: '8px', height: '8px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1.5rem', opacity: 0.4 }} />
-              <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.75rem' }}>
-                No campaigns yet
-              </p>
-              <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.6 }}>
-                Join the Austriacus Subsector — an open narrative campaign anyone can join — or create your own.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
-                <Link href={`/campaign/${AUSTRIACUS_SLUG}`}>
-                  <button className="btn-primary" style={{ background: 'var(--gold)', color: '#07070a', border: '1px solid var(--gold)', padding: '0.65rem 1.75rem', fontWeight: '700', letterSpacing: '0.1em' }}>
-                    Explore the Austriacus Subsector →
-                  </button>
-                </Link>
-                <Link href="/campaign/new" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic', textDecoration: 'none' }}>
-                  or create your own campaign
-                </Link>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', margin: 0, lineHeight: 1 }}>
+                  My Campaigns
+                </h2>
+              </div>
+              <div style={{ border: '1px solid var(--border-dim)', padding: '3rem 2rem', textAlign: 'center', background: 'rgba(255,255,255,0.01)' }}>
+                <div style={{ width: '8px', height: '8px', background: 'var(--gold)', transform: 'rotate(45deg)', margin: '0 auto 1.5rem', opacity: 0.4 }} />
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.75rem' }}>
+                  No campaigns yet
+                </p>
+                <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.6 }}>
+                  Join the Austriacus Subsector — an open narrative campaign anyone can join — or create your own.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
+                  <Link href={`/campaign/${AUSTRIACUS_SLUG}`}>
+                    <button className="btn-primary" style={{ background: 'var(--gold)', color: '#07070a', border: '1px solid var(--gold)', padding: '0.65rem 1.75rem', fontWeight: '700', letterSpacing: '0.1em' }}>
+                      Explore the Austriacus Subsector →
+                    </button>
+                  </Link>
+                  <Link href="/campaign/new" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic', textDecoration: 'none' }}>
+                    or create your own campaign
+                  </Link>
+                </div>
               </div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {campaigns.map(c => <CampaignCard key={c.id} campaign={c} />)}
-              {!isAustriacusMember && (
-                <div style={{ border: '1px solid rgba(183,140,64,0.25)', background: 'rgba(183,140,64,0.04)', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                  <div>
-                    <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-gold)', marginBottom: '0.35rem' }}>
-                      Open Narrative Campaign
-                    </p>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-                      The Austriacus Subsector is open to all — join an active campaign and see the platform in action.
-                    </p>
-                  </div>
-                  <Link href={`/campaign/${AUSTRIACUS_SLUG}`} style={{ flexShrink: 0 }}>
-                    <button className="btn-primary" style={{ background: 'var(--gold)', color: '#07070a', border: '1px solid var(--gold)', padding: '0.5rem 1.25rem', fontWeight: '700', fontSize: '0.78rem', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
-                      Join →
-                    </button>
-                  </Link>
-                </div>
-              )}
-            </div>
+            <DashboardCampaignsList
+              campaigns={campaigns}
+              userId={user.id}
+              isAustriacusMember={isAustriacusMember}
+            />
           )}
         </div>
 
