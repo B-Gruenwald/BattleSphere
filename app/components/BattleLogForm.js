@@ -34,7 +34,7 @@ function buildTerritoryTree(territories) {
   return result;
 }
 
-export default function BattleLogForm({ campaign, territories, factions, members, userId, preselectedTerritoryId }) {
+export default function BattleLogForm({ campaign, territories, factions, members, userId, preselectedTerritoryId, memberArmies }) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -52,6 +52,8 @@ export default function BattleLogForm({ campaign, territories, factions, members
   const [defenderPlayerId, setDefenderPlayer]     = useState('');
   const [attackerFactionId,setAttacker]           = useState('');
   const [defenderFactionId,setDefender]           = useState('');
+  const [attackerArmyId,   setAttackerArmyId]     = useState('');
+  const [defenderArmyId,   setDefenderArmyId]     = useState('');
   const [attackerArmyType, setAttackerArmyType]   = useState('');
   const [defenderArmyType, setDefenderArmyType]   = useState('');
   const [attackerArmyList, setAttackerArmyList]   = useState('');
@@ -75,6 +77,7 @@ export default function BattleLogForm({ campaign, territories, factions, members
       const member = members.find(m => m.user_id === attackerPlayerId);
       if (member?.faction_id) setAttacker(member.faction_id);
     }
+    setAttackerArmyId('');
   }, [attackerPlayerId]);
 
   useEffect(() => {
@@ -82,6 +85,7 @@ export default function BattleLogForm({ campaign, territories, factions, members
       const member = members.find(m => m.user_id === defenderPlayerId);
       if (member?.faction_id) setDefender(member.faction_id);
     }
+    setDefenderArmyId('');
   }, [defenderPlayerId]);
 
   const winnerFactionId =
@@ -270,6 +274,8 @@ export default function BattleLogForm({ campaign, territories, factions, members
         attacker_narrative:    attackerNarrative.trim() || null,
         defender_narrative:    defenderNarrative.trim() || null,
         logged_by:             userId,
+        army_id_p1:            attackerArmyId || null,
+        army_id_p2:            defenderArmyId || null,
       })
       .select()
       .single();
@@ -472,6 +478,26 @@ export default function BattleLogForm({ campaign, territories, factions, members
                 {factions.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
               </select>
             </div>
+            {/* Optional: army attribution */}
+            {memberArmies && attackerPlayerId && (memberArmies[attackerPlayerId] || []).length > 0 && (
+              <div style={{ opacity: 0.75 }}>
+                <label style={{ ...labelStyle, color: 'var(--text-muted)', fontSize: '0.52rem' }}>
+                  Army used <span style={{ opacity: 0.6, fontSize: '0.48rem' }}>(optional)</span>
+                </label>
+                <select
+                  value={attackerArmyId}
+                  onChange={e => setAttackerArmyId(e.target.value)}
+                  style={{ ...inputStyle, fontSize: '0.88rem' }}
+                >
+                  <option value="">— None selected —</option>
+                  {(memberArmies[attackerPlayerId] || []).map(a => (
+                    <option key={a.armyId} value={a.armyId}>
+                      {a.name}{a.faction_name ? ` · ${a.faction_name}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>
                 Army Type &amp; Detachment <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span>
@@ -516,6 +542,26 @@ export default function BattleLogForm({ campaign, territories, factions, members
                 ))}
               </select>
             </div>
+            {/* Optional: army attribution */}
+            {memberArmies && defenderPlayerId && (memberArmies[defenderPlayerId] || []).length > 0 && (
+              <div style={{ opacity: 0.75 }}>
+                <label style={{ ...labelStyle, color: 'var(--text-muted)', fontSize: '0.52rem' }}>
+                  Army used <span style={{ opacity: 0.6, fontSize: '0.48rem' }}>(optional)</span>
+                </label>
+                <select
+                  value={defenderArmyId}
+                  onChange={e => setDefenderArmyId(e.target.value)}
+                  style={{ ...inputStyle, fontSize: '0.88rem' }}
+                >
+                  <option value="">— None selected —</option>
+                  {(memberArmies[defenderPlayerId] || []).map(a => (
+                    <option key={a.armyId} value={a.armyId}>
+                      {a.name}{a.faction_name ? ` · ${a.faction_name}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label style={{ ...labelStyle, color: 'var(--text-secondary)' }}>
                 Army Type &amp; Detachment <span style={{ opacity: 0.5, fontSize: '0.55rem' }}>(optional)</span>

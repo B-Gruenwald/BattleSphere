@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import ReorderableRoster from '@/app/components/ReorderableRoster';
+import ArmyDeployments from '@/app/components/ArmyDeployments';
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
@@ -96,6 +97,41 @@ export default async function ArmyPage({ params }) {
   }
 
   const isOwner = user?.id === army.player_id;
+
+  // Campaign deployments for this army
+  const { data: deploymentRows } = await admin
+    .from('campaign_army_records')
+    .select('id, campaign_id, faction_id')
+    .eq('army_id', id)
+    .order('created_at', { ascending: true });
+
+  // Enrich with campaign name + slug
+  const campaignIds = (deploymentRows || []).map(r => r.campaign_id);
+  let deployments = [];
+  if (campaignIds.length) {
+    const { data: camps } = await admin
+      .from('campaigns').select('id, name, slug').in('id', campaignIds);
+    const campMap = Object.fromEntries((camps || []).map(c => [c.id, c]));
+    deployments = (deploymentRows || []).map(r => ({
+      ...r,
+      campaign: campMap[r.campaign_id] ?? null,
+    }));
+  }
+
+  // Campaigns the owner is a member of (for deploy modal — only shown to owner)
+  let memberCampaigns = [];
+  if (isOwner) {
+    const { data: memberRows } = await admin
+      .from('campaign_members')
+      .select('campaign_id')
+      .eq('user_id', user.id);
+    const memberCampaignIds = (memberRows || []).map(r => r.campaign_id);
+    if (memberCampaignIds.length) {
+      const { data: camps } = await admin
+        .from('campaigns').select('id, name, slug').in('id', memberCampaignIds).order('name');
+      memberCampaigns = camps || [];
+    }
+  }
 
   return (
     <div style={{ padding: '1.5rem', maxWidth: '900px', margin: '0 auto' }}>
@@ -216,6 +252,14 @@ export default async function ArmyPage({ params }) {
           </p>
         </div>
       )}
+
+      {/* Campaign deployments */}
+      <ArmyDeployments
+        armyId={army.id}
+        deployments={deployments}
+        memberCampaigns={memberCampaigns}
+        isOwner={isOwner}
+      />
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>

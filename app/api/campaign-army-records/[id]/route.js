@@ -2,6 +2,58 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
+// GET /api/campaign-army-records/[id]
+// Returns a single record enriched with army + faction + units + crusade_unit_records.
+export async function GET(request, { params }) {
+  const { id } = await params;
+  const admin = createAdminClient();
+
+  const { data: rows } = await admin
+    .from('campaign_army_records')
+    .select('*')
+    .eq('id', id)
+    .limit(1);
+  const record = rows?.[0] ?? null;
+  if (!record) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  // Army details
+  const { data: armyRows } = await admin.from('armies').select('*').eq('id', record.army_id).limit(1);
+  const army = armyRows?.[0] ?? null;
+
+  // Units for this army (ordered)
+  const { data: units } = await admin
+    .from('army_units')
+    .select('*')
+    .eq('army_id', record.army_id)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  // Crusade unit records for this campaign army
+  const { data: crusadeRecords } = await admin
+    .from('crusade_unit_records')
+    .select('*')
+    .eq('campaign_army_record_id', id);
+  const crusadeByUnit = Object.fromEntries(
+    (crusadeRecords || []).map(r => [r.army_unit_id, r])
+  );
+
+  // Campaign faction
+  let faction = null;
+  if (record.faction_id) {
+    const { data: factionRows } = await admin.from('factions').select('id, name, colour').eq('id', record.faction_id).limit(1);
+    faction = factionRows?.[0] ?? null;
+  }
+
+  // Campaign name
+  const { data: campaignRows } = await admin.from('campaigns').select('name, slug').eq('id', record.campaign_id).limit(1);
+  const campaign = campaignRows?.[0] ?? null;
+
+  return NextResponse.json({
+    record: { ...record, army, faction, campaign },
+    units: (units || []).map(u => ({ ...u, crusade: crusadeByUnit[u.id] ?? null })),
+  });
+}
+
 // PUT /api/campaign-army-records/[id]
 // Updates Crusade stats and campaign notes. Record owner OR campaign organiser may do this.
 export async function PUT(request, { params }) {
@@ -53,6 +105,9 @@ export async function PUT(request, { params }) {
     'battles_won',
     'requisition_points',
     'scars_and_upgrades',
+    'faction_id',
+    'kt_spec_ops_note',
+    'kt_equipment_points',
   ];
   const updates = {};
   for (const key of allowed) {

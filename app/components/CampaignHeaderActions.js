@@ -28,9 +28,14 @@ export default function CampaignHeaderActions({
         />
       )}
       {isMember && userId && (
-        <Link href={`/c/${campaignSlug}/player/${userId}`} style={{ textDecoration: 'none' }}>
-          <button className="btn-secondary" style={{ padding: '0.5rem 1.25rem' }}>My Profile</button>
-        </Link>
+        <>
+          <Link href={`/c/${campaignSlug}/forces`} style={{ textDecoration: 'none' }}>
+            <button className="btn-primary" style={{ padding: '0.5rem 1.25rem' }}>⚔ My Forces</button>
+          </Link>
+          <Link href={`/c/${campaignSlug}/player/${userId}`} style={{ textDecoration: 'none' }}>
+            <button className="btn-secondary" style={{ padding: '0.5rem 1.25rem' }}>My Profile</button>
+          </Link>
+        </>
       )}
       <Link href={`/campaign/${publicSlug}`} target="_blank" style={{ textDecoration: 'none' }}>
         <button className="btn-secondary" style={{ padding: '0.5rem 1.25rem', fontSize: '0.6rem' }}>
