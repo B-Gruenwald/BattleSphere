@@ -77,7 +77,7 @@ function getStatFields(gameSystem) {
       { key: 'battles_won',    label: 'Battles Won',    short: 'Won',    type: 'number' },
     ],
     textFields: [
-      { key: 'campaign_notes', label: 'Campaign Notes', placeholder: 'Notes about this army's role in the campaign…' },
+      { key: 'campaign_notes', label: 'Campaign Notes', placeholder: "Notes about this army's role in the campaign…" },
     ],
   };
 }
