@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { GAME_SYSTEMS } from '@/app/lib/gameSystems';
 
 export default function ArmyCreateClient() {
   const router = useRouter();
@@ -100,14 +101,22 @@ export default function ArmyCreateClient() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div>
               <label style={labelStyle}>Game System</label>
-              <input
+              <select
                 name="game_system"
                 value={form.game_system}
                 onChange={handleChange}
-                placeholder="e.g. Warhammer 40K"
-                style={inputStyle}
+                style={{ ...inputStyle, cursor: 'pointer' }}
                 disabled={saving}
-              />
+              >
+                <option value="">— Select a game system —</option>
+                {GAME_SYSTEMS.map(group => (
+                  <optgroup key={group.universe} label={group.universe}>
+                    {group.games.map(game => (
+                      <option key={game} value={game}>{game}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
             </div>
             <div>
               <label style={labelStyle}>Faction</label>

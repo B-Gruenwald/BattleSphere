@@ -2,34 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
-
-// ── Game systems, grouped by universe ────────────────────────────────────────
-const GAME_SYSTEMS = [
-  {
-    universe: 'Warhammer 40,000',
-    games: ['Warhammer 40,000', 'Kill Team', 'Necromunda', 'Horus Heresy (30K)', 'Aeronautica Imperialis'],
-  },
-  {
-    universe: 'Age of Sigmar',
-    games: ['Age of Sigmar', 'Warcry', 'Warhammer Underworlds'],
-  },
-  {
-    universe: 'The Old World',
-    games: ['The Old World'],
-  },
-  {
-    universe: 'Blood Bowl',
-    games: ['Blood Bowl'],
-  },
-  {
-    universe: 'Star Wars',
-    games: ['Star Wars: Legion', 'Star Wars: X-Wing', 'Star Wars: Armada', 'Star Wars: Shatterpoint'],
-  },
-  {
-    universe: 'Other',
-    games: ['Infinity', 'Bolt Action', 'Marvel Crisis Protocol', 'Malifaux', 'One Page Rules'],
-  },
-];
+import { GAME_SYSTEMS } from '@/app/lib/gameSystems';
 
 const HOBBY_TAGS = [
   'Narrative Player',
