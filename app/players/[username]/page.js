@@ -310,12 +310,12 @@ export default async function PublicPlayerProfilePage({ params }) {
                         {army.name}
                       </div>
                       {army.faction_name && (
-                        <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: MUTED }}>
+                        <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.55rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: GOLD }}>
                           {army.faction_name}
                         </div>
                       )}
                       {army.game_system && (
-                        <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.5rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', opacity: 0.7, marginTop: '0.15rem' }}>
+                        <div style={{ fontFamily: 'var(--font-display)', fontSize: '0.5rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: GOLD, opacity: 0.7, marginTop: '0.15rem' }}>
                           {army.game_system}
                         </div>
                       )}
