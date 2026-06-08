@@ -107,6 +107,7 @@ export default async function AdminArmies() {
     const status = activityStatus(lastActiveIso);
 
     const hasPortrait  = unitPhotos.some(p => p.is_portrait);
+    const hasCover     = !!a.cover_image_url;
     const photoCount   = unitPhotos.length;
 
     return {
@@ -126,9 +127,10 @@ export default async function AdminArmies() {
       created_at:     a.created_at,
       // content tags
       hasDescription: !!(a.description?.trim()),
+      hasCover,
       hasPortrait,
       photoCount,
-      isDeployed:     isDeployed,
+      isDeployed,
     };
   });
 

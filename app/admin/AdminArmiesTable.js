@@ -116,9 +116,10 @@ export default function AdminArmiesTable({ rows }) {
                   {a.faction}{a.game_system ? ` · ${a.game_system}` : ''}
                 </div>
               )}
-              {(a.hasDescription || a.hasPortrait || a.photoCount > 0 || a.isDeployed) && (
+              {(a.hasDescription || a.hasCover || a.hasPortrait || a.photoCount > 0 || a.isDeployed) && (
                 <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
                   {a.hasDescription && <Tag label="✦ Description" />}
+                  {a.hasCover       && <Tag label="✦ Banner" />}
                   {a.hasPortrait    && <Tag label="✦ Portrait" />}
                   {a.photoCount > 0 && <Tag label={`✦ ${a.photoCount} Photo${a.photoCount !== 1 ? 's' : ''}`} />}
                   {a.isDeployed     && <Tag label="✦ Deployed" colour="#7a9e7e" />}
