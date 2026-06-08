@@ -65,7 +65,7 @@ function getStatFields(gameSystem) {
       ],
       textFields: [
         { key: 'scars_and_upgrades', label: 'Scars & Upgrades', placeholder: 'Record any persistent army-level scars or upgrades…' },
-        { key: 'campaign_notes',     label: 'Campaign Notes',   placeholder: 'Notes about this army's role in the campaign…' },
+        { key: 'campaign_notes',     label: 'Campaign Notes',   placeholder: "Notes about this army's role in the campaign…" },
       ],
     };
   }
