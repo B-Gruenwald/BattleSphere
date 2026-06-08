@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -31,10 +31,30 @@ const inputStyle = {
 
 function DeployModal({ armyId, memberCampaigns, deployedCampaignIds, onClose, onDeployed }) {
   const [selectedCampaignId, setSelectedCampaignId] = useState('');
+  const [selectedFactionId,  setSelectedFactionId]  = useState('');
+  const [factions,           setFactions]           = useState([]);
+  const [loadingFactions,    setLoadingFactions]    = useState(false);
   const [deploying,          setDeploying]           = useState(false);
   const [error,              setError]               = useState('');
 
   const undeployed = memberCampaigns.filter(c => !deployedCampaignIds.includes(c.id));
+
+  // Load factions whenever a campaign is selected
+  useEffect(() => {
+    if (!selectedCampaignId) { setFactions([]); setSelectedFactionId(''); return; }
+    setLoadingFactions(true);
+    setSelectedFactionId('');
+    fetch(`/api/campaign-army-records?campaign_id=${selectedCampaignId}`)
+      .then(r => r.json())
+      .then(() => {
+        // Fetch factions for this campaign via a simple public endpoint
+        return fetch(`/api/factions?campaign_id=${selectedCampaignId}`);
+      })
+      .then(r => r.json())
+      .then(json => { setFactions(json.factions || []); })
+      .catch(() => setFactions([]))
+      .finally(() => setLoadingFactions(false));
+  }, [selectedCampaignId]);
 
   async function handleDeploy() {
     if (!selectedCampaignId) { setError('Please select a campaign.'); return; }
@@ -48,6 +68,16 @@ function DeployModal({ armyId, memberCampaigns, deployedCampaignIds, onClose, on
       });
       const json = await res.json();
       if (!res.ok) { setError(json.error || 'Failed to deploy.'); return; }
+
+      // Set faction if selected
+      if (selectedFactionId && json.record?.id) {
+        await fetch(`/api/campaign-army-records/${json.record.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ faction_id: selectedFactionId }),
+        });
+      }
+
       onDeployed();
     } finally {
       setDeploying(false);
@@ -89,6 +119,31 @@ function DeployModal({ armyId, memberCampaigns, deployedCampaignIds, onClose, on
                 <option key={c.id} value="" disabled>{c.name} — deployed ✓</option>
               ))}
             </select>
+
+            {/* Faction picker — appears once a campaign is selected */}
+            {selectedCampaignId && (
+              <div style={{ marginTop: '1rem' }}>
+                <label style={{ ...mutedLabelStyle, display: 'block', marginBottom: '0.4rem' }}>
+                  Fighting for faction <span style={{ fontFamily: 'inherit', textTransform: 'none', letterSpacing: 0, color: 'var(--text-muted)' }}>(optional)</span>
+                </label>
+                {loadingFactions ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', fontStyle: 'italic' }}>Loading factions…</p>
+                ) : factions.length > 0 ? (
+                  <select
+                    value={selectedFactionId}
+                    onChange={e => setSelectedFactionId(e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="">— None / unaligned —</option>
+                    {factions.map(f => (
+                      <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', fontStyle: 'italic' }}>No factions in this campaign.</p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -157,23 +212,18 @@ export default function ArmyDeployments({ armyId, deployments: initialDeployment
               flexWrap: 'wrap',
               gap: '0.5rem',
             }}>
-              <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+              <Link
+                href={`/c/${d.campaign?.slug}`}
+                style={{ fontSize: '0.9rem', color: 'var(--text-primary)', textDecoration: 'none', fontWeight: '600' }}
+              >
                 {d.campaign?.name ?? 'Unknown Campaign'}
-              </span>
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                <Link
-                  href={`/c/${d.campaign?.slug}/forces/${armyId}`}
-                  style={{ color: 'var(--text-gold)', fontSize: '0.75rem', textDecoration: 'none' }}
-                >
-                  Manage Roster →
-                </Link>
-                <Link
-                  href={`/c/${d.campaign?.slug}`}
-                  style={{ color: 'var(--text-muted)', fontSize: '0.72rem', textDecoration: 'none' }}
-                >
-                  Campaign ↗
-                </Link>
-              </div>
+              </Link>
+              <Link
+                href={`/c/${d.campaign?.slug}/forces/${armyId}`}
+                style={{ color: 'var(--text-gold)', fontSize: '0.75rem', textDecoration: 'none' }}
+              >
+                Manage Roster →
+              </Link>
             </div>
           ))}
         </div>

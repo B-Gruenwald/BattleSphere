@@ -230,6 +230,14 @@ export default async function ArmyPage({ params }) {
         </div>
       )}
 
+      {/* Campaign deployments */}
+      <ArmyDeployments
+        armyId={army.id}
+        deployments={deployments}
+        memberCampaigns={memberCampaigns}
+        isOwner={isOwner}
+      />
+
       {/* Units */}
       {(units || []).length > 0 ? (
         <div style={{ marginBottom: '1.25rem' }}>
@@ -252,14 +260,6 @@ export default async function ArmyPage({ params }) {
           </p>
         </div>
       )}
-
-      {/* Campaign deployments */}
-      <ArmyDeployments
-        armyId={army.id}
-        deployments={deployments}
-        memberCampaigns={memberCampaigns}
-        isOwner={isOwner}
-      />
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
