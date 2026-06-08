@@ -2,9 +2,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 
-// Each row: { id, name, faction, game_system, is_public, description,
+// Each row: { id, name, faction, game_system, is_public,
 //             ownerUsername, unitCount, score, lastActiveIso,
-//             activityLabel, activityColor, activityDot, updated_at }
+//             activityLabel, activityColor, activityDot, updated_at,
+//             hasDescription, hasPortrait, photoCount, isDeployed }
 
 const colHeaderStyle = {
   fontFamily: 'var(--font-display)',
@@ -16,6 +17,17 @@ const colHeaderStyle = {
 const sortableStyle = { ...colHeaderStyle, cursor: 'pointer', userSelect: 'none' }
 
 const COLS = '2fr 1.2fr 80px 70px 74px 80px 120px 80px'
+
+function Tag({ label, colour = '#c97b5a' }) {
+  return (
+    <span style={{
+      fontFamily: 'var(--font-display)', fontSize: '0.5rem', letterSpacing: '0.08em',
+      textTransform: 'uppercase', color: colour,
+      border: `1px solid ${colour}55`, padding: '0.1rem 0.35rem',
+      whiteSpace: 'nowrap',
+    }}>{label}</span>
+  )
+}
 
 function ScoreBadge({ score }) {
   const color = score >= 70 ? 'var(--text-gold)' : score >= 40 ? '#9ca3af' : '#555'
@@ -100,8 +112,16 @@ export default function AdminArmiesTable({ rows }) {
                 {a.name}
               </div>
               {a.faction && (
-                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: '0.3rem' }}>
                   {a.faction}{a.game_system ? ` · ${a.game_system}` : ''}
+                </div>
+              )}
+              {(a.hasDescription || a.hasPortrait || a.photoCount > 0 || a.isDeployed) && (
+                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                  {a.hasDescription && <Tag label="✦ Description" />}
+                  {a.hasPortrait    && <Tag label="✦ Portrait" />}
+                  {a.photoCount > 0 && <Tag label={`✦ ${a.photoCount} Photo${a.photoCount !== 1 ? 's' : ''}`} />}
+                  {a.isDeployed     && <Tag label="✦ Deployed" colour="#7a9e7e" />}
                 </div>
               )}
             </div>

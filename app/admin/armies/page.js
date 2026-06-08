@@ -106,22 +106,29 @@ export default async function AdminArmies() {
     const lastActiveIso = times[0] || null;
     const status = activityStatus(lastActiveIso);
 
+    const hasPortrait  = unitPhotos.some(p => p.is_portrait);
+    const photoCount   = unitPhotos.length;
+
     return {
-      id:            a.id,
-      name:          a.name,
-      faction:       a.faction,
-      game_system:   a.game_system,
-      is_public:     a.is_public,
-      description:   a.description,
-      ownerUsername: ownerMap[a.player_id]?.username ?? null,
-      unitCount:     units.length,
+      id:             a.id,
+      name:           a.name,
+      faction:        a.faction,
+      game_system:    a.game_system,
+      is_public:      a.is_public,
+      ownerUsername:  ownerMap[a.player_id]?.username ?? null,
+      unitCount:      units.length,
       score,
       lastActiveIso,
-      activityLabel: status.label,
-      activityColor: status.color,
-      activityDot:   status.dot,
-      updated_at:    a.updated_at,
-      created_at:    a.created_at,
+      activityLabel:  status.label,
+      activityColor:  status.color,
+      activityDot:    status.dot,
+      updated_at:     a.updated_at,
+      created_at:     a.created_at,
+      // content tags
+      hasDescription: !!(a.description?.trim()),
+      hasPortrait,
+      photoCount,
+      isDeployed:     isDeployed,
     };
   });
 
