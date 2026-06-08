@@ -79,18 +79,14 @@ export default async function BlogPage({ searchParams }) {
               : null;
             return (
               <Link key={post.id} href={`/blog/${post.slug}`} style={{ textDecoration: 'none' }}>
-                <div style={{
+                <div className="blog-list-row" style={{
                   padding: '1.75rem 0',
                   borderBottom: '1px solid var(--border-dim)',
                   display: 'grid',
                   gridTemplateColumns: post.cover_url ? '1fr 120px' : '1fr',
                   gap: '1.5rem',
                   alignItems: 'center',
-                  transition: 'opacity 0.15s',
-                }}
-                  onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                >
+                }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem' }}>
                       <span style={{

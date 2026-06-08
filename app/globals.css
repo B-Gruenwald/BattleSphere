@@ -1302,3 +1302,6 @@ a:hover .stat-cell {
   border-top: 1px solid var(--border-dim);
   margin: 2rem 0;
 }
+
+.blog-list-row { transition: opacity 0.15s; }
+.blog-list-row:hover { opacity: 0.8; }
