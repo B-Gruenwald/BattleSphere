@@ -111,9 +111,17 @@ export default async function BattleHistoryPage({ params }) {
                       </div>
                     )}
                     <div style={{ fontSize: battle.headline ? '0.85rem' : '1rem', color: battle.headline ? 'var(--text-secondary)' : 'var(--text-primary)', marginBottom: '0.2rem' }}>
-                      <span style={{ fontWeight: battle.headline ? '400' : '600' }}>{attacker?.name ?? '?'}</span>
+                      {attacker ? (
+                        <Link href={`/c/${slug}/faction/${battle.attacker_faction_id}`} onClick={e => e.stopPropagation()} style={{ fontWeight: battle.headline ? '400' : '600', color: 'inherit', textDecoration: 'none' }}>
+                          {attacker.name}
+                        </Link>
+                      ) : '?'}
                       <span style={{ color: 'var(--text-muted)', margin: '0 0.5rem' }}>vs</span>
-                      <span style={{ fontWeight: battle.headline ? '400' : '600' }}>{defender?.name ?? '?'}</span>
+                      {defender ? (
+                        <Link href={`/c/${slug}/faction/${battle.defender_faction_id}`} onClick={e => e.stopPropagation()} style={{ fontWeight: battle.headline ? '400' : '600', color: 'inherit', textDecoration: 'none' }}>
+                          {defender.name}
+                        </Link>
+                      ) : '?'}
                     </div>
                     <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                       <span style={{

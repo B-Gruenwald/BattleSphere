@@ -311,9 +311,13 @@ export default async function BattleDetailPage({ params }) {
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
             <div style={{ width: '10px', height: '10px', background: attackerFaction?.colour || 'var(--border-dim)', transform: 'rotate(45deg)', flexShrink: 0 }} />
-            <span style={{ fontSize: '1rem', fontWeight: '700', color: attackerWon && !isDraw ? attackerFaction?.colour : 'var(--text-primary)' }}>
-              {attackerFaction?.name ?? 'Unknown Faction'}
-            </span>
+            {attackerFaction ? (
+              <Link href={`/c/${slug}/faction/${battle.attacker_faction_id}`} style={{ fontSize: '1rem', fontWeight: '700', color: attackerWon && !isDraw ? attackerFaction.colour : 'var(--text-primary)', textDecoration: 'none' }}>
+                {attackerFaction.name}
+              </Link>
+            ) : (
+              <span style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-primary)' }}>Unknown Faction</span>
+            )}
           </div>
           {attackerPlayer && (
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
@@ -352,9 +356,13 @@ export default async function BattleDetailPage({ params }) {
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
             <div style={{ width: '10px', height: '10px', background: defenderFaction?.colour || 'var(--border-dim)', transform: 'rotate(45deg)', flexShrink: 0 }} />
-            <span style={{ fontSize: '1rem', fontWeight: '700', color: !attackerWon && !isDraw ? defenderFaction?.colour : 'var(--text-primary)' }}>
-              {defenderFaction?.name ?? 'Unknown Faction'}
-            </span>
+            {defenderFaction ? (
+              <Link href={`/c/${slug}/faction/${battle.defender_faction_id}`} style={{ fontSize: '1rem', fontWeight: '700', color: !attackerWon && !isDraw ? defenderFaction.colour : 'var(--text-primary)', textDecoration: 'none' }}>
+                {defenderFaction.name}
+              </Link>
+            ) : (
+              <span style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-primary)' }}>Unknown Faction</span>
+            )}
           </div>
           {defenderPlayer && (
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
