@@ -123,4 +123,9 @@ export const NOTIF_CONFIG = {
     colour: '#b78c40',
     label:  'Platform',
   },
+  blog_comment: {
+    icon:   '💬',
+    colour: '#6b9ecf',
+    label:  'Blog Comment',
+  },
 };

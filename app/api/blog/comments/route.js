@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createNotification } from '@/app/lib/notifications';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 // POST — submit a comment on a blog post
 export async function POST(req) {
@@ -15,10 +17,36 @@ export async function POST(req) {
   const { data, error } = await supabase
     .from('blog_comments')
     .insert({ post_id, user_id: user.id, body: body.trim() })
-    .select('*, profiles(username)')
+    .select('*')
     .single();
 
+  // Attach username for the client
+  if (data) {
+    const { data: prof } = await supabase.from('profiles').select('username').eq('id', user.id).single();
+    data.profiles = { username: prof?.username || 'User' };
+  }
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Notify the post author (fire-and-forget)
+  try {
+    const admin = createAdminClient();
+    const { data: post } = await admin
+      .from('blog_posts')
+      .select('author_id, title, slug')
+      .eq('id', post_id)
+      .single();
+    if (post && post.author_id !== user.id) {
+      const commenterUsername = data.profiles?.username || 'Someone';
+      await createNotification(post.author_id, {
+        type:  'blog_comment',
+        title: `New comment on "${post.title}"`,
+        body:  `${commenterUsername} left a comment on your post.`,
+        link:  `/blog/${post.slug}`,
+      });
+    }
+  } catch (_) {}
+
   return NextResponse.json({ comment: data });
 }
 
