@@ -37,7 +37,7 @@ export default async function AdminArmies() {
     // Photos: join via army_unit_ids — fetch all unit photos for units in these armies
     // We'll cross-reference via unit map after the fact
     armyIds.length > 0
-      ? supabase.from('army_unit_photos').select('army_unit_id, is_portrait')
+      ? supabase.from('army_unit_photos').select('unit_id, is_portrait')
       : { data: [] },
     // Campaign deployments: just need army_id to check is_deployed
     armyIds.length > 0
@@ -64,8 +64,8 @@ export default async function AdminArmies() {
   // Photos per unit_id
   const photosByUnit = {};
   (allUnitPhotos || []).forEach(p => {
-    if (!photosByUnit[p.army_unit_id]) photosByUnit[p.army_unit_id] = [];
-    photosByUnit[p.army_unit_id].push(p);
+    if (!photosByUnit[p.unit_id]) photosByUnit[p.unit_id] = [];
+    photosByUnit[p.unit_id].push(p);
   });
 
   // Deployed army IDs
