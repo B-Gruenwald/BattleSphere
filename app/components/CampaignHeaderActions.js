@@ -29,6 +29,9 @@ export default function CampaignHeaderActions({
       )}
       {isMember && userId && (
         <>
+          <Link href={`/c/${campaignSlug}/battle/new`} style={{ textDecoration: 'none' }}>
+            <button className="btn-primary" style={{ padding: '0.5rem 1.25rem' }}>+ Log Battle</button>
+          </Link>
           <Link href={`/c/${campaignSlug}/forces`} style={{ textDecoration: 'none' }}>
             <button className="btn-primary" style={{ padding: '0.5rem 1.25rem' }}>⚔ My Forces</button>
           </Link>
