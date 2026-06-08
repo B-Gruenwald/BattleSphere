@@ -171,6 +171,7 @@ export default function ArmyDeployments({ armyId, deployments: initialDeployment
   const router = useRouter();
   const [deployments, setDeployments] = useState(initialDeployments);
   const [showModal,   setShowModal]   = useState(false);
+  const [open,        setOpen]        = useState(false);
 
   const deployedCampaignIds = deployments.map(d => d.campaign_id);
 
@@ -180,12 +181,21 @@ export default function ArmyDeployments({ armyId, deployments: initialDeployment
   }
 
   return (
-    <div style={{ border: '1px solid var(--border-dim)', padding: '1.25rem', marginBottom: '1.25rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-        <h2 style={{ ...labelStyle }}>Campaigns</h2>
+    <div style={{ border: '1px solid var(--border-dim)', marginBottom: '1.25rem' }}>
+      {/* Collapsible header */}
+      <div
+        onClick={() => setOpen(v => !v)}
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 1.25rem', cursor: 'pointer', userSelect: 'none', flexWrap: 'wrap', gap: '0.5rem' }}
+      >
+        <h2 style={{ ...labelStyle, margin: 0 }}>
+          {open ? '▾' : '▸'} Campaigns
+          {deployments.length > 0 && (
+            <span style={{ fontWeight: 'normal', opacity: 0.6, marginLeft: '0.5em' }}>({deployments.length})</span>
+          )}
+        </h2>
         {isOwner && memberCampaigns.length > 0 && (
           <button
-            onClick={() => setShowModal(true)}
+            onClick={e => { e.stopPropagation(); setShowModal(true); }}
             className="btn-secondary"
             style={{ fontSize: '0.72rem', padding: '0.3rem 0.9rem' }}
           >
@@ -194,38 +204,26 @@ export default function ArmyDeployments({ armyId, deployments: initialDeployment
         )}
       </div>
 
-      {deployments.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
-          {isOwner
-            ? 'Not yet deployed to any campaign. Use the button above to deploy.'
-            : 'Not deployed to any campaigns.'}
-        </p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {deployments.map(d => (
-            <div key={d.id} style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '0.6rem 0.9rem',
-              border: '1px solid var(--border-dim)',
-              flexWrap: 'wrap',
-              gap: '0.5rem',
-            }}>
-              <Link
-                href={`/c/${d.campaign?.slug}`}
-                style={{ fontSize: '0.9rem', color: 'var(--text-primary)', textDecoration: 'none', fontWeight: '600' }}
-              >
-                {d.campaign?.name ?? 'Unknown Campaign'}
-              </Link>
-              <Link
-                href={`/c/${d.campaign?.slug}/forces/${armyId}`}
-                style={{ color: 'var(--text-gold)', fontSize: '0.75rem', textDecoration: 'none' }}
-              >
-                Manage Roster →
-              </Link>
+      {open && (
+        <div style={{ padding: '0 1.25rem 1.25rem' }}>
+          {deployments.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
+              {isOwner ? 'Not yet deployed to any campaign. Use the button above to deploy.' : 'Not deployed to any campaigns.'}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {deployments.map(d => (
+                <div key={d.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.6rem 0.9rem', border: '1px solid var(--border-dim)', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <Link href={`/c/${d.campaign?.slug}`} style={{ fontSize: '0.9rem', color: 'var(--text-primary)', textDecoration: 'none', fontWeight: '600' }}>
+                    {d.campaign?.name ?? 'Unknown Campaign'}
+                  </Link>
+                  <Link href={`/c/${d.campaign?.slug}/forces/${armyId}`} style={{ color: 'var(--text-gold)', fontSize: '0.75rem', textDecoration: 'none' }}>
+                    Manage Roster →
+                  </Link>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       )}
 
