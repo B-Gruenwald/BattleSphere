@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import NavBar from './components/NavBar';
 import NewsletterOptinModal from './components/NewsletterOptinModal';
+import NextTopLoader from 'nextjs-toploader';
 import { Analytics } from '@vercel/analytics/next';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://battlesphere.cc';
@@ -55,6 +56,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
+        <NextTopLoader color="#b78c40" height={3} showSpinner={false} />
         <NavBarServer />
         <NewsletterOptinModal />
         <main style={{ paddingTop: '64px' }}>
