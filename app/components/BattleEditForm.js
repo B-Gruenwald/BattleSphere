@@ -65,11 +65,11 @@ export default function BattleEditForm({ battle, campaign, territories, factions
   const [confirmDelete,    setConfirmDelete]      = useState(false);
   const [deleting,         setDeleting]           = useState(false);
 
-  // Optional section toggles — pre-open if data already exists
-  const [showScenario,    setShowScenario]    = useState(!!battle.scenario);
-  const [showArmyDetails, setShowArmyDetails] = useState(!!(battle.army_id_p1 || battle.army_id_p2 || battle.attacker_army_type || battle.defender_army_type || battle.attacker_army_list || battle.defender_army_list));
-  const [showScores,      setShowScores]      = useState(!!(battle.attacker_score || battle.defender_score));
-  const [showNarrative,   setShowNarrative]   = useState(!!(battle.attacker_narrative || battle.defender_narrative));
+  // Optional section toggles — always start hidden
+  const [showScenario,    setShowScenario]    = useState(false);
+  const [showArmyDetails, setShowArmyDetails] = useState(false);
+  const [showScores,      setShowScores]      = useState(false);
+  const [showNarrative,   setShowNarrative]   = useState(false);
 
   // Refs prevent the auto-fill useEffects from overwriting saved faction IDs on mount
   const attackerEffectRan = useRef(false);
