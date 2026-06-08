@@ -34,15 +34,13 @@ export default async function DashboardPage() {
     ? await supabase.from('factions').select('id, name, colour, campaign_id').in('campaign_id', campaignIds)
     : { data: [] };
 
-  // Personal Battle Log — all campaign battles where this user was attacker or defender
-  const { data: personalBattles } = campaignIds.length > 0
-    ? await supabase
-        .from('battles')
-        .select('*')
-        .or(`attacker_player_id.eq.${user.id},defender_player_id.eq.${user.id}`)
-        .order('created_at', { ascending: false })
-        .limit(20)
-    : { data: [] };
+  // Personal Battle Log — all battles where this user was attacker or defender (incl. no-campaign)
+  const { data: personalBattles } = await supabase
+    .from('battles')
+    .select('*')
+    .or(`attacker_player_id.eq.${user.id},defender_player_id.eq.${user.id}`)
+    .order('created_at', { ascending: false })
+    .limit(20);
 
   // My Armies (player-level, not campaign-scoped)
   const { data: myArmies } = await supabase
@@ -74,6 +72,9 @@ export default async function DashboardPage() {
             style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-gold)', textDecoration: 'none', border: '1px solid rgba(183,140,64,0.35)', padding: '0.45rem 0.9rem' }}
           >
             My Public Profile →
+          </Link>
+          <Link href="/battles/new">
+            <button className="btn-secondary">⚔ Log a Battle</button>
           </Link>
           <Link href="/campaign/new">
             <button className="btn-primary">+ New Campaign</button>
@@ -189,7 +190,7 @@ export default async function DashboardPage() {
                   const resultColour = isDraw ? 'var(--text-muted)' : (winner?.colour ?? 'var(--text-gold)');
                   const date         = new Date(battle.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
                   return (
-                    <Link key={battle.id} href={`/c/${campaign?.slug}/battle/${battle.id}`} style={{ textDecoration: 'none' }}>
+                    <Link key={battle.id} href={campaign?.slug ? `/c/${campaign.slug}/battle/${battle.id}` : `/battles/${battle.id}`} style={{ textDecoration: 'none' }}>
                       <div style={{ padding: '0.75rem 0', borderBottom: '1px solid var(--border-dim)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem' }}>
                           <div style={{ width: '5px', height: '5px', background: resultColour, transform: 'rotate(45deg)', flexShrink: 0 }} />
@@ -230,21 +231,31 @@ export default async function DashboardPage() {
         {personalBattles && personalBattles.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {personalBattles.map(b => {
-              const campaign    = campaignMap[b.campaign_id];
-              const isAttacker  = b.attacker_player_id === user.id;
-              const myFactionId = isAttacker ? b.attacker_faction_id : b.defender_faction_id;
+              const campaign     = campaignMap[b.campaign_id];
+              const isAttacker   = b.attacker_player_id === user.id;
+              const myFactionId  = isAttacker ? b.attacker_faction_id : b.defender_faction_id;
               const oppFactionId = isAttacker ? b.defender_faction_id : b.attacker_faction_id;
-              const myFaction   = factionMap[myFactionId];
-              const oppFaction  = factionMap[oppFactionId];
+              const myFaction    = factionMap[myFactionId];
+              const oppFaction   = factionMap[oppFactionId];
 
-              const isDraw = !b.winner_faction_id;
-              const iWon   = b.winner_faction_id === myFactionId;
+              // Support both campaign battles (winner_faction_id) and free battles (winner_player_id)
+              const isCampaignBattle = !!b.campaign_id;
+              const isDraw = isCampaignBattle
+                ? !b.winner_faction_id
+                : !b.winner_player_id;
+              const iWon = isCampaignBattle
+                ? b.winner_faction_id === myFactionId
+                : b.winner_player_id === user.id;
+
               const resultLabel  = isDraw ? 'Draw' : iWon ? 'Victory' : 'Defeat';
               const resultColour = isDraw
                 ? 'var(--text-muted)'
-                : iWon
-                  ? (myFaction?.colour || 'var(--text-gold)')
-                  : '#e05a5a';
+                : iWon ? (myFaction?.colour || 'var(--text-gold)')
+                : '#e05a5a';
+
+              // Display names: use faction names for campaign battles, army types for free battles
+              const myDisplay  = myFaction?.name  ?? (isAttacker ? b.attacker_army_type : b.defender_army_type) ?? (isAttacker ? 'You' : 'Opponent');
+              const oppDisplay = oppFaction?.name ?? (isAttacker ? b.defender_army_type : b.attacker_army_type) ?? 'Opponent';
 
               const myScore   = isAttacker ? b.attacker_score : b.defender_score;
               const oppScore  = isAttacker ? b.defender_score : b.attacker_score;
@@ -252,14 +263,14 @@ export default async function DashboardPage() {
               const date      = new Date(b.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
               return (
-                <Link key={b.id} href={`/c/${campaign?.slug}/battle/${b.id}`} style={{ textDecoration: 'none' }}>
+                <Link key={b.id} href={campaign?.slug ? `/c/${campaign.slug}/battle/${b.id}` : `/battles/${b.id}`} style={{ textDecoration: 'none' }}>
                   <div style={{ padding: '0.9rem 0', borderBottom: '1px solid var(--border-dim)', display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}>
                     <div style={{ width: '6px', height: '6px', background: resultColour, transform: 'rotate(45deg)', flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.2rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        <span style={{ color: myFaction?.colour || 'var(--text-secondary)' }}>{myFaction?.name ?? '?'}</span>
+                        <span style={{ color: myFaction?.colour || 'var(--text-secondary)' }}>{myDisplay}</span>
                         <span style={{ color: 'var(--text-muted)', margin: '0 0.4rem' }}>vs</span>
-                        <span style={{ color: oppFaction?.colour || 'var(--text-secondary)' }}>{oppFaction?.name ?? '?'}</span>
+                        <span style={{ color: oppFaction?.colour || 'var(--text-secondary)' }}>{oppDisplay}</span>
                       </div>
                       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                         <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.52rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: resultColour }}>
