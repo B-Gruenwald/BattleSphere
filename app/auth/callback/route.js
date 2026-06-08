@@ -58,11 +58,13 @@ export async function GET(request) {
           user.user_metadata?.full_name ||
           null;
 
-        // Set username on profile if the trigger left it null
+        // Set username on profile if the trigger left it null.
+        // Strip Discord discriminator suffix (#0, #1234, etc.) before storing.
         if (discordName) {
+          const cleanName = discordName.replace(/#.*$/, '');
           await supabase
             .from('profiles')
-            .update({ username: discordName })
+            .update({ username: cleanName })
             .eq('id', user.id)
             .is('username', null);
         }
