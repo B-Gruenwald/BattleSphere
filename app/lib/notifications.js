@@ -118,4 +118,9 @@ export const NOTIF_CONFIG = {
     colour: '#7a9e7e',
     label:  'Campaign',
   },
+  platform_broadcast: {
+    icon:   '📣',
+    colour: '#b78c40',
+    label:  'Platform',
+  },
 };
