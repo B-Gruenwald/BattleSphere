@@ -1,5 +1,6 @@
-import Link from 'next/link';
 import { createAdminClient } from '@/lib/supabase/admin';
+import AdminUsersTable from '../AdminUsersTable';
+import { scoreCampaign, scoreArmy, activityStatus } from '../engagementScore';
 
 export const metadata = {
   title: 'All Users · Admin · BattleSphere',
@@ -8,7 +9,8 @@ export const metadata = {
 export default async function AdminUsers() {
   const supabase = createAdminClient();
 
-  // All profiles, newest first
+  // ── Core user data ────────────────────────────────────────────────────────────
+
   const { data: profiles } = await supabase
     .from('profiles')
     .select('*')
@@ -16,56 +18,239 @@ export default async function AdminUsers() {
 
   const userIds = (profiles || []).map(p => p.id);
 
-  // Campaign memberships — need user_id + campaign_id for counts and profile links
-  const { data: memberships } = userIds.length > 0
-    ? await supabase.from('campaign_members').select('user_id, campaign_id').in('user_id', userIds)
+  // ── All supporting data (parallel) ────────────────────────────────────────────
+
+  const [
+    { data: memberships },
+    { data: armies },
+    { data: battles },
+    { data: allCampaigns },
+  ] = await Promise.all([
+    userIds.length > 0
+      ? supabase.from('campaign_members').select('user_id, campaign_id').in('user_id', userIds)
+      : { data: [] },
+    userIds.length > 0
+      ? supabase.from('armies').select('id, player_id, name, description, is_public, faction, game_system, updated_at, created_at').in('player_id', userIds)
+      : { data: [] },
+    userIds.length > 0
+      ? supabase.from('battles').select('id, attacker_player_id, defender_player_id, created_at, army_id_p1, army_id_p2')
+          .or(`attacker_player_id.in.(${userIds.join(',')}),defender_player_id.in.(${userIds.join(',')})`)
+      : { data: [] },
+    // Campaigns organised by these users
+    userIds.length > 0
+      ? supabase.from('campaigns').select('id, organiser_id, created_at').in('organiser_id', userIds)
+      : { data: [] },
+  ]);
+
+  // For army scoring — need unit counts and photos
+  const armyIds = (armies || []).map(a => a.id);
+  const [
+    { data: allUnits },
+    { data: allUnitPhotos },
+    { data: allDeployments },
+  ] = await Promise.all([
+    armyIds.length > 0
+      ? supabase.from('army_units').select('id, army_id').in('army_id', armyIds)
+      : { data: [] },
+    armyIds.length > 0
+      ? supabase.from('army_unit_photos').select('army_unit_id, is_portrait')
+      : { data: [] },
+    armyIds.length > 0
+      ? supabase.from('campaign_army_records').select('army_id').in('army_id', armyIds)
+      : { data: [] },
+  ]);
+
+  // For campaign scoring — need members, battles, territories, events, photos
+  const campaignIds = (allCampaigns || []).map(c => c.id);
+  const [
+    { data: campMembers },
+    { data: campBattles },
+    { data: campTerritories },
+    { data: campEvents },
+  ] = await Promise.all([
+    campaignIds.length > 0
+      ? supabase.from('campaign_members').select('campaign_id').in('campaign_id', campaignIds)
+      : { data: [] },
+    campaignIds.length > 0
+      ? supabase.from('battles').select('id, campaign_id, created_at').in('campaign_id', campaignIds)
+      : { data: [] },
+    campaignIds.length > 0
+      ? supabase.from('territories').select('id, campaign_id, image_url, description').in('campaign_id', campaignIds)
+      : { data: [] },
+    campaignIds.length > 0
+      ? supabase.from('campaign_events').select('id, campaign_id, created_at').in('campaign_id', campaignIds)
+      : { data: [] },
+  ]);
+
+  // Battle photos for campaign battles
+  const campBattleIds = (campBattles || []).map(b => b.id);
+  const { data: campBattlePhotos } = campBattleIds.length > 0
+    ? await supabase.from('battle_photos').select('battle_id').in('battle_id', campBattleIds)
     : { data: [] };
 
-  // Campaigns — need slug for profile links
-  const campaignIds = [...new Set((memberships || []).map(m => m.campaign_id))];
-  const { data: campaigns } = campaignIds.length > 0
-    ? await supabase.from('campaigns').select('id, slug').in('id', campaignIds)
-    : { data: [] };
-
-  const campaignSlugById = Object.fromEntries((campaigns || []).map(c => [c.id, c.slug]));
-
-  // Per-user: campaign count + first campaign slug (for profile link)
-  const memberCountMap = {};
-  const userFirstCampaignSlug = {};
-  (memberships || []).forEach(m => {
-    memberCountMap[m.user_id] = (memberCountMap[m.user_id] || 0) + 1;
-    if (!userFirstCampaignSlug[m.user_id] && campaignSlugById[m.campaign_id]) {
-      userFirstCampaignSlug[m.user_id] = campaignSlugById[m.campaign_id];
-    }
-  });
-
-  // Email addresses — fetch individually by profile ID.
-  // We avoid listUsers() because directly SQL-inserted demo accounts can have
-  // missing auth columns that cause the bulk query to fail entirely.
+  // Email addresses
   const emailMap = {};
-  let authError = null;
   await Promise.all(
     userIds.map(async (id) => {
-      const { data, error } = await supabase.auth.admin.getUserById(id);
+      const { data } = await supabase.auth.admin.getUserById(id);
       if (data?.user?.email) emailMap[id] = data.user.email;
-      if (error && !authError) authError = error;
     })
   );
 
-  const colHeaderStyle = {
-    fontFamily: 'var(--font-display)',
-    fontSize: '0.54rem',
-    letterSpacing: '0.12em',
-    textTransform: 'uppercase',
-    color: 'var(--text-muted)',
-  };
+  // ── Build lookup maps ─────────────────────────────────────────────────────────
 
-  const COLS = '1.2fr 2fr 90px 140px 90px';
+  // Campaigns slug for profile links
+  const campaignIdsByUser = {};  // user_id → [campaign_id]
+  (memberships || []).forEach(m => {
+    if (!campaignIdsByUser[m.user_id]) campaignIdsByUser[m.user_id] = [];
+    campaignIdsByUser[m.user_id].push(m.campaign_id);
+  });
+
+  // Armies by owner
+  const armiesByUser = {};
+  (armies || []).forEach(a => {
+    if (!armiesByUser[a.player_id]) armiesByUser[a.player_id] = [];
+    armiesByUser[a.player_id].push(a);
+  });
+
+  // Battles by user (as attacker or defender)
+  const battlesByUser = {};
+  const lastBattleByUser = {};
+  (battles || []).forEach(b => {
+    const addTo = (uid) => {
+      if (!battlesByUser[uid]) battlesByUser[uid] = [];
+      battlesByUser[uid].push(b);
+      if (!lastBattleByUser[uid] || b.created_at > lastBattleByUser[uid]) {
+        lastBattleByUser[uid] = b.created_at;
+      }
+    };
+    if (b.attacker_player_id) addTo(b.attacker_player_id);
+    if (b.defender_player_id) addTo(b.defender_player_id);
+  });
+
+  // Organised campaigns by user
+  const campaignsByOrganiser = {};
+  (allCampaigns || []).forEach(c => {
+    if (!campaignsByOrganiser[c.organiser_id]) campaignsByOrganiser[c.organiser_id] = [];
+    campaignsByOrganiser[c.organiser_id].push(c);
+  });
+
+  // Army scoring helpers
+  const unitsByArmy = {};
+  (allUnits || []).forEach(u => {
+    if (!unitsByArmy[u.army_id]) unitsByArmy[u.army_id] = [];
+    unitsByArmy[u.army_id].push(u);
+  });
+  const photosByUnit = {};
+  (allUnitPhotos || []).forEach(p => {
+    if (!photosByUnit[p.army_unit_id]) photosByUnit[p.army_unit_id] = [];
+    photosByUnit[p.army_unit_id].push(p);
+  });
+  const deployedArmyIds = new Set((allDeployments || []).map(d => d.army_id));
+
+  const battleCountByArmy = {};
+  (battles || []).forEach(b => {
+    if (b.army_id_p1) battleCountByArmy[b.army_id_p1] = (battleCountByArmy[b.army_id_p1] || 0) + 1;
+    if (b.army_id_p2) battleCountByArmy[b.army_id_p2] = (battleCountByArmy[b.army_id_p2] || 0) + 1;
+  });
+
+  // Campaign scoring helpers
+  function groupBy(arr, key) {
+    const map = {};
+    for (const item of (arr || [])) {
+      const k = item[key];
+      if (!map[k]) map[k] = [];
+      map[k].push(item);
+    }
+    return map;
+  }
+  const campMemberCountMap = {};
+  (campMembers || []).forEach(r => { campMemberCountMap[r.campaign_id] = (campMemberCountMap[r.campaign_id] || 0) + 1; });
+  const campBattlesByC   = groupBy(campBattles,       'campaign_id');
+  const campTerrByC      = groupBy(campTerritories,   'campaign_id');
+  const campEventsByC    = groupBy(campEvents,        'campaign_id');
+  const campPhotosByB    = groupBy(campBattlePhotos,  'battle_id');
+
+  // ── Compute scored rows ───────────────────────────────────────────────────────
+
+  const userRows = (profiles || []).map(p => {
+    const userArmies     = armiesByUser[p.id]         || [];
+    const userBattles    = battlesByUser[p.id]         || [];
+    const userCampaigns  = campaignsByOrganiser[p.id]  || [];
+
+    // Score each army
+    const armyScores = userArmies.map(a => {
+      const units      = unitsByArmy[a.id] || [];
+      const unitPhotos = units.flatMap(u => photosByUnit[u.id] || []);
+      return scoreArmy(a, {
+        unitCount:    units.length,
+        unitPhotos,
+        isDeployed:   deployedArmyIds.has(a.id),
+        battleCount:  battleCountByArmy[a.id] || 0,
+      });
+    });
+
+    // Score each organised campaign
+    const campaignScores = userCampaigns.map(c => {
+      const cBattles   = campBattlesByC[c.id]   || [];
+      const cTerr      = campTerrByC[c.id]       || [];
+      const cEvents    = campEventsByC[c.id]     || [];
+      const cPhotos    = cBattles.flatMap(b => campPhotosByB[b.id] || []);
+      return scoreCampaign(c, {
+        memberCount:  campMemberCountMap[c.id] || 0,
+        battles:      cBattles,
+        territories:  cTerr,
+        events:       cEvents,
+        battlePhotos: cPhotos,
+      });
+    });
+
+    const allScores   = [...armyScores, ...campaignScores];
+    const bestScore   = allScores.length ? Math.max(...allScores) : 0;
+
+    // Label for the best score tooltip
+    let bestScoreLabel = ''
+    if (bestScore > 0) {
+      const bestArmyIdx = armyScores.indexOf(Math.max(...armyScores, -1));
+      const bestCampIdx = campaignScores.indexOf(Math.max(...campaignScores, -1));
+      if (armyScores.length && Math.max(...armyScores) >= (campaignScores.length ? Math.max(...campaignScores) : -1)) {
+        bestScoreLabel = `Best army: ${userArmies[bestArmyIdx]?.name ?? ''}`
+      } else if (campaignScores.length) {
+        bestScoreLabel = `Best campaign: ${userCampaigns[bestCampIdx]?.id ?? ''}`
+      }
+    }
+
+    // Last active = max of last battle, last army updated_at
+    const lastArmyUpdate = userArmies.map(a => a.updated_at).filter(Boolean).sort().reverse()[0] || null;
+    const lastBattle     = lastBattleByUser[p.id] || null;
+    const allTimes       = [lastArmyUpdate, lastBattle].filter(Boolean).sort().reverse();
+    const lastActiveIso  = allTimes[0] || null;
+    const status         = activityStatus(lastActiveIso);
+
+    // Count how many campaigns the user is *in* (not just organised)
+    const campaignCount = (campaignIdsByUser[p.id] || []).length;
+
+    return {
+      id:             p.id,
+      username:       p.username,
+      email:          emailMap[p.id] ?? null,
+      is_admin:       p.is_admin,
+      campaignCount,
+      armyCount:      userArmies.length,
+      battleCount:    userBattles.length,
+      bestScore:      bestScore || null,
+      bestScoreLabel,
+      lastActiveIso,
+      activityLabel:  status.label,
+      activityColor:  status.color,
+      activityDot:    status.dot,
+      created_at:     p.created_at,
+    };
+  });
 
   return (
-    <div style={{ padding: '3rem 2rem', maxWidth: '1100px', margin: '0 auto' }}>
+    <div style={{ padding: '3rem 2rem', maxWidth: '1500px', margin: '0 auto' }}>
 
-      {/* Page header */}
       <div style={{ marginBottom: '2.5rem' }}>
         <p style={{
           fontFamily: 'var(--font-display)',
@@ -82,120 +267,13 @@ export default async function AdminUsers() {
         </h1>
       </div>
 
-      {authError && Object.keys(emailMap).length === 0 && (
-        <div style={{
-          marginBottom: '1.5rem',
-          padding: '0.85rem 1.25rem',
-          border: '1px solid rgba(224,90,90,0.4)',
-          background: 'rgba(224,90,90,0.07)',
-          fontSize: '0.85rem',
-          color: '#e05a5a',
-        }}>
-          ⚠ Could not load email addresses — auth.admin.listUsers failed.
-          Check that <code>SUPABASE_SERVICE_ROLE_KEY</code> is set correctly in Vercel env vars.
-          Error: {authError.message}
-        </div>
-      )}
-
-      <div style={{ border: '1px solid var(--border-dim)' }}>
-        {/* Table header */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: COLS,
-          gap: '1rem',
-          padding: '0.7rem 1.25rem',
-          borderBottom: '1px solid var(--border-dim)',
-          background: 'rgba(255,255,255,0.02)',
-        }}>
-          {['Username', 'Email', 'Campaigns', 'Registered', ''].map(h => (
-            <span key={h} style={colHeaderStyle}>{h}</span>
-          ))}
-        </div>
-
-        {(profiles || []).length === 0 ? (
-          <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-            No users found.
-          </div>
-        ) : (
-          (profiles || []).map(p => {
-            const email      = emailMap[p.id] ?? '—';
-            const campaigns  = memberCountMap[p.id] || 0;
-            const created    = new Date(p.created_at).toLocaleDateString('en-GB', {
-              day: 'numeric', month: 'short', year: 'numeric',
-            });
-            const firstSlug  = userFirstCampaignSlug[p.id];
-
-            return (
-              <div key={p.id} style={{
-                display: 'grid',
-                gridTemplateColumns: COLS,
-                gap: '1rem',
-                padding: '0.85rem 1.25rem',
-                borderBottom: '1px solid var(--border-dim)',
-                alignItems: 'center',
-              }}>
-                {/* Username + admin badge */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <span style={{
-                    fontSize: '0.9rem',
-                    color: 'var(--text-primary)',
-                    fontWeight: p.is_admin ? '600' : '400',
-                  }}>
-                    {p.username}
-                  </span>
-                  {p.is_admin && (
-                    <span style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '0.48rem',
-                      letterSpacing: '0.12em',
-                      textTransform: 'uppercase',
-                      color: '#e05a5a',
-                      background: 'rgba(224,90,90,0.1)',
-                      padding: '0.12rem 0.35rem',
-                      border: '1px solid rgba(224,90,90,0.3)',
-                    }}>
-                      Admin
-                    </span>
-                  )}
-                </div>
-
-                {/* Email */}
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {email}
-                </div>
-
-                {/* Campaign count */}
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                  {campaigns}
-                </div>
-
-                {/* Registered date */}
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                  {created}
-                </div>
-
-                {/* Profile link */}
-                <div>
-                  {p.username ? (
-                    <Link href={`/players/${encodeURIComponent(p.username.replace(/#.*$/, ''))}`} style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '0.54rem',
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase',
-                      color: '#e05a5a',
-                      textDecoration: 'none',
-                    }}>
-                      Profile →
-                    </Link>
-                  ) : (
-                    <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>—</span>
-                  )}
-                </div>
-              </div>
-            );
-          })
-        )}
+      <div style={{ marginBottom: '1.25rem' }}>
+        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+          Best Score = highest engagement score across that user's armies + organised campaigns · click column headers to sort
+        </span>
       </div>
+
+      <AdminUsersTable rows={userRows} />
     </div>
   );
 }

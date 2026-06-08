@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
+import AdminCampaignsTable from './AdminCampaignsTable';
+import { scoreCampaign, activityStatus } from './engagementScore';
 
 export const metadata = {
   title: 'Platform Overview · Admin · BattleSphere',
@@ -17,7 +19,8 @@ export default async function SuperAdminOverview() {
 
   const supabase = createAdminClient();
 
-  // All campaigns, newest first
+  // ── Core data ────────────────────────────────────────────────────────────────
+
   const { data: campaigns } = await supabase
     .from('campaigns')
     .select('*')
@@ -26,35 +29,45 @@ export default async function SuperAdminOverview() {
   const campaignIds = (campaigns || []).map(c => c.id);
   const organiserIds = [...new Set((campaigns || []).map(c => c.organiser_id))];
 
-  // Member + battle counts (just the id columns — efficient)
-  const { data: memberRows } = campaignIds.length > 0
-    ? await supabase.from('campaign_members').select('campaign_id').in('campaign_id', campaignIds)
+  // ── Scoring data (all parallel) ───────────────────────────────────────────────
+
+  const [
+    { data: memberRows },
+    { data: battleRows },
+    { data: organiserProfiles },
+    { data: territories },
+    { data: events },
+  ] = await Promise.all([
+    campaignIds.length > 0
+      ? supabase.from('campaign_members').select('campaign_id').in('campaign_id', campaignIds)
+      : { data: [] },
+    campaignIds.length > 0
+      ? supabase.from('battles').select('id, campaign_id, created_at').in('campaign_id', campaignIds)
+      : { data: [] },
+    organiserIds.length > 0
+      ? supabase.from('profiles').select('id, username').in('id', organiserIds)
+      : { data: [] },
+    campaignIds.length > 0
+      ? supabase.from('territories').select('id, campaign_id, image_url, description').in('campaign_id', campaignIds)
+      : { data: [] },
+    campaignIds.length > 0
+      ? supabase.from('campaign_events').select('id, campaign_id, created_at').in('campaign_id', campaignIds)
+      : { data: [] },
+  ]);
+
+  // Battle photos — second wave (needs battle IDs from first wave)
+  const battleIds = (battleRows || []).map(b => b.id);
+  const { data: battlePhotos } = battleIds.length > 0
+    ? await supabase.from('battle_photos').select('battle_id').in('battle_id', battleIds)
     : { data: [] };
 
-  const { data: battleRows } = campaignIds.length > 0
-    ? await supabase.from('battles').select('campaign_id').in('campaign_id', campaignIds)
-    : { data: [] };
+  // Platform totals for stat cards
+  const { count: totalUsers   } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+  const { count: totalBattles } = await supabase.from('battles').select('*', { count: 'exact', head: true });
+  const { count: totalArmies  } = await supabase.from('armies').select('*', { count: 'exact', head: true });
 
-  // Organiser usernames
-  const { data: organiserProfiles } = organiserIds.length > 0
-    ? await supabase.from('profiles').select('id, username').in('id', organiserIds)
-    : { data: [] };
+  // ── Build lookup maps ────────────────────────────────────────────────────────
 
-  // Platform totals
-  const { count: totalUsers } = await supabase
-    .from('profiles')
-    .select('*', { count: 'exact', head: true });
-
-  const { count: totalBattles } = await supabase
-    .from('battles')
-    .select('*', { count: 'exact', head: true });
-
-  // Army count for stat card
-  const { count: totalArmies } = await supabase
-    .from('armies')
-    .select('*', { count: 'exact', head: true });
-
-  // Build lookup maps
   const profileMap = Object.fromEntries((organiserProfiles || []).map(p => [p.id, p]));
 
   const memberCountMap = {};
@@ -62,10 +75,63 @@ export default async function SuperAdminOverview() {
     memberCountMap[r.campaign_id] = (memberCountMap[r.campaign_id] || 0) + 1;
   });
 
-  const battleCountMap = {};
-  (battleRows || []).forEach(r => {
-    battleCountMap[r.campaign_id] = (battleCountMap[r.campaign_id] || 0) + 1;
+  function groupBy(arr, key) {
+    const map = {};
+    for (const item of (arr || [])) {
+      const k = item[key];
+      if (!map[k]) map[k] = [];
+      map[k].push(item);
+    }
+    return map;
+  }
+
+  const battlesByCampaign    = groupBy(battleRows,    'campaign_id');
+  const terrByCampaign       = groupBy(territories,   'campaign_id');
+  const eventsByCampaign     = groupBy(events,        'campaign_id');
+  const photosByBattle       = groupBy(battlePhotos,  'battle_id');
+
+  // ── Compute scored rows ───────────────────────────────────────────────────────
+
+  const campaignRows = (campaigns || []).map(c => {
+    const cBattles     = battlesByCampaign[c.id] || [];
+    const cTerritories = terrByCampaign[c.id]    || [];
+    const cEvents      = eventsByCampaign[c.id]  || [];
+    const cMemberCount = memberCountMap[c.id]     || 0;
+    const cPhotos      = cBattles.flatMap(b => photosByBattle[b.id] || []);
+
+    const score = scoreCampaign(c, {
+      memberCount:  cMemberCount,
+      battles:      cBattles,
+      territories:  cTerritories,
+      events:       cEvents,
+      battlePhotos: cPhotos,
+    });
+
+    const allTimes = [
+      ...cBattles.map(b => b.created_at),
+      ...cEvents.map(e => e.created_at),
+    ].filter(Boolean).sort().reverse();
+    const lastActiveIso = allTimes[0] || null;
+    const status = activityStatus(lastActiveIso);
+
+    return {
+      id:                c.id,
+      name:              c.name,
+      slug:              c.slug,
+      setting:           c.setting || null,
+      organiserUsername: profileMap[c.organiser_id]?.username ?? null,
+      memberCount:       cMemberCount,
+      battleCount:       cBattles.length,
+      score,
+      lastActiveIso,
+      activityLabel:     status.label,
+      activityColor:     status.color,
+      activityDot:       status.dot,
+      created_at:        c.created_at,
+    };
   });
+
+  // ── Stat card helper ─────────────────────────────────────────────────────────
 
   const statCard = (label, value) => (
     <div key={label} style={{
@@ -89,20 +155,8 @@ export default async function SuperAdminOverview() {
     </div>
   );
 
-  const colHeader = (label) => (
-    <span key={label} style={{
-      fontFamily: 'var(--font-display)',
-      fontSize: '0.54rem',
-      letterSpacing: '0.12em',
-      textTransform: 'uppercase',
-      color: 'var(--text-muted)',
-    }}>
-      {label}
-    </span>
-  );
-
   return (
-    <div style={{ padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '3rem 2rem', maxWidth: '1400px', margin: '0 auto' }}>
 
       {/* Page header */}
       <div style={{ marginBottom: '2.5rem' }}>
@@ -138,102 +192,23 @@ export default async function SuperAdminOverview() {
 
       {/* Campaigns table */}
       <div>
-
-        <h2 style={{
-          fontFamily: 'var(--font-display)',
-          fontSize: '0.64rem',
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: 'var(--text-gold)',
-          marginBottom: '1.25rem',
-        }}>
-          All Campaigns ({(campaigns || []).length})
-        </h2>
-
-        <div style={{ border: '1px solid var(--border-dim)' }}>
-          {/* Table header */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '2fr 1.2fr 80px 80px 130px 110px',
-            gap: '1rem',
-            padding: '0.7rem 1.25rem',
-            borderBottom: '1px solid var(--border-dim)',
-            background: 'rgba(255,255,255,0.02)',
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+          <h2 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '0.64rem',
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: 'var(--text-gold)',
+            margin: 0,
           }}>
-            {['Campaign', 'Organiser', 'Members', 'Battles', 'Created', ''].map(colHeader)}
-          </div>
-
-          {(campaigns || []).length === 0 ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-              No campaigns yet.
-            </div>
-          ) : (
-            (campaigns || []).map(c => {
-              const organiser = profileMap[c.organiser_id];
-              const members   = memberCountMap[c.id] || 0;
-              const battles   = battleCountMap[c.id] || 0;
-              const created   = new Date(c.created_at).toLocaleDateString('en-GB', {
-                day: 'numeric', month: 'short', year: 'numeric',
-              });
-
-              return (
-                <div key={c.id} style={{
-                  display: 'grid',
-                  gridTemplateColumns: '2fr 1.2fr 80px 80px 130px 110px',
-                  gap: '1rem',
-                  padding: '0.9rem 1.25rem',
-                  borderBottom: '1px solid var(--border-dim)',
-                  alignItems: 'center',
-                }}>
-                  <div>
-                    <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '0.15rem' }}>
-                      {c.name}
-                    </div>
-                    {c.setting && (
-                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                        {c.setting}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                    {organiser?.username ?? '—'}
-                  </div>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                    {members}
-                  </div>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                    {battles}
-                  </div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    {created}
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                    <Link href={`/admin/campaigns/${c.id}`} style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '0.54rem',
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase',
-                      color: '#e05a5a',
-                      textDecoration: 'none',
-                    }}>
-                      Detail →
-                    </Link>
-                    <Link href={`/c/${c.slug}`} style={{
-                      fontFamily: 'var(--font-display)',
-                      fontSize: '0.54rem',
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase',
-                      color: 'var(--text-muted)',
-                      textDecoration: 'none',
-                    }}>
-                      Visit ↗
-                    </Link>
-                  </div>
-                </div>
-              );
-            })
-          )}
+            All Campaigns ({(campaigns || []).length})
+          </h2>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+            — click Score or Last Active to sort
+          </span>
         </div>
+
+        <AdminCampaignsTable rows={campaignRows} />
       </div>
 
     </div>
